@@ -1,0 +1,228 @@
+import os
+
+from django.conf import settings
+from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema, inline_serializer
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import serializers
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from .serializers import (
+    ForgotPasswordSerializer,
+    ResetPasswordSerializer,
+    SignInSerializer,
+    SignUpSerializer,
+)
+
+User = get_user_model()
+
+
+class HealthCheckView(APIView):
+    """Simple endpoint to verify API is reachable."""
+
+    @extend_schema(
+        responses={
+            200: inline_serializer(
+                name="HealthCheckResponse",
+                fields={
+                    "status": serializers.CharField(),
+                    "service": serializers.CharField(),
+                },
+            )
+        }
+    )
+    def get(self, request):
+        return Response({"status": "ok", "service": "finance-app-api"})
+
+
+class SignUpView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=SignUpSerializer,
+        responses={
+            201: inline_serializer(
+                name="AuthResponse",
+                fields={
+                    "user": inline_serializer(
+                        name="AuthUser",
+                        fields={
+                            "id": serializers.IntegerField(),
+                            "username": serializers.CharField(),
+                            "email": serializers.EmailField(),
+                        },
+                    ),
+                    "tokens": inline_serializer(
+                        name="AuthTokens",
+                        fields={
+                            "refresh": serializers.CharField(),
+                            "access": serializers.CharField(),
+                        },
+                    ),
+                },
+            )
+        },
+    )
+    def post(self, request):
+        serializer = SignUpSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        refresh = RefreshToken.for_user(user)
+        return Response(
+            {
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                },
+                "tokens": {
+                    "refresh": str(refresh),
+                    "access": str(refresh.access_token),
+                },
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class SignInView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=SignInSerializer,
+        responses={
+            200: inline_serializer(
+                name="SignInResponse",
+                fields={
+                    "user": inline_serializer(
+                        name="SignInUser",
+                        fields={
+                            "id": serializers.IntegerField(),
+                            "username": serializers.CharField(),
+                            "email": serializers.EmailField(),
+                        },
+                    ),
+                    "tokens": inline_serializer(
+                        name="SignInTokens",
+                        fields={
+                            "refresh": serializers.CharField(),
+                            "access": serializers.CharField(),
+                        },
+                    ),
+                },
+            ),
+            401: OpenApiResponse(description="Invalid credentials"),
+        },
+    )
+    def post(self, request):
+        serializer = SignInSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = authenticate(
+            request,
+            username=serializer.validated_data["username"],
+            password=serializer.validated_data["password"],
+        )
+        if not user:
+            return Response(
+                {"detail": "Invalid credentials."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        refresh = RefreshToken.for_user(user)
+        return Response(
+            {
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                },
+                "tokens": {
+                    "refresh": str(refresh),
+                    "access": str(refresh.access_token),
+                },
+            }
+        )
+
+
+class ForgotPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=ForgotPasswordSerializer,
+        responses={
+            200: inline_serializer(
+                name="ForgotPasswordResponse",
+                fields={"detail": serializers.CharField()},
+            )
+        },
+        examples=[
+            OpenApiExample(
+                "Request",
+                value={"email": "john@example.com"},
+                request_only=True,
+            )
+        ],
+    )
+    def post(self, request):
+        serializer = ForgotPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+        user = User.objects.filter(email__iexact=email).first()
+
+        if user:
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            frontend_url = os.environ.get("PASSWORD_RESET_URL", "http://localhost:3000/reset-password")
+            reset_link = f"{frontend_url}?uid={uid}&token={token}"
+            send_mail(
+                subject="Password reset request",
+                message=f"Use this link to reset your password: {reset_link}",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=True,
+            )
+
+        return Response(
+            {"detail": "If the email exists, password reset instructions were sent."},
+            status=status.HTTP_200_OK,
+        )
+
+
+class ResetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=ResetPasswordSerializer,
+        responses={
+            200: inline_serializer(
+                name="ResetPasswordResponse",
+                fields={"detail": serializers.CharField()},
+            ),
+            400: OpenApiResponse(description="Invalid or expired token"),
+        },
+    )
+    def post(self, request):
+        serializer = ResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        uid = serializer.validated_data["uid"]
+        token = serializer.validated_data["token"]
+        new_password = serializer.validated_data["new_password"]
+
+        try:
+            user_id = force_str(urlsafe_base64_decode(uid))
+            user = User.objects.get(pk=user_id)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return Response({"detail": "Invalid reset link."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not default_token_generator.check_token(user, token):
+            return Response({"detail": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(new_password)
+        user.save(update_fields=["password"])
+        return Response({"detail": "Password reset successful."}, status=status.HTTP_200_OK)
