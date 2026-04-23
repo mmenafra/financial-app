@@ -1,7 +1,7 @@
 DC = docker compose
 APP = app
 
-.PHONY: help docker-build docker-up docker-down lint fmt test
+.PHONY: help docker-build docker-up docker-down lint fmt test seed
 
 help:
 	@echo "Available targets:"
@@ -11,6 +11,7 @@ help:
 	@echo "  make lint          - Run Django checks and Ruff lint"
 	@echo "  make fmt           - Run Ruff formatter"
 	@echo "  make test          - Run Django test suite"
+	@echo "  make seed          - Seed finance mock data"
 
 docker-build:
 	$(DC) build
@@ -29,3 +30,6 @@ fmt:
 
 test:
 	$(DC) run --rm $(APP) python manage.py test
+
+seed:
+	$(DC) run --rm $(APP) python manage.py seed_finance_data --reset

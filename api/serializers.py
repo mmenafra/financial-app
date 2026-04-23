@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
+from .models import Category, RecurringPattern, Transaction
+
 User = get_user_model()
 
 
@@ -42,4 +44,77 @@ class ResetPasswordSerializer(serializers.Serializer):
 
     def validate_new_password(self, value):
         validate_password(value)
+        return value
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ("id", "created_at", "updated_at", "user", "name", "parent", "icon", "color")
+        read_only_fields = ("id", "created_at", "updated_at", "user")
+
+    def validate_parent(self, value):
+        request = self.context.get("request")
+        if value and request and value.user_id != request.user.id:
+            raise serializers.ValidationError("Parent category must belong to the authenticated user.")
+        return value
+
+
+class TransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Transaction
+        fields = (
+            "id",
+            "created_at",
+            "updated_at",
+            "user",
+            "description",
+            "amount",
+            "currency",
+            "amount_local",
+            "exchange_rate",
+            "transaction_type",
+            "direction",
+            "category",
+            "subcategory",
+            "source",
+            "original_reference",
+            "external_id",
+            "is_installment",
+            "installment_current",
+            "installment_total",
+            "installment_amount",
+            "installment_group_id",
+            "raw_data",
+            "imported_at",
+            "status",
+        )
+        read_only_fields = ("id", "created_at", "updated_at", "user")
+
+    def validate_category(self, value):
+        request = self.context.get("request")
+        if value and request and value.user_id != request.user.id:
+            raise serializers.ValidationError("Category must belong to the authenticated user.")
+        return value
+
+
+class RecurringPatternSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RecurringPattern
+        fields = (
+            "id",
+            "created_at",
+            "updated_at",
+            "user",
+            "description_pattern",
+            "category",
+            "expected_amount",
+            "frequency",
+        )
+        read_only_fields = ("id", "created_at", "updated_at", "user")
+
+    def validate_category(self, value):
+        request = self.context.get("request")
+        if value and request and value.user_id != request.user.id:
+            raise serializers.ValidationError("Category must belong to the authenticated user.")
         return value

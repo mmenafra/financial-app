@@ -13,17 +13,22 @@ from drf_spectacular.utils import (
     inline_serializer,
 )
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import serializers
+from rest_framework.viewsets import ModelViewSet
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from .models import Category, RecurringPattern, Transaction
 from .serializers import (
+    CategorySerializer,
     ForgotPasswordSerializer,
+    RecurringPatternSerializer,
     ResetPasswordSerializer,
     SignInSerializer,
     SignUpSerializer,
+    TransactionSerializer,
 )
 
 User = get_user_model()
@@ -240,3 +245,36 @@ class ResetPasswordView(APIView):
         return Response(
             {"detail": "Password reset successful."}, status=status.HTTP_200_OK
         )
+
+
+class CategoryViewSet(ModelViewSet):
+    serializer_class = CategorySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Category.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class TransactionViewSet(ModelViewSet):
+    serializer_class = TransactionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Transaction.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class RecurringPatternViewSet(ModelViewSet):
+    serializer_class = RecurringPatternSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return RecurringPattern.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
