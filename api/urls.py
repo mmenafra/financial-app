@@ -5,6 +5,8 @@ from .views import (
     CategoryViewSet,
     ForgotPasswordView,
     HealthCheckView,
+    ImportBankStatementView,
+    ImportVisaNationalStatementView,
     RecurringPatternViewSet,
     ResetPasswordView,
     SignInView,
@@ -23,5 +25,15 @@ urlpatterns = [
     path("auth/signin/", SignInView.as_view(), name="signin"),
     path("auth/forgot-password/", ForgotPasswordView.as_view(), name="forgot-password"),
     path("auth/reset-password/", ResetPasswordView.as_view(), name="reset-password"),
+    path(
+        "transactions/import-bank-statement/",
+        ImportBankStatementView.as_view(),
+        name="import-bank-statement",
+    ),
+    path(
+        "transactions/import-visa-national/",
+        ImportVisaNationalStatementView.as_view(),
+        name="import-visa-national",
+    ),
     path("", include(router.urls)),
 ]

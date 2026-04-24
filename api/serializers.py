@@ -47,6 +47,16 @@ class ResetPasswordSerializer(serializers.Serializer):
         return value
 
 
+class ImportBankStatementSerializer(serializers.Serializer):
+    file = serializers.FileField()
+
+
+class ImportVisaNationalStatementSerializer(serializers.Serializer):
+    """Multipart upload: PDF Visa Nacional statement."""
+
+    file = serializers.FileField()
+
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category

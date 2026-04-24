@@ -5,3 +5,4 @@ djangorestframework-simplejwt
 drf-spectacular
 psycopg[binary]
 ruff
+pypdf>=5.0,<6

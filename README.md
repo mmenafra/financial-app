@@ -59,6 +59,21 @@ Notes:
   - body: `{"email":"john@example.com"}`
 - Reset password: `POST /api/auth/reset-password/`
   - body: `{"uid":"<uid>","token":"<token>","new_password":"NewStrongPass123!"}`
+- Import bank statement: `POST /api/transactions/import-bank-statement/` (authenticated)
+  - form-data: `file=<statement.dat>`
+  - returns parsed metadata and transactions as JSON
+- Import Visa Nacional (PDF): `POST /api/transactions/import-visa-national/` (authenticated)
+  - form-data: `file=<statement.pdf>` (text-based PDF; Scotiabank Chile Visa Nacional layout)
+  - returns JSON: `{ "transactions": [ ... ] }` — only rows from **II. DETALLE → 2.PERÍODO ACTUAL**
+  - each item may include: `operation_date`, `posting_code`, `reference_code`, `description`, `amount`, optional `total_to_pay`, optional `installment` / `installment_value`
+
+Example (after obtaining a JWT access token):
+
+```bash
+curl -sS -H "Authorization: Bearer <access_token>" \
+  -F "file=@/path/to/Estado-de-Cuenta-Scotiabank-Marzo-2026.pdf" \
+  http://localhost:8000/api/transactions/import-visa-national/
+```
 
 Notes:
 - Signup and signin return JWT `access` and `refresh` tokens.

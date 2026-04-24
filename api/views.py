@@ -8,12 +8,14 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from drf_spectacular.utils import (
     OpenApiExample,
+    OpenApiRequest,
     OpenApiResponse,
     extend_schema,
     inline_serializer,
 )
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import serializers
 from rest_framework.viewsets import ModelViewSet
@@ -21,9 +23,13 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import Category, RecurringPattern, Transaction
+from .bank_statement_parser import parse_bsa_bank_statement
+from .visa_nacional_parser import parse_visa_nacional_statement_pdf
 from .serializers import (
     CategorySerializer,
     ForgotPasswordSerializer,
+    ImportBankStatementSerializer,
+    ImportVisaNationalStatementSerializer,
     RecurringPatternSerializer,
     ResetPasswordSerializer,
     SignInSerializer,
@@ -245,6 +251,106 @@ class ResetPasswordView(APIView):
         return Response(
             {"detail": "Password reset successful."}, status=status.HTTP_200_OK
         )
+
+
+class ImportBankStatementView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    @extend_schema(
+        request=OpenApiRequest(
+            request=ImportBankStatementSerializer,
+            encoding={"file": {"contentType": "application/octet-stream"}},
+        ),
+        responses={
+            200: inline_serializer(
+                name="ImportBankStatementResponse",
+                fields={
+                    "metadata": serializers.JSONField(),
+                    "transactions": serializers.ListField(
+                        child=serializers.JSONField()
+                    ),
+                },
+            ),
+            400: OpenApiResponse(description="Invalid file payload"),
+        },
+    )
+    def post(self, request):
+        statement_file = request.FILES.get("file")
+        if not statement_file:
+            return Response(
+                {"detail": "A file is required in form-data with key 'file'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not statement_file.name.lower().endswith(".dat"):
+            return Response(
+                {"detail": "Only .dat files are supported."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            content = statement_file.read().decode("utf-8")
+            parsed = parse_bsa_bank_statement(content)
+        except UnicodeDecodeError:
+            return Response(
+                {"detail": "File must be UTF-8 encoded text."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(parsed, status=status.HTTP_200_OK)
+
+
+class ImportVisaNationalStatementView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    @extend_schema(
+        request=OpenApiRequest(
+            request=ImportVisaNationalStatementSerializer,
+            encoding={"file": {"contentType": "application/pdf"}},
+        ),
+        responses={
+            200: inline_serializer(
+                name="ImportVisaNationalResponse",
+                fields={
+                    "transactions": serializers.ListField(
+                        child=serializers.JSONField()
+                    ),
+                },
+            ),
+            400: OpenApiResponse(description="Invalid file payload or PDF"),
+        },
+    )
+    def post(self, request):
+        statement_file = request.FILES.get("file")
+        if not statement_file:
+            return Response(
+                {"detail": "A file is required in form-data with key 'file'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not statement_file.name.lower().endswith(".pdf"):
+            return Response(
+                {"detail": "Only .pdf files are supported."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            pdf_bytes = statement_file.read()
+            parsed = parse_visa_nacional_statement_pdf(pdf_bytes)
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(parsed, status=status.HTTP_200_OK)
 
 
 class CategoryViewSet(ModelViewSet):
