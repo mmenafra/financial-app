@@ -1,3 +1,6 @@
+# Full production stack (nginx for Angular, Django + PostgreSQL).
+# Use: docker compose -f docker-compose.prod.yml up --build
+# Or:  make docker-prod
 services:
   db:
     image: postgres:16
@@ -7,8 +10,6 @@ services:
       POSTGRES_PASSWORD: finance_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U finance_user -d finance_app"]
       interval: 5s
@@ -18,12 +19,10 @@ services:
   backend:
     build: ./backend
     command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
-    volumes:
-      - ./backend:/app
     ports:
       - "8000:8000"
     environment:
-      DJANGO_DEBUG: "True"
+      DJANGO_DEBUG: "False"
       DJANGO_ALLOWED_HOSTS: "127.0.0.1,localhost"
       DB_ENGINE: "postgres"
       POSTGRES_DB: "finance_app"
@@ -38,12 +37,9 @@ services:
   frontend:
     build:
       context: ./frontend
-      target: dev
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      target: prod
     ports:
-      - "4200:4200"
+      - "80:80"
     depends_on:
       - backend
 

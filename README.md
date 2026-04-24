@@ -1,49 +1,73 @@
-# Django DRF Boilerplate API
+# Finance app monorepo
 
-Starter project for a Django REST Framework backend.
+- **`backend/`** – Django REST Framework API  
+- **`frontend/`** – Angular 20 (CLI project name `web`)
 
 ## Stack
 
-- Django
-- Django REST Framework
-- django-cors-headers
+**Backend:** Django, Django REST Framework, django-cors-headers, PostgreSQL (Docker) or SQLite (local).
 
-## Quick Start
+**Frontend:** Angular, TypeScript, SCSS.
+
+**Optional:** `backend/package.json` includes `open-banking-chile` (CLI tooling); run from `backend/` with `npx` if you use it.
+
+## Quick start (local, no Docker)
+
+### Backend
 
 1. Create and activate a virtual environment:
-   - `python3 -m venv .venv`
+   - `cd backend`
+   - `python3 -m venv .venv` (or use a venv at repo root)
    - `source .venv/bin/activate`
-2. Install dependencies:
-   - `pip install -r requirements.txt`
-3. (Optional) add environment variables:
-   - `cp .env.example .env`
-4. Run migrations:
-   - `python manage.py migrate`
-5. Start the server:
-   - `python manage.py runserver`
+2. Install dependencies: `pip install -r requirements.txt`
+3. Environment: from repo root, `cp .env.example .env` (or use `backend/.env.example` as a template)
+4. Migrations: `python manage.py migrate` (from `backend/` with `manage.py` in cwd)
+5. Server: `python manage.py runserver`
 
-## Run with Docker Compose (App + PostgreSQL)
+### Frontend
 
-1. Build and start services:
-   - `docker compose up --build`
-2. Open the API at:
-   - `http://localhost:8000`
-3. Stop services:
-   - `docker compose down`
+```bash
+cd frontend
+npm ci
+npx ng serve
+```
+
+App: `http://localhost:4200/`
+
+## Run with Docker Compose (development)
+
+1. `docker compose up --build` (or `make docker-up`)
+2. **API:** `http://localhost:8000`
+3. **Angular (dev):** `http://localhost:4200`
+4. `docker compose down` (or `make docker-down`)
 
 Notes:
-- The `app` service runs migrations automatically on startup.
-- Docker Compose uses PostgreSQL as the main database.
-- Data is persisted in the `postgres_data` Docker volume.
 
-## Makefile Commands
+- The **`backend`** service runs migrations on startup and mounts `./backend` for live code edits.
+- The **`frontend`** service uses the `dev` image target (`ng serve` with polling); `./frontend` is bind-mounted, with `node_modules` kept in a container volume.
+- PostgreSQL is used in Compose; data is stored in the `postgres_data` volume.
 
-- `make docker-build` - build Docker images.
-- `make docker-up` - start app and database with Docker Compose.
-- `make docker-down` - stop Docker Compose services.
-- `make lint` - run Django checks and Ruff lint.
-- `make fmt` - run Ruff formatter.
-- `make test` - run Django tests.
+## Production-like stack (Django + nginx for Angular)
+
+```bash
+make docker-prod
+# same as: docker compose -f docker-compose.prod.yml up --build
+```
+
+- **Static Angular UI:** `http://localhost:80` (nginx)
+- **API:** `http://localhost:8000`
+
+`docker-compose.prod.yml` is a self-contained file (avoids complex merge of dev bind-mounts) with `DJANGO_DEBUG=False` for the backend.
+
+## Makefile commands
+
+**Docker (dev):** `make docker-build` | `make docker-up` | `make docker-down`
+
+**Docker (prod):** `make docker-prod`
+
+**Backend:** `make lint` | `make fmt` | `make test` | `make seed` (uses Compose `backend` service)
+
+**Frontend (host):** `make fe-install` | `make fe-dev` | `make fe-build`
 
 ## API Endpoint
 
