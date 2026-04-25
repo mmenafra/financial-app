@@ -1,0 +1,11 @@
+---
+description: Angular frontend conventions
+globs: frontend/**/*.ts,frontend/**/*.html,frontend/**/*.scss
+alwaysApply: false
+---
+
+# Frontend (Angular)
+
+- **Stack:** Angular (CLI app under `frontend/`). Follow existing `src/app` structure, routing, and store patterns.
+- **Quality:** Use `make fe-lint` and `make fe-test-ci` from [AGENTS.md](AGENTS.md); align with ESLint, Stylelint, and Vitest (Angular unit tests) as wired in the project.
+- **UI:** Keep spacing, typography, and layout consistent with existing components and [styles](frontend/src).

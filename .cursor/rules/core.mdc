@@ -1,0 +1,11 @@
+---
+description: Monorepo-wide standards for this finance app
+alwaysApply: true
+---
+
+# Core
+
+- Keep changes **minimal and on-task**; do not refactor unrelated code or add scope the user did not request.
+- **Match** existing naming, import style, and patterns in the files you touch.
+- Prefer **conventional commands** for validation: [Makefile](Makefile) targets in [AGENTS.md](AGENTS.md) (`make lint`, `make test`, `make fe-lint`, `make fe-test-ci`, `make lint-all`, `make test-all`). See [README.md](README.md) for environment details.
+- **Do not** add unsolicited markdown docs; document in code only when the project already does so for similar code.

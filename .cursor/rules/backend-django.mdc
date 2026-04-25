@@ -1,0 +1,11 @@
+---
+description: Django REST Framework backend conventions
+globs: backend/**/*.py
+alwaysApply: false
+---
+
+# Backend (Django)
+
+- **Stack:** Django, DRF, typical layout under `api/` and `config/`. Tests live in `api/tests/`; mirror that layout for new tests.
+- **Bank / imports:** Parsers and import flows live under `backend/api/` (e.g. bank statement and Visa-related modules). Reuse existing helpers and patterns; extend tests when behavior changes.
+- **Quality:** Backend linting and tests run **via Make/Docker** as in [AGENTS.md](AGENTS.md) (`make lint`, `make test`, `make fmt` for formatting). Align with Ruff, Flake8, and Pylint as configured in the repo.
