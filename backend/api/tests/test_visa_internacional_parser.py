@@ -95,6 +95,15 @@ II. DETALLE
         )
         self.assertEqual(d2, "2026-01-01")
 
+    def test_resolve_date_prefers_closest_when_outside_billing_window(self):
+        # No 15/01 falls inside an all-March period; we still return a date (closest).
+        d = resolve_dd_mm_in_period(
+            "15/01",
+            date(2026, 3, 1),
+            date(2026, 3, 31),
+        )
+        self.assertEqual(d, "2026-01-15")
+
     def test_parse_mar_2026_fixture_five_rows(self):
         out = parse_visa_internacional_statement_text(self.FIXTURE_MAR_2026)
         txs = out["transactions"]

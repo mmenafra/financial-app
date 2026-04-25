@@ -43,19 +43,31 @@ def extract_billing_period(text: str) -> tuple[date, date]:
 
 
 def resolve_dd_mm_in_period(day_month: str, period_from: date, period_to: date) -> str:
+    """Map DD/MM to an ISO date: prefer a day inside the billing window, else closest valid date."""
     day_s, m_s = day_month.split("/")
     d, m_ = int(day_s), int(m_s)
+    candidates: list[date] = []
     for y in range(period_from.year - 1, period_to.year + 2):
         try:
-            candidate = date(y, m_, d)
+            candidates.append(date(y, m_, d))
         except ValueError:
             continue
-        if period_from <= candidate <= period_to:
-            return candidate.isoformat()
-    raise ValueError(
-        f"Could not resolve {day_month!r} within the billing period "
-        f"{period_from}–{period_to}."
-    )
+    if not candidates:
+        raise ValueError(f"Invalid day/month {day_month!r}.")
+
+    in_period = [c for c in candidates if period_from <= c <= period_to]
+    if in_period:
+        return min(in_period).isoformat()
+
+    def days_from_billing_window(c: date) -> int:
+        if c < period_from:
+            return (period_from - c).days
+        if c > period_to:
+            return (c - period_to).days
+        return 0
+
+    best = min(candidates, key=lambda c: (days_from_billing_window(c), c))
+    return best.isoformat()
 
 
 def _pop_trailing_amount(s: str) -> tuple[str, str] | None:
