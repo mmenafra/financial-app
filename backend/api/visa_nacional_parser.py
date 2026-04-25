@@ -7,11 +7,16 @@ Requires a text-based PDF (no OCR).
 
 from __future__ import annotations
 
-import io
+import logging
 import re
 from datetime import datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Any
+
+from .amounts import parse_chilean_decimal
+from .pdf_text import extract_text_from_pdf
+
+logger = logging.getLogger(__name__)
 
 _DATE_POSTING_RE = re.compile(r"(\d{2}/\d{2}/\d{4})\s+(\d{4})\s*$")
 _REFERENCE_RE = re.compile(r"^\d{6,}$")
@@ -27,47 +32,8 @@ _SECTION_END_PREFIXES = (
 )
 
 
-def extract_text_from_pdf(pdf_bytes: bytes) -> str:
-    """Extract plain text from a PDF using pypdf."""
-    try:
-        from pypdf import PdfReader
-    except ImportError as exc:  # pragma: no cover - env guard
-        raise ValueError("PDF support is not installed (pypdf missing).") from exc
-
-    try:
-        reader = PdfReader(io.BytesIO(pdf_bytes))
-    except Exception as exc:
-        raise ValueError("Could not read PDF file.") from exc
-
-    parts: list[str] = []
-    for page in reader.pages:
-        try:
-            t = page.extract_text()
-        except Exception as exc:
-            raise ValueError("Could not extract text from PDF page.") from exc
-        if t:
-            parts.append(t)
-    return "\n".join(parts)
-
-
 def _parse_chilean_amount(token: str) -> Decimal:
-    """Parse amounts like '$ 1.699.990', '$ 6.713', '$ -403.521'."""
-    s = token.replace("$", "").strip().replace(" ", "")
-    if not s:
-        raise ValueError("Empty amount token.")
-    negative = s.startswith("-")
-    s = s[1:] if negative else s
-    if "," in s:
-        int_part, frac = s.rsplit(",", 1)
-        int_part = int_part.replace(".", "")
-        normalized = f"{int_part}.{frac}"
-    else:
-        normalized = s.replace(".", "")
-    try:
-        value = Decimal(normalized)
-    except InvalidOperation as exc:
-        raise ValueError(f"Invalid amount: {token!r}") from exc
-    return -value if negative else value
+    return parse_chilean_decimal(token)
 
 
 def _parse_amounts_from_line(
@@ -196,14 +162,17 @@ def parse_transactions_from_periodo_text(block: str) -> list[dict[str, Any]]:
 def parse_visa_nacional_statement_text(full_text: str) -> dict[str, Any]:
     """Parse full PDF-extracted text; returns only ``transactions`` list."""
     block = extract_periodo_actual_block(full_text)
+    logger.debug("Visa Nacional: periodo-actual block length=%s characters", len(block))
     transactions = parse_transactions_from_periodo_text(block)
     if not transactions:
         raise ValueError("No transactions found in '2.PERÍODO ACTUAL' section.")
+    logger.info("Visa Nacional: parsed %s transactions", len(transactions))
     return {"transactions": transactions}
 
 
 def parse_visa_nacional_statement_pdf(pdf_bytes: bytes) -> dict[str, Any]:
     """Extract text from PDF bytes and parse Visa Nacional transactions."""
+    logger.debug("Visa Nacional: parsing PDF, size=%s bytes", len(pdf_bytes))
     text = extract_text_from_pdf(pdf_bytes)
     if not text or not text.strip():
         raise ValueError("PDF contains no extractable text (may be image-only).")

@@ -1,5 +1,8 @@
+import logging
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+
+logger = logging.getLogger(__name__)
 
 
 def parse_bsa_amount(value):
@@ -34,6 +37,8 @@ def parse_bsa_bank_statement(file_content):
         if not line:
             continue
 
+        logger.debug("Bank statement: processing line: %r", line[:200])
+
         if line.startswith(";"):
             meta_line = line[1:].strip()
             if ":" in meta_line:
@@ -46,6 +51,10 @@ def parse_bsa_bank_statement(file_content):
 
         parts = [part.strip() for part in line.split(";")]
         if len(parts) < 6:
+            if ";" in line and not line.startswith(";"):
+                logger.warning(
+                    "Bank statement: skipped line with < 6 fields: %r", line[:200]
+                )
             continue
 
         transactions.append(
@@ -59,4 +68,9 @@ def parse_bsa_bank_statement(file_content):
             }
         )
 
+    logger.info(
+        "Bank statement: parsed metadata keys=%s transactions=%s",
+        len(metadata),
+        len(transactions),
+    )
     return {"metadata": metadata, "transactions": transactions}

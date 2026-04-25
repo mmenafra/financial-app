@@ -7,6 +7,7 @@ from .views import (
     ForgotPasswordView,
     HealthCheckView,
     ImportBankStatementView,
+    ImportVisaInternationalStatementView,
     ImportVisaNationalStatementView,
     RecurringPatternViewSet,
     ResetPasswordView,
@@ -37,6 +38,11 @@ urlpatterns = [
         "transactions/import-visa-national/",
         ImportVisaNationalStatementView.as_view(),
         name="import-visa-national",
+    ),
+    path(
+        "transactions/import-visa-international/",
+        ImportVisaInternationalStatementView.as_view(),
+        name="import-visa-international",
     ),
     path("", include(router.urls)),
 ]

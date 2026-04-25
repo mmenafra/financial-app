@@ -1,3 +1,4 @@
+import logging
 import os
 
 from drf_spectacular.utils import (
@@ -28,6 +29,7 @@ from .serializers import (
     CategorySerializer,
     ForgotPasswordSerializer,
     ImportBankStatementSerializer,
+    ImportVisaInternationalStatementSerializer,
     ImportVisaNationalStatementSerializer,
     RecurringPatternSerializer,
     ResetPasswordSerializer,
@@ -35,9 +37,12 @@ from .serializers import (
     SignUpSerializer,
     TransactionSerializer,
 )
+from .visa_internacional_parser import parse_visa_internacional_statement_pdf
 from .visa_nacional_parser import parse_visa_nacional_statement_pdf
 
 User = get_user_model()
+
+logger = logging.getLogger(__name__)
 
 
 class HealthCheckView(APIView):
@@ -145,6 +150,10 @@ class SignInView(APIView):
             password=serializer.validated_data["password"],
         )
         if not user:
+            logger.warning(
+                "Sign-in failed: invalid credentials for username=%r",
+                serializer.validated_data["username"],
+            )
             return Response(
                 {"detail": "Invalid credentials."},
                 status=status.HTTP_401_UNAUTHORIZED,
@@ -289,20 +298,34 @@ class ImportBankStatementView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        logger.info(
+            "Import bank statement: user_id=%s filename=%r",
+            request.user.pk,
+            statement_file.name,
+        )
         try:
             content = statement_file.read().decode("utf-8")
+            logger.debug(
+                "Bank statement file decoded, length=%s characters", len(content)
+            )
             parsed = parse_bsa_bank_statement(content)
-        except UnicodeDecodeError:
+        except UnicodeDecodeError as exc:
+            logger.error("Bank statement UTF-8 decode failed: %s", exc)
             return Response(
                 {"detail": "File must be UTF-8 encoded text."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         except ValueError as exc:
+            logger.error("Bank statement parse failed: %s", exc)
             return Response(
                 {"detail": str(exc)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        logger.info(
+            "Import bank statement success: transactions=%s",
+            len(parsed.get("transactions", [])),
+        )
         return Response(parsed, status=status.HTTP_200_OK)
 
 
@@ -341,15 +364,84 @@ class ImportVisaNationalStatementView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        logger.info(
+            "Import Visa Nacional: user_id=%s filename=%r",
+            request.user.pk,
+            statement_file.name,
+        )
         try:
             pdf_bytes = statement_file.read()
+            logger.debug("Visa Nacional PDF size=%s bytes", len(pdf_bytes))
             parsed = parse_visa_nacional_statement_pdf(pdf_bytes)
         except ValueError as exc:
+            logger.error("Visa Nacional import failed: %s", exc)
             return Response(
                 {"detail": str(exc)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        logger.info(
+            "Import Visa Nacional success: transactions=%s",
+            len(parsed.get("transactions", [])),
+        )
+        return Response(parsed, status=status.HTTP_200_OK)
+
+
+class ImportVisaInternationalStatementView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    @extend_schema(
+        request=OpenApiRequest(
+            request=ImportVisaInternationalStatementSerializer,
+            encoding={"file": {"contentType": "application/pdf"}},
+        ),
+        responses={
+            200: inline_serializer(
+                name="ImportVisaInternationalResponse",
+                fields={
+                    "transactions": serializers.ListField(
+                        child=serializers.JSONField()
+                    ),
+                },
+            ),
+            400: OpenApiResponse(description="Invalid file payload or PDF"),
+        },
+    )
+    def post(self, request):
+        statement_file = request.FILES.get("file")
+        if not statement_file:
+            return Response(
+                {"detail": "A file is required in form-data with key 'file'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not statement_file.name.lower().endswith(".pdf"):
+            return Response(
+                {"detail": "Only .pdf files are supported."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        logger.info(
+            "Import Visa Internacional: user_id=%s filename=%r",
+            request.user.pk,
+            statement_file.name,
+        )
+        try:
+            pdf_bytes = statement_file.read()
+            logger.debug("Visa Internacional PDF size=%s bytes", len(pdf_bytes))
+            parsed = parse_visa_internacional_statement_pdf(pdf_bytes)
+        except ValueError as exc:
+            logger.error("Visa Internacional import failed: %s", exc)
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        logger.info(
+            "Import Visa Internacional success: transactions=%s",
+            len(parsed.get("transactions", [])),
+        )
         return Response(parsed, status=status.HTTP_200_OK)
 
 

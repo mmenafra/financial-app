@@ -58,6 +58,12 @@ class ImportVisaNationalStatementSerializer(serializers.Serializer):
     file = serializers.FileField()
 
 
+class ImportVisaInternationalStatementSerializer(serializers.Serializer):
+    """Multipart upload: PDF Visa Internacional (USD) statement."""
+
+    file = serializers.FileField()
+
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
