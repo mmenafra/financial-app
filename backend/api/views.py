@@ -1,11 +1,5 @@
 import os
 
-from django.conf import settings
-from django.contrib.auth import authenticate, get_user_model
-from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
-from django.utils.encoding import force_bytes, force_str
-from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from drf_spectacular.utils import (
     OpenApiExample,
     OpenApiRequest,
@@ -13,18 +7,23 @@ from drf_spectacular.utils import (
     extend_schema,
     inline_serializer,
 )
-from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework import serializers, status
 from rest_framework.parsers import MultiPartParser
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import serializers
-from rest_framework.viewsets import ModelViewSet
 from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Category, RecurringPattern, Transaction
+from django.conf import settings
+from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+
 from .bank_statement_parser import parse_bsa_bank_statement
-from .visa_nacional_parser import parse_visa_nacional_statement_pdf
+from .models import Category, RecurringPattern, Transaction
 from .serializers import (
     CategorySerializer,
     ForgotPasswordSerializer,
@@ -36,6 +35,7 @@ from .serializers import (
     SignUpSerializer,
     TransactionSerializer,
 )
+from .visa_nacional_parser import parse_visa_nacional_statement_pdf
 
 User = get_user_model()
 

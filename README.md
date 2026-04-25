@@ -65,9 +65,15 @@ make docker-prod
 
 **Docker (prod):** `make docker-prod`
 
-**Backend:** `make lint` | `make fmt` | `make test` | `make seed` (uses Compose `backend` service)
+**Backend:** `make lint` (Django `check` + ruff + flake8 + pylint) | `make fmt` (autoflake + isort + black + ruff format) | `make test` (pytest) | `make seed` (uses Compose `backend` service)
 
 **Frontend (host):** `make fe-install` | `make fe-dev` | `make fe-build`
+
+**Frontend quality:** `make fe-lint` (ESLint `ng lint` + Stylelint) | `make fe-test` (Vitest via `ng test`, watch) | `make fe-test-ci` (Vitest, `watch=false`) | `make fe-betterer` (incremental checks; `make fe-betterer-update` after improving results). In `frontend/`: `npm run format` / `format:check` (Prettier), `npm run lint:styles` (Stylelint), `npm run test:jest` (Jest, same `*.spec.ts` as Vitest in typical setups)
+
+**Combined:** `make lint-all` (backend stack above + Angular lint) | `make test-all` (pytest in Docker, then Angular `test:ci`)
+
+`npm` scripts in `frontend/`: `npm run lint` (ESLint), `npm test` / `test:ci` (experimental `@angular/build:unit-test` + Vitest), `test:jest` / `test:jest:ci` (Jest + `jest-preset-angular`), `npm run betterer` / `betterer:update`. State uses [NgRx](https://ngrx.io/) (`provideStore`, `provideEffects`, `@ngrx/entity` helper example). Betterer: [`frontend/.betterer.ts`](frontend/.betterer.ts); `@betterer/eslint` is omitted (ESLint 8 vs flat ESLint 9).
 
 ## API Endpoint
 

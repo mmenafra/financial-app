@@ -1,0 +1,16 @@
+[flake8]
+max-line-length = 88
+# E501: line length (Black is authoritative; long strings/URLs may remain)
+# W503: line break before binary operator (Black style)
+# E203: whitespace before ':'
+extend-ignore = E203, E501, W503
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    migrations,
+    node_modules
+per-file-ignores =
+    */migrations/*:E501
+max-complexity = 12

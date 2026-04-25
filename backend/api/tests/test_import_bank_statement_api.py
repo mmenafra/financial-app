@@ -1,10 +1,11 @@
 from decimal import Decimal
 
+from rest_framework import status
+from rest_framework.test import APITestCase
+
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APITestCase
 
 User = get_user_model()
 
@@ -46,10 +47,16 @@ class ImportBankStatementAPITests(APITestCase):
         self.assertEqual(response.data["metadata"]["Numero Cuenta"], "97-10525-46")
         self.assertEqual(len(response.data["transactions"]), 2)
         self.assertEqual(response.data["transactions"][0]["date"], "2026-04-01")
-        self.assertEqual(response.data["transactions"][0]["debit"], Decimal("854000.00"))
+        self.assertEqual(
+            response.data["transactions"][0]["debit"], Decimal("854000.00")
+        )
         self.assertIsNone(response.data["transactions"][0]["credit"])
-        self.assertEqual(response.data["transactions"][1]["credit"], Decimal("747040.00"))
-        self.assertEqual(response.data["transactions"][1]["balance"], Decimal("6139989.00"))
+        self.assertEqual(
+            response.data["transactions"][1]["credit"], Decimal("747040.00")
+        )
+        self.assertEqual(
+            response.data["transactions"][1]["balance"], Decimal("6139989.00")
+        )
 
     def test_only_dat_files_are_supported(self):
         self.client.force_authenticate(user=self.user)

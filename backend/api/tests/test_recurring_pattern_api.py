@@ -1,7 +1,8 @@
-from django.contrib.auth import get_user_model
-from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
+
+from django.contrib.auth import get_user_model
+from django.urls import reverse
 
 from api.models import Category, Frequency, RecurringPattern
 
@@ -21,7 +22,9 @@ class RecurringPatternAPITests(APITestCase):
             password="StrongPass123!",
         )
         self.category = Category.objects.create(name="Subscriptions", user=self.user)
-        self.other_category = Category.objects.create(name="Other", user=self.other_user)
+        self.other_category = Category.objects.create(
+            name="Other", user=self.other_user
+        )
         self.list_url = reverse("recurring-pattern-list")
         self.payload = {
             "description_pattern": "NETFLIX",

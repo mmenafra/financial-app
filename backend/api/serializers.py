@@ -1,6 +1,7 @@
+from rest_framework import serializers
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from rest_framework import serializers
 
 from .models import Category, RecurringPattern, Transaction
 
@@ -60,13 +61,24 @@ class ImportVisaNationalStatementSerializer(serializers.Serializer):
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ("id", "created_at", "updated_at", "user", "name", "parent", "icon", "color")
+        fields = (
+            "id",
+            "created_at",
+            "updated_at",
+            "user",
+            "name",
+            "parent",
+            "icon",
+            "color",
+        )
         read_only_fields = ("id", "created_at", "updated_at", "user")
 
     def validate_parent(self, value):
         request = self.context.get("request")
         if value and request and value.user_id != request.user.id:
-            raise serializers.ValidationError("Parent category must belong to the authenticated user.")
+            raise serializers.ValidationError(
+                "Parent category must belong to the authenticated user."
+            )
         return value
 
 
@@ -104,7 +116,9 @@ class TransactionSerializer(serializers.ModelSerializer):
     def validate_category(self, value):
         request = self.context.get("request")
         if value and request and value.user_id != request.user.id:
-            raise serializers.ValidationError("Category must belong to the authenticated user.")
+            raise serializers.ValidationError(
+                "Category must belong to the authenticated user."
+            )
         return value
 
 
@@ -126,5 +140,7 @@ class RecurringPatternSerializer(serializers.ModelSerializer):
     def validate_category(self, value):
         request = self.context.get("request")
         if value and request and value.user_id != request.user.id:
-            raise serializers.ValidationError("Category must belong to the authenticated user.")
+            raise serializers.ValidationError(
+                "Category must belong to the authenticated user."
+            )
         return value

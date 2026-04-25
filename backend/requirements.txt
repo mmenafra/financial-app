@@ -4,5 +4,14 @@ django-cors-headers
 djangorestframework-simplejwt
 drf-spectacular
 psycopg[binary]
-ruff
 pypdf>=5.0,<6
+# dev / quality
+pytest
+pytest-django
+black
+isort
+autoflake
+ruff
+pylint
+pylint-django
+flake8

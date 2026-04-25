@@ -1,0 +1,14 @@
+[MAIN]
+load-plugins = pylint_django
+# Match any path under .../migrations/ (Django autogen; ruff/flake8 already skip these)
+ignore-paths = .*/migrations/.*
+py-version = 3.12
+
+[DJANGO]
+django-settings-module = config.settings
+
+[MESSAGES CONTROL]
+disable=missing-module-docstring,missing-class-docstring,missing-function-docstring,too-few-public-methods,import-outside-toplevel,too-many-arguments,too-many-locals,duplicate-code,abstract-method,too-many-ancestors,line-too-long
+
+[SIMILARITIES]
+min-similarity-lines = 6

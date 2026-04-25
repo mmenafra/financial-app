@@ -28,6 +28,12 @@ class TransactionAdmin(admin.ModelAdmin):
 
 @admin.register(RecurringPattern)
 class RecurringPatternAdmin(admin.ModelAdmin):
-    list_display = ("description_pattern", "user", "category", "frequency", "expected_amount")
+    list_display = (
+        "description_pattern",
+        "user",
+        "category",
+        "frequency",
+        "expected_amount",
+    )
     search_fields = ("description_pattern",)
     list_filter = ("frequency", "created_at")

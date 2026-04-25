@@ -1,5 +1,6 @@
-from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
+from django.urls import include, path
 
 from .views import (
     CategoryViewSet,
@@ -17,7 +18,9 @@ from .views import (
 router = DefaultRouter()
 router.register("categories", CategoryViewSet, basename="category")
 router.register("transactions", TransactionViewSet, basename="transaction")
-router.register("recurring-patterns", RecurringPatternViewSet, basename="recurring-pattern")
+router.register(
+    "recurring-patterns", RecurringPatternViewSet, basename="recurring-pattern"
+)
 
 urlpatterns = [
     path("health/", HealthCheckView.as_view(), name="health-check"),

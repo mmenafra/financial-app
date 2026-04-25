@@ -36,7 +36,9 @@ class ModelTests(TestCase):
         self.assertEqual(str(self.category), "Food")
 
     def test_category_str_with_parent(self):
-        child = Category.objects.create(name="Restaurants", parent=self.category, user=self.user)
+        child = Category.objects.create(
+            name="Restaurants", parent=self.category, user=self.user
+        )
         self.assertEqual(str(child), "Food / Restaurants")
 
     def test_transaction_manager_methods(self):

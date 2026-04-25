@@ -1,0 +1,36 @@
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["tests.py", "test_*.py", "*_test.py"]
+testpaths = ["api/tests"]
+addopts = "-ra"
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+extend-exclude = "/(migrations)/"
+
+[tool.isort]
+profile = "black"
+line_length = 88
+known_django = ["django"]
+sections = [
+  "FUTURE",
+  "STDLIB",
+  "THIRDPARTY",
+  "DJANGO",
+  "FIRSTPARTY",
+  "LOCALFOLDER",
+]
+skip_glob = ["*/migrations/*"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+extend-exclude = ["migrations", "node_modules"]
+
+[tool.ruff.lint]
+# Import order is applied by isort in `make fmt`, not ruff isort.
+ignore = ["I"]
+
+[tool.ruff.format]
+quote-style = "double"

@@ -119,7 +119,9 @@ class Transaction(AbstractBaseModel):
     description = models.CharField(max_length=255)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     currency = models.CharField(max_length=3)
-    amount_local = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    amount_local = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
     exchange_rate = models.DecimalField(
         max_digits=12,
         decimal_places=6,

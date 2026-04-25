@@ -61,7 +61,9 @@ III. INFORMACIÓN DE PAGO
 
     def test_installment_fields(self):
         out = parse_visa_nacional_statement_text(self.FIXTURE_TEXT)
-        falabella = next(t for t in out["transactions"] if "FALABELLA" in t["description"])
+        falabella = next(
+            t for t in out["transactions"] if "FALABELLA" in t["description"]
+        )
         self.assertEqual(falabella["installment"], "03/03")
         self.assertEqual(Decimal(falabella["installment_value"]), Decimal("61310"))
 
@@ -69,4 +71,3 @@ III. INFORMACIÓN DE PAGO
         block = extract_periodo_actual_block(self.FIXTURE_TEXT)
         txs = parse_transactions_from_periodo_text(block)
         self.assertEqual(len(txs), 4)
-

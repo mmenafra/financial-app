@@ -1,11 +1,19 @@
 from decimal import Decimal
 
-from django.contrib.auth import get_user_model
-from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from api.models import Category, Direction, Source, Transaction, TransactionStatus, TransactionType
+from django.contrib.auth import get_user_model
+from django.urls import reverse
+
+from api.models import (
+    Category,
+    Direction,
+    Source,
+    Transaction,
+    TransactionStatus,
+    TransactionType,
+)
 
 User = get_user_model()
 
@@ -23,7 +31,9 @@ class TransactionAPITests(APITestCase):
             password="StrongPass123!",
         )
         self.category = Category.objects.create(name="Transport", user=self.user)
-        self.other_category = Category.objects.create(name="Other", user=self.other_user)
+        self.other_category = Category.objects.create(
+            name="Other", user=self.other_user
+        )
         self.list_url = reverse("transaction-list")
         self.payload = {
             "description": "Uber",

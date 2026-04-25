@@ -58,8 +58,12 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("Existing user finance data deleted."))
 
         categories = self._create_categories(user, options["categories"])
-        transactions = self._create_transactions(user, categories, options["transactions"])
-        patterns = self._create_recurring_patterns(user, categories, options["patterns"])
+        transactions = self._create_transactions(
+            user, categories, options["transactions"]
+        )
+        patterns = self._create_recurring_patterns(
+            user, categories, options["patterns"]
+        )
 
         self.stdout.write(
             self.style.SUCCESS(
@@ -113,7 +117,9 @@ class Command(BaseCommand):
         for index in range(total):
             direction = random.choice([Direction.EXPENSE, Direction.INCOME])
             tx_type = (
-                TransactionType.CREDIT if direction == Direction.INCOME else TransactionType.DEBIT
+                TransactionType.CREDIT
+                if direction == Direction.INCOME
+                else TransactionType.DEBIT
             )
             source = random.choice(sources)
             is_installment = source in {
@@ -132,9 +138,9 @@ class Command(BaseCommand):
                 amount=amount,
                 currency=random.choice(["CLP", "USD"]),
                 amount_local=amount if random.choice([True, False]) else None,
-                exchange_rate=Decimal("1.000000")
-                if random.choice([True, False])
-                else None,
+                exchange_rate=(
+                    Decimal("1.000000") if random.choice([True, False]) else None
+                ),
                 transaction_type=tx_type,
                 direction=direction,
                 category=random.choice(categories),

@@ -1,5 +1,6 @@
 from rest_framework import status
 from rest_framework.test import APITestCase
+
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
@@ -28,7 +29,9 @@ class CategoryAPITests(APITestCase):
 
     def test_crud_category_authenticated(self):
         self.client.force_authenticate(user=self.user)
-        create_response = self.client.post(self.list_url, {"name": "Housing"}, format="json")
+        create_response = self.client.post(
+            self.list_url, {"name": "Housing"}, format="json"
+        )
         self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
         category_id = create_response.data["id"]
 

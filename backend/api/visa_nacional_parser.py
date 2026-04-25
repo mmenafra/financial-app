@@ -70,7 +70,9 @@ def _parse_chilean_amount(token: str) -> Decimal:
     return -value if negative else value
 
 
-def _parse_amounts_from_line(line: str) -> tuple[list[Decimal], str | None, Decimal | None]:
+def _parse_amounts_from_line(
+    line: str,
+) -> tuple[list[Decimal], str | None, Decimal | None]:
     """
     Returns (all_amounts, installment_label, installment_value).
     installment_* set when line ends with 'NN/NN $ amount'.
