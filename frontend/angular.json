@@ -49,7 +49,7 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.scss"]
+            "styles": ["tailwind.css", "src/styles.scss"]
           },
           "configurations": {
             "production": {

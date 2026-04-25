@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Global base ─────────────────────────────────────────── */
+body {
+  font-family: 'Manrope', sans-serif;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.glass-indicator {
+  background: rgb(255 255 255 / 0.8);
+  backdrop-filter: blur(20px);
+}
+
+.shadow-ambient {
+  box-shadow: 0 8px 32px rgb(7 30 39 / 0.06);
+}

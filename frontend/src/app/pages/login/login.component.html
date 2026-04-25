@@ -1,0 +1,234 @@
+<main class="min-h-screen flex flex-col md:flex-row bg-surface text-on-surface">
+  <!-- ── Left: Branding panel (desktop only) ────────────────────────── -->
+  <section
+    class="hidden md:flex w-1/2 bg-surface-container-low p-12 lg:p-20 flex-col justify-between relative overflow-hidden"
+  >
+    <div class="z-10">
+      <!-- Logo -->
+      <div class="flex items-center gap-2 mb-16">
+        <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+          <span
+            class="material-symbols-outlined text-secondary-fixed text-2xl"
+            style="font-variation-settings: 'FILL' 1"
+            >account_balance</span
+          >
+        </div>
+        <span class="text-2xl font-extrabold tracking-tighter text-primary">Finance App</span>
+      </div>
+
+      <!-- Hero copy -->
+      <div class="space-y-6 max-w-md">
+        <h1 class="text-5xl lg:text-7xl font-extrabold tracking-tight text-primary leading-[1.1]">
+          Architect your <span class="text-on-primary-container">wealth.</span>
+        </h1>
+        <p class="text-lg text-on-surface-variant font-medium leading-relaxed">
+          Experience a digital gallery of your financial growth. Secure, intentional, and curated
+          for the modern professional.
+        </p>
+      </div>
+    </div>
+
+    <!-- Security badge -->
+    <div class="z-10 space-y-4">
+      <div class="flex items-center gap-4 p-4 glass-indicator rounded-3xl w-fit shadow-ambient">
+        <div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center">
+          <span
+            class="material-symbols-outlined text-on-secondary-container"
+            style="font-variation-settings: 'FILL' 1"
+            >verified_user</span
+          >
+        </div>
+        <div>
+          <p class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">
+            Security Status
+          </p>
+          <p class="text-sm font-bold text-primary">Military-Grade Encryption Active</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Decorative gradient -->
+    <div
+      class="absolute -right-20 bottom-0 w-3/4 aspect-square bg-gradient-to-tr from-surface-container-highest to-transparent rounded-full opacity-50 blur-3xl pointer-events-none"
+    ></div>
+  </section>
+
+  <!-- ── Right: Auth panel ──────────────────────────────────────────── -->
+  <section
+    class="flex-1 flex items-center justify-center p-6 md:p-12 lg:p-24 bg-surface"
+  >
+    <div class="w-full max-w-[440px] space-y-10">
+      <!-- Mobile logo -->
+      <div class="flex md:hidden items-center gap-2">
+        <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+          <span
+            class="material-symbols-outlined text-secondary-fixed text-xl"
+            style="font-variation-settings: 'FILL' 1"
+            >account_balance</span
+          >
+        </div>
+        <span class="text-xl font-extrabold tracking-tighter text-primary">Finance App</span>
+      </div>
+
+      <!-- Header -->
+      <header class="space-y-2">
+        <h2 class="text-3xl font-extrabold text-primary tracking-tight">Secure Login</h2>
+        <p class="text-on-surface-variant font-medium">Welcome back to your financial curator.</p>
+      </header>
+
+      <div class="space-y-8">
+        <!-- Form -->
+        <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-6" novalidate>
+          <!-- Username -->
+          <div class="space-y-2">
+            <label
+              for="username"
+              class="text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1"
+              >Username</label
+            >
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl"
+                >person</span
+              >
+              <input
+                id="username"
+                type="text"
+                formControlName="username"
+                autocomplete="username"
+                placeholder="your_username"
+                class="w-full pl-12 pr-4 py-4 bg-surface-container-highest rounded-2xl border-none outline-none focus:ring-2 focus:ring-primary/40 focus:bg-surface-container-lowest transition-all placeholder:text-on-surface-variant/40"
+                [class.ring-2]="usernameControl.invalid && usernameControl.touched"
+                [class.ring-error]="usernameControl.invalid && usernameControl.touched"
+              />
+            </div>
+            @if (usernameControl.invalid && usernameControl.touched) {
+              <p class="text-xs text-error ml-1">Username is required.</p>
+            }
+          </div>
+
+          <!-- Password -->
+          <div class="space-y-2">
+            <div class="flex justify-between items-center px-1">
+              <label
+                for="password"
+                class="text-xs font-bold uppercase tracking-widest text-on-surface-variant"
+                >Password</label
+              >
+              <a
+                href="#"
+                class="text-xs font-bold text-secondary hover:text-on-secondary-container transition-colors"
+                >Forgot Password?</a
+              >
+            </div>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl"
+                >lock</span
+              >
+              <input
+                id="password"
+                [type]="showPassword() ? 'text' : 'password'"
+                formControlName="password"
+                autocomplete="current-password"
+                placeholder="••••••••••••"
+                class="w-full pl-12 pr-12 py-4 bg-surface-container-highest rounded-2xl border-none outline-none focus:ring-2 focus:ring-primary/40 focus:bg-surface-container-lowest transition-all placeholder:text-on-surface-variant/40"
+                [class.ring-2]="passwordControl.invalid && passwordControl.touched"
+                [class.ring-error]="passwordControl.invalid && passwordControl.touched"
+              />
+              <button
+                type="button"
+                (click)="togglePassword()"
+                class="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant"
+                [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+              >
+                <span class="material-symbols-outlined text-xl">{{
+                  showPassword() ? 'visibility_off' : 'visibility'
+                }}</span>
+              </button>
+            </div>
+            @if (passwordControl.invalid && passwordControl.touched) {
+              <p class="text-xs text-error ml-1">Password is required.</p>
+            }
+          </div>
+
+          <!-- Remember me -->
+          <div class="flex items-center gap-3 px-1">
+            <input
+              id="rememberMe"
+              type="checkbox"
+              formControlName="rememberMe"
+              class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary"
+            />
+            <label for="rememberMe" class="text-sm font-medium text-on-surface-variant"
+              >Keep me authenticated for 30 days</label
+            >
+          </div>
+
+          <!-- Error message -->
+          @if (errorMessage()) {
+            <div
+              class="flex items-center gap-3 p-4 bg-error-container rounded-2xl"
+              role="alert"
+            >
+              <span class="material-symbols-outlined text-on-error-container text-xl">error</span>
+              <p class="text-sm font-medium text-on-error-container">{{ errorMessage() }}</p>
+            </div>
+          }
+
+          <!-- Submit -->
+          <button
+            type="submit"
+            [disabled]="loading()"
+            class="w-full py-4 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold rounded-3xl shadow-ambient active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            @if (loading()) {
+              <span class="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+            }
+            <span>{{ loading() ? 'Authorizing…' : 'Authorize Access' }}</span>
+            @if (!loading()) {
+              <span class="material-symbols-outlined text-lg">arrow_forward</span>
+            }
+          </button>
+        </form>
+
+        <!-- Divider -->
+        <div class="relative flex items-center py-2">
+          <div class="flex-grow h-px bg-surface-container-highest"></div>
+          <span class="flex-shrink mx-4 text-xs font-bold uppercase tracking-[0.2em] text-on-surface-variant"
+            >Or connect via</span
+          >
+          <div class="flex-grow h-px bg-surface-container-highest"></div>
+        </div>
+
+        <!-- Google (UI placeholder — OAuth not yet implemented) -->
+        <div class="flex justify-center">
+          <button
+            type="button"
+            disabled
+            title="Google sign-in coming soon"
+            class="flex items-center justify-center gap-3 py-3 px-6 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl shadow-sm opacity-50 cursor-not-allowed"
+          >
+            <svg class="w-5 h-5" viewBox="0 0 48 48" aria-hidden="true">
+              <path
+                fill="#EA4335"
+                d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+              />
+              <path
+                fill="#4285F4"
+                d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+              />
+              <path
+                fill="#34A853"
+                d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+              />
+            </svg>
+            <span class="text-sm font-bold text-primary">Continue with Google</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
