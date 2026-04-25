@@ -9,6 +9,18 @@ import { DashboardComponent } from '../dashboard/dashboard.component';
 
 const API_SIGNIN = 'http://localhost:8000/api/auth/signin/';
 
+/** Minimal GSI mock so `ngOnInit` does not wait 10s for the real script. */
+function mockGoogleIdentityService(): void {
+  window.google = {
+    accounts: {
+      id: {
+        initialize: vi.fn(),
+        prompt: vi.fn(),
+      },
+    },
+  };
+}
+
 const MOCK_SUCCESS = {
   user: { id: 1, username: 'testuser', email: 'test@example.com' },
   tokens: { access: 'access-token', refresh: 'refresh-token' },
@@ -19,6 +31,7 @@ describe('LoginComponent', () => {
   let router: Router;
 
   beforeEach(async () => {
+    mockGoogleIdentityService();
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
       providers: [

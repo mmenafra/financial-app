@@ -218,3 +218,6 @@ LOGGING = {
         },
     },
 }
+
+# Google Sign-In (ID token verification). Set GOOGLE_CLIENT_ID in .env
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")

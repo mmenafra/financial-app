@@ -38,6 +38,14 @@ export class AuthService {
       .pipe(tap((res) => this.storeTokens(res.tokens, remember)));
   }
 
+  loginWithGoogle(idToken: string, remember: boolean): Observable<SignInResponse> {
+    return this.http
+      .post<SignInResponse>(`${environment.apiUrl}/api/auth/google/`, {
+        id_token: idToken,
+      })
+      .pipe(tap((res) => this.storeTokens(res.tokens, remember)));
+  }
+
   storeTokens(tokens: AuthTokens, remember: boolean): void {
     const storage = remember ? localStorage : sessionStorage;
     storage.setItem(ACCESS_KEY, tokens.access);

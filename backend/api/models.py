@@ -14,6 +14,29 @@ class AbstractBaseModel(models.Model):
         abstract = True
 
 
+class SocialAccount(AbstractBaseModel):
+    """Links a Django user to an external identity (e.g. Google Sign-In)."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="social_accounts",
+    )
+    provider = models.CharField(max_length=50)
+    provider_uid = models.CharField(max_length=255)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["provider", "provider_uid"],
+                name="api_socialaccount_provider_provider_uid_uniq",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.provider}:{self.provider_uid}"
+
+
 class Category(AbstractBaseModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

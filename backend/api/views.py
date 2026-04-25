@@ -8,6 +8,8 @@ from drf_spectacular.utils import (
     extend_schema,
     inline_serializer,
 )
+from google.auth.transport import requests as google_auth_requests
+from google.oauth2 import id_token as google_id_token
 from rest_framework import serializers, status
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -24,10 +26,11 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
 from .bank_statement_parser import parse_bsa_bank_statement
-from .models import Category, RecurringPattern, Transaction
+from .models import Category, RecurringPattern, SocialAccount, Transaction
 from .serializers import (
     CategorySerializer,
     ForgotPasswordSerializer,
+    GoogleAuthSerializer,
     ImportBankStatementSerializer,
     ImportVisaInternationalStatementSerializer,
     ImportVisaNationalStatementSerializer,
@@ -157,6 +160,118 @@ class SignInView(APIView):
             return Response(
                 {"detail": "Invalid credentials."},
                 status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        refresh = RefreshToken.for_user(user)
+        return Response(
+            {
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                },
+                "tokens": {
+                    "refresh": str(refresh),
+                    "access": str(refresh.access_token),
+                },
+            }
+        )
+
+
+class GoogleAuthView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=GoogleAuthSerializer,
+        responses={
+            200: inline_serializer(
+                name="GoogleAuthResponse",
+                fields={
+                    "user": inline_serializer(
+                        name="GoogleAuthUser",
+                        fields={
+                            "id": serializers.IntegerField(),
+                            "username": serializers.CharField(),
+                            "email": serializers.EmailField(),
+                        },
+                    ),
+                    "tokens": inline_serializer(
+                        name="GoogleAuthTokens",
+                        fields={
+                            "refresh": serializers.CharField(),
+                            "access": serializers.CharField(),
+                        },
+                    ),
+                },
+            ),
+            400: OpenApiResponse(description="Bad request"),
+            401: OpenApiResponse(description="Invalid token"),
+            503: OpenApiResponse(description="Google Sign-In not configured"),
+        },
+    )
+    def post(self, request):
+        if not settings.GOOGLE_CLIENT_ID:
+            return Response(
+                {"detail": "Google Sign-In is not configured."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        serializer = GoogleAuthSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        id_token_str = serializer.validated_data["id_token"]
+
+        try:
+            idinfo = google_id_token.verify_oauth2_token(
+                id_token_str,
+                google_auth_requests.Request(),
+                settings.GOOGLE_CLIENT_ID,
+            )
+        except ValueError as exc:
+            logger.warning("Google id_token verification failed: %s", exc)
+            return Response(
+                {"detail": "Invalid Google token."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        sub = idinfo.get("sub")
+        email = idinfo.get("email")
+        email_verified = idinfo.get("email_verified", False)
+        if not sub or not email:
+            return Response(
+                {"detail": "Token missing required claims."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not email_verified:
+            return Response(
+                {"detail": "Email is not verified with Google."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        first_name = (idinfo.get("given_name") or "")[:150]
+        last_name = (idinfo.get("family_name") or "")[:150]
+
+        social = (
+            SocialAccount.objects.filter(provider="google", provider_uid=sub)
+            .select_related("user")
+            .first()
+        )
+        if social:
+            user = social.user
+        else:
+            user = User.objects.filter(email__iexact=email).first()
+            if not user:
+                user = User(
+                    username=email,
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                )
+                user.set_unusable_password()
+                user.save()
+            SocialAccount.objects.get_or_create(
+                provider="google",
+                provider_uid=sub,
+                defaults={"user": user},
             )
 
         refresh = RefreshToken.for_user(user)
