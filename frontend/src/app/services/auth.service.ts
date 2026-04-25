@@ -9,6 +9,12 @@ export interface SignInPayload {
   password: string;
 }
 
+export interface SignUpPayload {
+  username: string;
+  email: string;
+  password: string;
+}
+
 export interface AuthTokens {
   access: string;
   refresh: string;
@@ -35,6 +41,12 @@ export class AuthService {
   signIn(payload: SignInPayload, remember: boolean): Observable<SignInResponse> {
     return this.http
       .post<SignInResponse>(`${environment.apiUrl}/api/auth/signin/`, payload)
+      .pipe(tap((res) => this.storeTokens(res.tokens, remember)));
+  }
+
+  signUp(payload: SignUpPayload, remember: boolean): Observable<SignInResponse> {
+    return this.http
+      .post<SignInResponse>(`${environment.apiUrl}/api/auth/signup/`, payload)
       .pipe(tap((res) => this.storeTokens(res.tokens, remember)));
   }
 

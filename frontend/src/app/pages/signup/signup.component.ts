@@ -1,5 +1,12 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators,
+} from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
 import { environment } from '../../../environments/environment';
@@ -8,23 +15,61 @@ import { AuthService } from '../../services/auth.service';
 const GOOGLE_SCRIPT_WAIT_MS = 10_000;
 const GOOGLE_SCRIPT_POLL_MS = 50;
 
+const passwordsMatchValidator: ValidatorFn = (
+  group: AbstractControl,
+): ValidationErrors | null => {
+  const password = group.get('password')?.value as string | undefined;
+  const passwordConfirm = group.get('passwordConfirm')?.value as string | undefined;
+  if (!passwordConfirm) {
+    return null;
+  }
+  return password === passwordConfirm ? null : { passwordMismatch: true };
+};
+
+function firstApiErrorMessage(body: unknown): string | null {
+  if (!body || typeof body !== 'object') {
+    return null;
+  }
+  const o = body as Record<string, unknown>;
+  for (const key of ['non_field_errors', 'email', 'username', 'password', 'detail']) {
+    const v = o[key];
+    if (Array.isArray(v) && v.length > 0 && typeof v[0] === 'string') {
+      return v[0];
+    }
+    if (typeof v === 'string') {
+      return v;
+    }
+  }
+  for (const val of Object.values(o)) {
+    if (Array.isArray(val) && val.length > 0 && typeof val[0] === 'string') {
+      return val[0];
+    }
+  }
+  return null;
+}
+
 @Component({
-  selector: 'app-login',
+  selector: 'app-signup',
   standalone: true,
   imports: [ReactiveFormsModule, RouterLink],
-  templateUrl: './login.component.html',
-  styleUrl: './login.component.scss',
+  templateUrl: './signup.component.html',
+  styleUrl: './signup.component.scss',
 })
-export class LoginComponent implements OnInit {
+export class SignupComponent implements OnInit {
   private fb = inject(FormBuilder);
   private auth = inject(AuthService);
   private router = inject(Router);
 
-  form = this.fb.nonNullable.group({
-    username: ['', [Validators.required]],
-    password: ['', [Validators.required]],
-    rememberMe: [false],
-  });
+  form = this.fb.nonNullable.group(
+    {
+      username: ['', [Validators.required]],
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.required, Validators.minLength(8)]],
+      passwordConfirm: ['', [Validators.required]],
+      rememberMe: [false],
+    },
+    { validators: [passwordsMatchValidator] },
+  );
 
   loading = signal(false);
   errorMessage = signal('');
@@ -87,7 +132,8 @@ export class LoginComponent implements OnInit {
       return;
     }
     this.errorMessage.set('');
-    this.auth.loginWithGoogle(response.credential, false).subscribe({
+    const { rememberMe } = this.form.getRawValue();
+    this.auth.loginWithGoogle(response.credential, rememberMe).subscribe({
       next: () => {
         this.router.navigate(['/dashboard']);
       },
@@ -111,11 +157,19 @@ export class LoginComponent implements OnInit {
     return this.form.controls.username;
   }
 
+  get emailControl() {
+    return this.form.controls.email;
+  }
+
   get passwordControl() {
     return this.form.controls.password;
   }
 
-  signInWithGoogle(): void {
+  get passwordConfirmControl() {
+    return this.form.controls.passwordConfirm;
+  }
+
+  signUpWithGoogle(): void {
     this.errorMessage.set('');
     if (!environment.googleClientId) {
       this.errorMessage.set('Google sign-in is not configured for this app.');
@@ -150,17 +204,20 @@ export class LoginComponent implements OnInit {
     this.loading.set(true);
     this.errorMessage.set('');
 
-    const { username, password, rememberMe } = this.form.getRawValue();
+    const { username, email, password, rememberMe } = this.form.getRawValue();
 
-    this.auth.signIn({ username, password }, rememberMe).subscribe({
+    this.auth.signUp({ username, email, password }, rememberMe).subscribe({
       next: () => {
         this.loading.set(false);
         this.router.navigate(['/dashboard']);
       },
-      error: (err) => {
+      error: (err: { status?: number; error?: unknown }) => {
         this.loading.set(false);
-        if (err.status === 401) {
-          this.errorMessage.set('Invalid username or password. Please try again.');
+        if (err.status === 400) {
+          const msg = firstApiErrorMessage(err.error);
+          this.errorMessage.set(
+            msg ?? 'Please check your details and try again.',
+          );
         } else {
           this.errorMessage.set('Something went wrong. Please try again later.');
         }

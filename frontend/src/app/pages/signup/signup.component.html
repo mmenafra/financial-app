@@ -72,8 +72,10 @@
 
       <!-- Header -->
       <header class="space-y-2">
-        <h2 class="text-3xl font-extrabold text-primary tracking-tight">Secure Login</h2>
-        <p class="text-on-surface-variant font-medium">Welcome back to your financial curator.</p>
+        <h2 class="text-3xl font-extrabold text-primary tracking-tight">Create your account</h2>
+        <p class="text-on-surface-variant font-medium">
+          Join your financial curator in a few steps.
+        </p>
       </header>
 
       <div class="space-y-8">
@@ -82,7 +84,7 @@
           <!-- Username -->
           <div class="space-y-2">
             <label
-              for="username"
+              for="signup-username"
               class="text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1"
               >Username</label
             >
@@ -91,7 +93,7 @@
                 >person</span
               >
               <input
-                id="username"
+                id="signup-username"
                 type="text"
                 formControlName="username"
                 autocomplete="username"
@@ -106,29 +108,55 @@
             }
           </div>
 
+          <!-- Email -->
+          <div class="space-y-2">
+            <label
+              for="signup-email"
+              class="text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1"
+              >Email</label
+            >
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl"
+                >mail</span
+              >
+              <input
+                id="signup-email"
+                type="email"
+                formControlName="email"
+                autocomplete="email"
+                placeholder="you@example.com"
+                class="w-full pl-12 pr-4 py-4 bg-surface-container-highest rounded-2xl border-none outline-none focus:ring-2 focus:ring-primary/40 focus:bg-surface-container-lowest transition-all placeholder:text-on-surface-variant/40"
+                [class.ring-2]="emailControl.invalid && emailControl.touched"
+                [class.ring-error]="emailControl.invalid && emailControl.touched"
+              />
+            </div>
+            @if (emailControl.invalid && emailControl.touched) {
+              <p class="text-xs text-error ml-1">
+                @if (emailControl.hasError('required')) {
+                  Email is required.
+                } @else {
+                  Enter a valid email address.
+                }
+              </p>
+            }
+          </div>
+
           <!-- Password -->
           <div class="space-y-2">
-            <div class="flex justify-between items-center px-1">
-              <label
-                for="password"
-                class="text-xs font-bold uppercase tracking-widest text-on-surface-variant"
-                >Password</label
-              >
-              <a
-                href="#"
-                class="text-xs font-bold text-secondary hover:text-on-secondary-container transition-colors"
-                >Forgot Password?</a
-              >
-            </div>
+            <label
+              for="signup-password"
+              class="text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1"
+              >Password</label
+            >
             <div class="relative">
               <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl"
                 >lock</span
               >
               <input
-                id="password"
+                id="signup-password"
                 [type]="showPassword() ? 'text' : 'password'"
                 formControlName="password"
-                autocomplete="current-password"
+                autocomplete="new-password"
                 placeholder="••••••••••••"
                 class="w-full pl-12 pr-12 py-4 bg-surface-container-highest rounded-2xl border-none outline-none focus:ring-2 focus:ring-primary/40 focus:bg-surface-container-lowest transition-all placeholder:text-on-surface-variant/40"
                 [class.ring-2]="passwordControl.invalid && passwordControl.touched"
@@ -146,19 +174,75 @@
               </button>
             </div>
             @if (passwordControl.invalid && passwordControl.touched) {
-              <p class="text-xs text-error ml-1">Password is required.</p>
+              <p class="text-xs text-error ml-1">
+                @if (passwordControl.hasError('required')) {
+                  Password is required.
+                } @else if (passwordControl.hasError('minlength')) {
+                  Use at least 8 characters.
+                }
+              </p>
+            }
+          </div>
+
+          <!-- Confirm password -->
+          <div class="space-y-2">
+            <label
+              for="signup-password-confirm"
+              class="text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1"
+              >Confirm password</label
+            >
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl"
+                >lock_reset</span
+              >
+              <input
+                id="signup-password-confirm"
+                [type]="showPassword() ? 'text' : 'password'"
+                formControlName="passwordConfirm"
+                autocomplete="new-password"
+                placeholder="••••••••••••"
+                class="w-full pl-12 pr-12 py-4 bg-surface-container-highest rounded-2xl border-none outline-none focus:ring-2 focus:ring-primary/40 focus:bg-surface-container-lowest transition-all placeholder:text-on-surface-variant/40"
+                [class.ring-2]="
+                  (passwordConfirmControl.invalid && passwordConfirmControl.touched) ||
+                  (form.hasError('passwordMismatch') && form.touched)
+                "
+                [class.ring-error]="
+                  (passwordConfirmControl.invalid && passwordConfirmControl.touched) ||
+                  (form.hasError('passwordMismatch') && form.touched)
+                "
+              />
+              <button
+                type="button"
+                (click)="togglePassword()"
+                class="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant"
+                [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+              >
+                <span class="material-symbols-outlined text-xl">{{
+                  showPassword() ? 'visibility_off' : 'visibility'
+                }}</span>
+              </button>
+            </div>
+            @if (passwordConfirmControl.invalid && passwordConfirmControl.touched) {
+              <p class="text-xs text-error ml-1">Please confirm your password.</p>
+            }
+            @if (
+              form.hasError('passwordMismatch') &&
+              form.touched &&
+              passwordConfirmControl.value
+            ) {
+              <p class="text-xs text-error ml-1">Passwords do not match.</p>
             }
           </div>
 
           <!-- Remember me -->
           <div class="flex items-center gap-3 px-1">
             <input
-              id="rememberMe"
+              id="signupRememberMe"
               type="checkbox"
               formControlName="rememberMe"
               class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary"
             />
-            <label for="rememberMe" class="text-sm font-medium text-on-surface-variant"
+            <label for="signupRememberMe" class="text-sm font-medium text-on-surface-variant"
               >Keep me authenticated for 30 days</label
             >
           </div>
@@ -183,7 +267,7 @@
             @if (loading()) {
               <span class="material-symbols-outlined text-lg animate-spin">progress_activity</span>
             }
-            <span>{{ loading() ? 'Authorizing…' : 'Authorize Access' }}</span>
+            <span>{{ loading() ? 'Creating account…' : 'Create account' }}</span>
             @if (!loading()) {
               <span class="material-symbols-outlined text-lg">arrow_forward</span>
             }
@@ -202,10 +286,10 @@
         <div class="flex flex-col items-center gap-6">
           <button
             type="button"
-            (click)="signInWithGoogle()"
+            (click)="signUpWithGoogle()"
             [disabled]="!googleReady() || googleLoading()"
             [attr.aria-busy]="googleLoading()"
-            title="Continue with Google"
+            title="Sign up with Google"
             class="flex items-center justify-center gap-3 py-3 px-6 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl shadow-sm active:scale-[0.99] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
           >
             @if (googleLoading()) {
@@ -231,16 +315,16 @@
               </svg>
             }
             <span class="text-sm font-bold text-primary">{{
-              googleLoading() ? 'Signing in…' : 'Continue with Google'
+              googleLoading() ? 'Signing up…' : 'Sign up with Google'
             }}</span>
           </button>
 
-          <p class="text-sm text-on-surface-variant text-center">
-            Don’t have an account?
+          <p class="text-sm text-on-surface-variant">
+            Already have an account?
             <a
-              routerLink="/signup"
+              routerLink="/login"
               class="font-bold text-secondary hover:text-on-secondary-container transition-colors"
-              >Create one</a
+              >Sign in</a
             >
           </p>
         </div>
