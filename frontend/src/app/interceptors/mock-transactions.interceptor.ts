@@ -235,7 +235,7 @@ function buildAllMockTransactions(): Transaction[] {
   return all.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
 }
 
-const ALL_MOCK = buildAllMockTransactions();
+let ALL_MOCK: Transaction[] = buildAllMockTransactions();
 
 function parsePathname(url: string): string {
   try {
@@ -249,6 +249,14 @@ function parsePathname(url: string): string {
 
 function isTransactionsListGet(url: string, method: string): boolean {
   if (method !== 'GET') {
+    return false;
+  }
+  const path = parsePathname(url);
+  return path === '/api/transactions' || path === '/api/transactions/';
+}
+
+function isTransactionsCreate(url: string, method: string): boolean {
+  if (method !== 'POST') {
     return false;
   }
   const path = parsePathname(url);
@@ -300,6 +308,25 @@ export const mockTransactionsInterceptor: HttpInterceptorFn = (req, next) => {
 
   if (isCategoriesListGet(req.url, req.method)) {
     return of(new HttpResponse({ status: 200, body: MOCK_CATEGORIES }));
+  }
+
+  if (isTransactionsCreate(req.url, req.method)) {
+    const body = req.body as Record<string, unknown>;
+    const now = typeof body['created_at'] === 'string' && body['created_at']
+      ? body['created_at']
+      : new Date().toISOString();
+    const suffix = String(Date.now()).slice(-12).padStart(12, '0');
+    const created: Transaction = tx(suffix, now, {
+      description: String(body['description'] ?? 'New transaction'),
+      amount: String(body['amount'] ?? '0.00'),
+      currency: String(body['currency'] ?? 'USD'),
+      transaction_type: (body['transaction_type'] as TransactionType | undefined) ?? 'DEBIT',
+      direction: (body['direction'] as Direction | undefined) ?? 'EXPENSE',
+      category: (body['category'] as string | null | undefined) ?? null,
+      source: (body['source'] as Source | undefined) ?? 'BANK_ACCOUNT',
+    });
+    ALL_MOCK = [created, ...ALL_MOCK];
+    return of(new HttpResponse({ status: 201, body: created }));
   }
 
   if (!isTransactionsListGet(req.url, req.method)) {

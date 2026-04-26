@@ -44,6 +44,15 @@
               >
               Filter
             </button>
+
+            <button type="button" class="tx-pill-btn" (click)="openNewTxModal()">
+              <span
+                class="material-symbols-outlined text-[18px]"
+                style="font-variation-settings: 'FILL' 0"
+                >add</span
+              >
+              Add Transaction
+            </button>
           </div>
         </header>
 
@@ -298,6 +307,130 @@
     </main>
   </div>
 </div>
+
+@if (newTxModalOpen()) {
+  <div
+    class="tx-modal-backdrop"
+    role="button"
+    tabindex="0"
+    aria-label="Close dialog"
+    (click)="!newTxSubmitting() && closeNewTxModal()"
+    (keydown.enter)="!newTxSubmitting() && closeNewTxModal()"
+    (keydown.space)="$event.preventDefault(); !newTxSubmitting() && closeNewTxModal()"
+  ></div>
+  <div class="tx-modal" role="dialog" aria-modal="true" aria-labelledby="tx-new-title">
+    <h2 id="tx-new-title" class="text-xl font-extrabold text-primary m-0 font-headline">
+      Add Transaction
+    </h2>
+    <form class="mt-4 flex flex-col gap-4" [formGroup]="newTxForm" (ngSubmit)="submitNewTx()">
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-on-surface-variant" for="ntx-desc">
+          Description <span class="text-red-500">*</span>
+        </label>
+        <input
+          id="ntx-desc"
+          type="text"
+          class="tx-input"
+          [class.border-red-400]="newTxForm.get('description')!.invalid && newTxForm.get('description')!.touched"
+          formControlName="description"
+          autocomplete="off"
+          placeholder="e.g. Grocery store"
+        />
+        @if (newTxForm.get('description')!.touched && newTxForm.get('description')!.hasError('required')) {
+          <p class="text-xs text-red-600 font-semibold m-0">Description is required.</p>
+        } @else if (newTxForm.get('description')!.touched && newTxForm.get('description')!.hasError('maxlength')) {
+          <p class="text-xs text-red-600 font-semibold m-0">Maximum 255 characters.</p>
+        }
+      </div>
+
+      <div class="flex gap-3">
+        <div class="flex flex-col gap-1 flex-1">
+          <label class="text-xs font-semibold text-on-surface-variant" for="ntx-amount">
+            Amount <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="ntx-amount"
+            type="text"
+            inputmode="decimal"
+            class="tx-input"
+            [class.border-red-400]="newTxForm.get('amount')!.invalid && newTxForm.get('amount')!.touched"
+            formControlName="amount"
+            autocomplete="off"
+            placeholder="0.00"
+          />
+          @if (newTxForm.get('amount')!.touched && newTxForm.get('amount')!.hasError('required')) {
+            <p class="text-xs text-red-600 font-semibold m-0">Amount is required.</p>
+          } @else if (newTxForm.get('amount')!.touched && newTxForm.get('amount')!.hasError('positiveNumber')) {
+            <p class="text-xs text-red-600 font-semibold m-0">Enter a valid amount greater than 0.</p>
+          }
+        </div>
+        <div class="flex flex-col gap-1 w-28">
+          <label class="text-xs font-semibold text-on-surface-variant" for="ntx-currency">Currency</label>
+          <select id="ntx-currency" class="tx-input" formControlName="currency">
+            <option value="USD">USD</option>
+            <option value="CLP">CLP</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex gap-3">
+        <div class="flex flex-col gap-1 flex-1">
+          <label class="text-xs font-semibold text-on-surface-variant" for="ntx-direction">Type</label>
+          <select id="ntx-direction" class="tx-input" formControlName="direction">
+            <option value="EXPENSE">Expense</option>
+            <option value="INCOME">Income</option>
+          </select>
+        </div>
+        <div class="flex flex-col gap-1 flex-1">
+          <label class="text-xs font-semibold text-on-surface-variant" for="ntx-date">Date</label>
+          <input
+            id="ntx-date"
+            type="date"
+            class="tx-input"
+            formControlName="date"
+          />
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-on-surface-variant" for="ntx-source">Source</label>
+        <select id="ntx-source" class="tx-input" formControlName="source">
+          <option value="BANK_ACCOUNT">Bank Account</option>
+          <option value="CREDIT_CARD_NATIONAL">Visa National</option>
+          <option value="CREDIT_CARD_INTERNATIONAL">Visa International</option>
+          <option value="MERCADOPAGO">MercadoPago</option>
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-on-surface-variant" for="ntx-category">Category</label>
+        <select id="ntx-category" class="tx-input" formControlName="category">
+          <option [ngValue]="null">Uncategorized</option>
+          @for (c of categories(); track c.id) {
+            <option [ngValue]="c.id">{{ c.name }}</option>
+          }
+        </select>
+      </div>
+
+      @if (newTxError()) {
+        <p class="text-sm font-semibold text-red-600 m-0">{{ newTxError() }}</p>
+      }
+
+      <div class="flex flex-wrap gap-2 justify-end pt-1">
+        <button type="button" class="tx-pill-btn ghost" (click)="closeNewTxModal()" [disabled]="newTxSubmitting()">
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="tx-pill-btn"
+          [disabled]="newTxSubmitting()"
+        >
+          {{ newTxSubmitting() ? 'Saving…' : 'Add Transaction' }}
+        </button>
+      </div>
+    </form>
+  </div>
+}
 
 @if (splitModalOpen() && pendingSplit(); as bundle) {
     <div

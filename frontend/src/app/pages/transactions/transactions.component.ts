@@ -1,12 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, DestroyRef, HostListener, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { TopNavComponent } from '../../components/top-nav/top-nav.component';
-import type { Category, Source, Transaction } from '../../models/transaction.model';
+import type { Category, CreateTransactionPayload, Direction, Source, Transaction, TransactionType } from '../../models/transaction.model';
 import { TransactionService } from '../../services/transaction.service';
 
 const PAGE_SIZE = 10;
@@ -59,6 +59,20 @@ export class TransactionsComponent {
 
   protected readonly splitForm = this.fb.group({
     rows: this.fb.array([this.createSplitRow(), this.createSplitRow()]),
+  });
+
+  protected readonly newTxModalOpen = signal(false);
+  protected readonly newTxSubmitting = signal(false);
+  protected readonly newTxError = signal<string | null>(null);
+
+  protected readonly newTxForm = this.fb.group({
+    description: ['', [Validators.required, Validators.maxLength(255)]],
+    amount: ['', [Validators.required, positiveNumberValidator]],
+    currency: ['USD', [Validators.required]],
+    direction: ['EXPENSE', [Validators.required]],
+    source: ['BANK_ACCOUNT', [Validators.required]],
+    category: [null as string | null],
+    date: [new Date().toISOString().slice(0, 10)],
   });
 
   protected readonly totalSpentThisMonth = signal(0);
@@ -459,6 +473,62 @@ export class TransactionsComponent {
       });
   }
 
+  protected openNewTxModal(): void {
+    this.newTxError.set(null);
+    this.newTxForm.reset({
+      description: '',
+      amount: '',
+      currency: 'USD',
+      direction: 'EXPENSE',
+      source: 'BANK_ACCOUNT',
+      category: null,
+      date: new Date().toISOString().slice(0, 10),
+    });
+    this.newTxModalOpen.set(true);
+  }
+
+  protected closeNewTxModal(): void {
+    this.newTxModalOpen.set(false);
+    this.newTxError.set(null);
+  }
+
+  protected submitNewTx(): void {
+    this.newTxForm.markAllAsTouched();
+    if (this.newTxForm.invalid) {
+      return;
+    }
+    const v = this.newTxForm.value;
+    const direction = (v.direction ?? 'EXPENSE') as Direction;
+    const txType: TransactionType = direction === 'INCOME' ? 'CREDIT' : 'DEBIT';
+    const dateVal = v.date ? new Date(v.date + 'T12:00:00').toISOString() : undefined;
+    const payload: CreateTransactionPayload = {
+      description: String(v.description ?? '').trim(),
+      amount: round2(Number(v.amount)).toFixed(2),
+      currency: String(v.currency ?? 'USD'),
+      direction,
+      transaction_type: txType,
+      source: (v.source ?? 'BANK_ACCOUNT') as Source,
+      category: v.category ?? null,
+      ...(dateVal && { created_at: dateVal }),
+    };
+    this.newTxSubmitting.set(true);
+    this.newTxError.set(null);
+    this.transactionService
+      .createTransaction(payload)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.newTxSubmitting.set(false);
+          this.closeNewTxModal();
+          this.reload();
+        },
+        error: (err: unknown) => {
+          this.newTxSubmitting.set(false);
+          this.newTxError.set(this.httpErrorMessage(err) ?? 'Could not create transaction.');
+        },
+      });
+  }
+
   protected trendText(): string {
     const pct = this.trendVsPrevMonthPct();
     const less = this.trendSpentLess();
@@ -498,6 +568,18 @@ export class TransactionsComponent {
     }
     return null;
   }
+}
+
+function positiveNumberValidator(control: AbstractControl): ValidationErrors | null {
+  const raw = String(control.value ?? '').trim();
+  if (!raw) {
+    return null; // let Validators.required handle the empty case
+  }
+  const n = Number(raw);
+  if (Number.isNaN(n) || n <= 0) {
+    return { positiveNumber: true };
+  }
+  return null;
 }
 
 function sumExpenses(rows: Transaction[]): number {

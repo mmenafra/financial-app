@@ -77,3 +77,15 @@ export interface SplitItem {
   amount: string;
   category: string | null;
 }
+
+/** Body for POST /api/transactions/ */
+export interface CreateTransactionPayload {
+  description: string;
+  amount: string;
+  currency: string;
+  direction: Direction;
+  transaction_type: TransactionType;
+  source: Source;
+  category?: string | null;
+  created_at?: string;
+}

@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import type {
   Category,
+  CreateTransactionPayload,
   PaginatedResponse,
   SplitItem,
   Transaction,
@@ -44,6 +45,13 @@ export class TransactionService {
   /** Categories list is unpaginated on the backend (no pagination class on `CategoryViewSet`). */
   getCategories(): Observable<Category[]> {
     return this.http.get<Category[]>(`${environment.apiUrl}/api/categories/`);
+  }
+
+  createTransaction(payload: CreateTransactionPayload): Observable<Transaction> {
+    return this.http.post<Transaction>(
+      `${environment.apiUrl}/api/transactions/`,
+      payload,
+    );
   }
 
   splitTransaction(id: string, items: SplitItem[]): Observable<Transaction[]> {
