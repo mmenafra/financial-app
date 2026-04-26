@@ -1,0 +1,83 @@
+// Transactions page. Global tokens live in src/tailwind.css.
+
+.tx-select {
+  @apply rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm font-semibold text-on-surface shadow-sm min-w-[8.5rem];
+}
+
+.tx-filter-btn {
+  @apply inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-sm font-bold text-primary shadow-sm transition-colors hover:bg-surface-container;
+}
+
+.tx-pill-btn {
+  @apply rounded-xl px-4 py-2.5 text-sm font-bold bg-primary text-on-primary transition-opacity hover:opacity-90;
+
+  &.ghost {
+    @apply bg-transparent text-primary border border-outline-variant;
+  }
+}
+
+.tx-summary-label {
+  @apply text-xs font-bold uppercase tracking-widest text-on-surface-variant;
+}
+
+.tx-summary-amount {
+  @apply text-4xl font-extrabold text-primary tracking-tight;
+}
+
+.tx-trend-down {
+  @apply text-green-700;
+}
+
+.tx-trend-up {
+  @apply text-red-700;
+}
+
+.tx-table {
+  th {
+    @apply px-6 py-3 text-xs font-bold uppercase tracking-wider text-on-surface-variant bg-surface-container/50 border-b border-outline-variant/40;
+  }
+
+  td {
+    @apply px-6 py-4 text-sm border-b border-outline-variant/30 align-middle;
+  }
+
+  tbody tr:hover td {
+    @apply bg-surface-container/30;
+  }
+}
+
+.tx-page {
+  @apply inline-flex items-center justify-center min-w-[2.25rem] h-9 rounded-lg border border-outline-variant/70 bg-surface text-on-surface font-semibold text-sm transition-colors hover:bg-surface-container disabled:opacity-40 disabled:pointer-events-none;
+
+  &.num.active {
+    @apply bg-primary-container text-on-primary border-primary-container;
+  }
+}
+
+.tx-chip {
+  border-width: 1px;
+}
+
+.tx-menu-btn {
+  @apply inline-flex items-center justify-center w-8 h-8 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors;
+}
+
+.tx-dropdown {
+  @apply absolute right-2 top-full mt-1 z-20 min-w-[8rem] rounded-xl border border-outline-variant bg-surface-container-lowest shadow-lg py-1;
+}
+
+.tx-dropdown-item {
+  @apply flex w-full items-center gap-2 px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container transition-colors;
+
+  &--danger {
+    @apply text-red-600 hover:bg-red-50;
+  }
+}
+
+.amount-income {
+  @apply text-green-700;
+}
+
+.amount-expense {
+  @apply text-primary;
+}
