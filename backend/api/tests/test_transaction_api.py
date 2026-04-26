@@ -16,6 +16,7 @@ from api.models import (
     TransactionStatus,
     TransactionType,
 )
+from api.pagination import TransactionPagination
 
 User = get_user_model()
 
@@ -102,8 +103,9 @@ class TransactionAPITests(APITestCase):
         response = self.client.get(self.list_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["id"], str(own.id))
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["id"], str(own.id))
 
     def test_cannot_create_transaction_with_other_users_category(self):
         self.client.force_authenticate(user=self.user)
@@ -146,7 +148,9 @@ class TransactionAPITests(APITestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.list_url, {"year": 2026})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual({row["id"] for row in response.data}, {str(b.id)})
+        self.assertEqual(
+            {row["id"] for row in response.data["results"]}, {str(b.id)}
+        )
 
     def test_list_filter_by_year_and_month(self):
         m3 = self._create_tx(self.user, description="March")
@@ -163,7 +167,9 @@ class TransactionAPITests(APITestCase):
             self.list_url, {"year": 2025, "month": 3}
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual({row["id"] for row in response.data}, {str(m3.id)})
+        self.assertEqual(
+            {row["id"] for row in response.data["results"]}, {str(m3.id)}
+        )
 
     def test_list_month_without_year_returns_400(self):
         self.client.force_authenticate(user=self.user)
@@ -181,8 +187,12 @@ class TransactionAPITests(APITestCase):
             self.list_url, {"category": str(self.category.id)}
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual({row["id"] for row in response.data}, {str(t1.id)})
-        self.assertNotIn(str(t2.id), {row["id"] for row in response.data})
+        self.assertEqual(
+            {row["id"] for row in response.data["results"]}, {str(t1.id)}
+        )
+        self.assertNotIn(
+            str(t2.id), {row["id"] for row in response.data["results"]}
+        )
 
     def test_list_filter_by_category_not_owned_returns_400(self):
         self._create_tx(self.user)
@@ -206,7 +216,9 @@ class TransactionAPITests(APITestCase):
             self.list_url, {"source": Source.MERCADOPAGO}
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual({row["id"] for row in response.data}, {str(mp.id)})
+        self.assertEqual(
+            {row["id"] for row in response.data["results"]}, {str(mp.id)}
+        )
 
     def test_list_invalid_source_returns_400(self):
         self._create_tx(self.user)
@@ -242,7 +254,47 @@ class TransactionAPITests(APITestCase):
             self.list_url, {"year": 2025, "source": Source.MERCADOPAGO}
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual({row["id"] for row in response.data}, {str(match.id)})
+        self.assertEqual(
+            {row["id"] for row in response.data["results"]}, {str(match.id)}
+        )
+
+    def test_list_pagination_default_page_size(self):
+        for i in range(TransactionPagination.page_size + 1):
+            self._create_tx(self.user, description=f"T{i}")
+        self.client.force_authenticate(user=self.user)
+        r1 = self.client.get(self.list_url)
+        self.assertEqual(r1.status_code, status.HTTP_200_OK)
+        self.assertEqual(r1.data["count"], TransactionPagination.page_size + 1)
+        self.assertEqual(len(r1.data["results"]), TransactionPagination.page_size)
+        self.assertIsNotNone(r1.data.get("next"))
+
+    def test_list_pagination_page_two(self):
+        n = TransactionPagination.page_size + 1
+        for i in range(n):
+            self._create_tx(self.user, description=f"T{i}")
+        self.client.force_authenticate(user=self.user)
+        r2 = self.client.get(
+            self.list_url,
+            {"page": 2, "page_size": TransactionPagination.page_size},
+        )
+        self.assertEqual(r2.status_code, status.HTTP_200_OK)
+        self.assertEqual(r2.data["count"], n)
+        self.assertEqual(len(r2.data["results"]), 1)
+        self.assertIsNone(r2.data.get("next"))
+
+    def test_list_pagination_page_size_clamped_to_max(self):
+        total = TransactionPagination.max_page_size + 1
+        for i in range(total):
+            self._create_tx(self.user, description=f"T{i}")
+        self.client.force_authenticate(user=self.user)
+        r = self.client.get(
+            self.list_url, {"page_size": TransactionPagination.max_page_size * 2}
+        )
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data["count"], total)
+        self.assertEqual(
+            len(r.data["results"]), TransactionPagination.max_page_size
+        )
 
     def test_retrieve_ignores_list_query_params(self):
         t = self._create_tx(self.user)

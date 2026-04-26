@@ -1,0 +1,11 @@
+:host {
+  display: block;
+}
+
+.nav-item-active {
+  @apply bg-surface-container-lowest text-primary shadow-sm;
+}
+
+.nav-item-active .material-symbols-outlined {
+  font-variation-settings: 'FILL' 1;
+}

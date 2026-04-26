@@ -31,6 +31,7 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
 from .bank_statement_parser import parse_bsa_bank_statement
 from .models import Category, RecurringPattern, SocialAccount, Source, Transaction
+from .pagination import TransactionPagination
 from .serializers import (
     CategorySerializer,
     ForgotPasswordSerializer,
@@ -693,12 +694,32 @@ def _filter_transactions_list_queryset(qs, query_params, user):
                 enum=_SOURCE_QUERY_ENUM,
                 examples=[OpenApiExample("Mercado Pago", value=Source.MERCADOPAGO.value)],
             ),
+            OpenApiParameter(
+                name="page",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Page number (1-based).",
+                examples=[OpenApiExample("First page", value=1)],
+            ),
+            OpenApiParameter(
+                name="page_size",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description=(
+                    "Number of results per page. "
+                    "Capped at the API maximum (e.g. 100)."
+                ),
+                examples=[OpenApiExample("Default size", value=20)],
+            ),
         ],
     ),
 )
 class TransactionViewSet(ModelViewSet):
     serializer_class = TransactionSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = TransactionPagination
 
     def get_queryset(self):
         qs = Transaction.objects.filter(user=self.request.user)

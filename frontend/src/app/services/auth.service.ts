@@ -71,6 +71,10 @@ export class AuthService {
     sessionStorage.removeItem(REFRESH_KEY);
   }
 
+  signOut(): void {
+    this.clearTokens();
+  }
+
   getAccessToken(): string | null {
     return sessionStorage.getItem(ACCESS_KEY) ?? localStorage.getItem(ACCESS_KEY);
   }

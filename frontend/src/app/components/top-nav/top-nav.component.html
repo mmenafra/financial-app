@@ -1,0 +1,61 @@
+<header
+  class="top-nav flex items-center justify-between gap-4 px-8 py-5 bg-surface border-b border-surface-container-high shrink-0"
+>
+  <h1 class="text-lg font-semibold text-primary tracking-tight m-0 font-headline">
+    {{ pageTitle() }}
+  </h1>
+
+  <div class="flex items-center gap-2">
+    <button
+      type="button"
+      class="icon-btn p-2 rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors"
+      aria-label="Notifications"
+    >
+      <span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 0"
+        >notifications</span
+      >
+    </button>
+    <button
+      type="button"
+      class="icon-btn p-2 rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors"
+      aria-label="Settings"
+    >
+      <span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 0"
+        >settings</span
+      >
+    </button>
+
+    <div class="relative pl-1" #userMenuRoot>
+      <button
+        type="button"
+        class="avatar-btn flex items-center justify-center w-10 h-10 rounded-full bg-primary-container text-secondary-fixed border-2 border-surface-container-high overflow-hidden shrink-0"
+        [attr.aria-expanded]="menuOpen()"
+        aria-haspopup="true"
+        aria-label="Account menu"
+        (click)="toggleUserMenu($event)"
+      >
+        <span
+          class="material-symbols-outlined text-[26px]"
+          style="font-variation-settings: 'FILL' 1"
+          >person</span
+        >
+      </button>
+
+      @if (menuOpen()) {
+        <div
+          class="user-menu absolute right-0 top-full mt-2 min-w-[11rem] py-1 rounded-xl bg-surface-container-lowest border border-outline-variant shadow-lg z-50"
+          role="menu"
+        >
+          <button
+            type="button"
+            class="w-full text-left px-4 py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container transition-colors"
+            role="menuitem"
+            (click)="signOut()"
+          >
+            Sign out
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+</header>

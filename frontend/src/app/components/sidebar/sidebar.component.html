@@ -1,0 +1,64 @@
+<aside class="sidebar flex flex-col w-56 shrink-0 bg-surface-container-low min-h-screen py-8 px-4">
+  <a routerLink="/dashboard" class="flex items-center gap-2 mb-10 px-2">
+    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shrink-0">
+      <span
+        class="material-symbols-outlined text-secondary-fixed text-2xl"
+        style="font-variation-settings: 'FILL' 1"
+        >account_balance</span
+      >
+    </div>
+    <span class="text-xl font-extrabold tracking-tight text-primary">LedgerArch</span>
+  </a>
+
+  <nav class="flex flex-col gap-1" aria-label="Main">
+    <a
+      routerLink="/dashboard"
+      routerLinkActive="nav-item-active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="nav-item flex items-center gap-3 rounded-xl px-3 py-2.5 text-on-surface-variant font-semibold text-sm transition-colors hover:text-primary"
+    >
+      <span
+        class="material-symbols-outlined text-[22px] shrink-0"
+        style="font-variation-settings: 'FILL' 0"
+        >dashboard</span
+      >
+      Dashboard
+    </a>
+    <a
+      routerLink="/connections"
+      routerLinkActive="nav-item-active"
+      class="nav-item flex items-center gap-3 rounded-xl px-3 py-2.5 text-on-surface-variant font-semibold text-sm transition-colors hover:text-primary"
+    >
+      <span
+        class="material-symbols-outlined text-[22px] shrink-0"
+        style="font-variation-settings: 'FILL' 0"
+        >hub</span
+      >
+      Connections
+    </a>
+    <a
+      routerLink="/transactions"
+      routerLinkActive="nav-item-active"
+      class="nav-item flex items-center gap-3 rounded-xl px-3 py-2.5 text-on-surface-variant font-semibold text-sm transition-colors hover:text-primary"
+    >
+      <span
+        class="material-symbols-outlined text-[22px] shrink-0"
+        style="font-variation-settings: 'FILL' 0"
+        >receipt_long</span
+      >
+      Transactions
+    </a>
+    <a
+      routerLink="/projections"
+      routerLinkActive="nav-item-active"
+      class="nav-item flex items-center gap-3 rounded-xl px-3 py-2.5 text-on-surface-variant font-semibold text-sm transition-colors hover:text-primary"
+    >
+      <span
+        class="material-symbols-outlined text-[22px] shrink-0"
+        style="font-variation-settings: 'FILL' 0"
+        >trending_up</span
+      >
+      Projections
+    </a>
+  </nav>
+</aside>
