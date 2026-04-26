@@ -1,16 +1,20 @@
 import logging
 import os
 
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
+    OpenApiParameter,
     OpenApiRequest,
     OpenApiResponse,
     extend_schema,
+    extend_schema_view,
     inline_serializer,
 )
 from google.auth.transport import requests as google_auth_requests
 from google.oauth2 import id_token as google_id_token
 from rest_framework import serializers, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -26,7 +30,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
 from .bank_statement_parser import parse_bsa_bank_statement
-from .models import Category, RecurringPattern, SocialAccount, Transaction
+from .models import Category, RecurringPattern, SocialAccount, Source, Transaction
 from .serializers import (
     CategorySerializer,
     ForgotPasswordSerializer,
@@ -571,12 +575,138 @@ class CategoryViewSet(ModelViewSet):
         serializer.save(user=self.request.user)
 
 
+_SOURCE_QUERY_ENUM = [choice.value for choice in Source]
+
+
+def _query_param_non_empty(raw):
+    return raw is not None and str(raw).strip() != ""
+
+
+def _apply_transaction_year_filter(qs, year_raw):
+    if not _query_param_non_empty(year_raw):
+        return qs
+    try:
+        year = int(year_raw)
+    except (TypeError, ValueError) as err:
+        raise ValidationError(
+            {"year": "Must be a valid integer."}
+        ) from err
+    if year < 1 or year > 9999:
+        raise ValidationError({"year": "Invalid year."})
+    return qs.filter(created_at__year=year)
+
+
+def _apply_transaction_month_filter(qs, month_raw):
+    if not _query_param_non_empty(month_raw):
+        return qs
+    try:
+        month = int(month_raw)
+    except (TypeError, ValueError) as err:
+        raise ValidationError(
+            {"month": "Must be a valid integer."}
+        ) from err
+    if month < 1 or month > 12:
+        raise ValidationError({"month": "Must be between 1 and 12."})
+    return qs.filter(created_at__month=month)
+
+
+def _apply_transaction_category_filter(qs, category_id, user):
+    if not _query_param_non_empty(category_id):
+        return qs
+    if not Category.objects.filter(pk=category_id, user=user).exists():
+        raise ValidationError(
+            {"category": "Category must belong to the authenticated user."}
+        )
+    return qs.filter(category_id=category_id)
+
+
+def _apply_transaction_source_filter(qs, source_raw):
+    if not _query_param_non_empty(source_raw):
+        return qs
+    if source_raw not in _SOURCE_QUERY_ENUM:
+        raise ValidationError(
+            {
+                "source": (
+                    "Invalid source. Must be one of: "
+                    f"{', '.join(_SOURCE_QUERY_ENUM)}."
+                )
+            }
+        )
+    return qs.filter(source=source_raw)
+
+
+def _filter_transactions_list_queryset(qs, query_params, user):
+    """Apply optional GET /transactions/ filters. Raises ValidationError if invalid."""
+    year_raw = query_params.get("year")
+    month_raw = query_params.get("month")
+    if _query_param_non_empty(month_raw) and not _query_param_non_empty(year_raw):
+        raise ValidationError(
+            {"month": "year is required when month is provided."}
+        )
+    qs = _apply_transaction_year_filter(qs, year_raw)
+    qs = _apply_transaction_month_filter(qs, month_raw)
+    qs = _apply_transaction_category_filter(
+        qs, query_params.get("category"), user
+    )
+    qs = _apply_transaction_source_filter(qs, query_params.get("source"))
+    return qs
+
+
+@extend_schema_view(
+    list=extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="year",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description=(
+                    "Filter by calendar year of `created_at` (UTC). "
+                    "Use together with `month` to restrict to a single month."
+                ),
+                examples=[OpenApiExample("Current year", value=2026)],
+            ),
+            OpenApiParameter(
+                name="month",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description=(
+                    "Filter by calendar month (1–12) of `created_at` (UTC). "
+                    "Requires `year` to be set."
+                ),
+                examples=[OpenApiExample("April", value=4)],
+            ),
+            OpenApiParameter(
+                name="category",
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Filter by category id (must be one of your categories).",
+            ),
+            OpenApiParameter(
+                name="source",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Filter by transaction source.",
+                enum=_SOURCE_QUERY_ENUM,
+                examples=[OpenApiExample("Mercado Pago", value=Source.MERCADOPAGO.value)],
+            ),
+        ],
+    ),
+)
 class TransactionViewSet(ModelViewSet):
     serializer_class = TransactionSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Transaction.objects.filter(user=self.request.user)
+        qs = Transaction.objects.filter(user=self.request.user)
+        if self.action != "list":
+            return qs
+        return _filter_transactions_list_queryset(
+            qs, self.request.query_params, self.request.user
+        )
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
