@@ -113,6 +113,10 @@ class TransactionQuerySet(models.QuerySet):
     def installments_pending(self):
         return self.filter(is_installment=True, status=TransactionStatus.CONFIRMED)
 
+    def leaf_only(self):
+        """Exclude bundle transactions that have been split into children."""
+        return self.filter(splits__isnull=True)
+
 
 class TransactionManager(models.Manager):
     def get_queryset(self):
@@ -180,6 +184,13 @@ class Transaction(AbstractBaseModel):
         max_length=10,
         choices=TransactionStatus.choices,
         default=TransactionStatus.PENDING,
+    )
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="splits",
     )
 
     objects = TransactionManager()

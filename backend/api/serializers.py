@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from decimal import Decimal
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 
@@ -93,6 +95,8 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class TransactionSerializer(serializers.ModelSerializer):
+    splits = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+
     class Meta:
         model = Transaction
         fields = (
@@ -120,8 +124,10 @@ class TransactionSerializer(serializers.ModelSerializer):
             "raw_data",
             "imported_at",
             "status",
+            "parent",
+            "splits",
         )
-        read_only_fields = ("id", "created_at", "updated_at", "user")
+        read_only_fields = ("id", "created_at", "updated_at", "user", "splits")
 
     def validate_category(self, value):
         request = self.context.get("request")
@@ -130,6 +136,32 @@ class TransactionSerializer(serializers.ModelSerializer):
                 "Category must belong to the authenticated user."
             )
         return value
+
+    def validate_parent(self, value):
+        if value is None:
+            return value
+        request = self.context.get("request")
+        if request and value.user_id != request.user.id:
+            raise serializers.ValidationError(
+                "Parent transaction must belong to the authenticated user."
+            )
+        if value.parent_id is not None:
+            raise serializers.ValidationError(
+                "Parent must be a top-level transaction (not a split line)."
+            )
+        return value
+
+
+class TransactionSplitItemSerializer(serializers.Serializer):
+    description = serializers.CharField(max_length=255)
+    amount = serializers.DecimalField(
+        max_digits=12, decimal_places=2, min_value=Decimal("0.01")
+    )
+    category = serializers.UUIDField(allow_null=True, required=False)
+
+
+class TransactionSplitRequestSerializer(serializers.Serializer):
+    items = TransactionSplitItemSerializer(many=True)
 
 
 class RecurringPatternSerializer(serializers.ModelSerializer):

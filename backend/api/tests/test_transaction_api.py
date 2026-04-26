@@ -306,3 +306,96 @@ class TransactionAPITests(APITestCase):
         response = self.client.get(detail_url, {"year": 1990})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["id"], str(t.id))
+
+    def test_list_excludes_bundle_with_splits(self):
+        """Bundles that were split are hidden; children appear in the list."""
+        bundle = Transaction.objects.create(
+            user=self.user,
+            description="Utilities bundle",
+            amount=Decimal("10.00"),
+            currency="CLP",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.BANK_ACCOUNT,
+            status=TransactionStatus.CONFIRMED,
+        )
+        child1 = Transaction.objects.create(
+            user=self.user,
+            description="Electric",
+            amount=Decimal("4.00"),
+            currency="CLP",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.BANK_ACCOUNT,
+            status=TransactionStatus.CONFIRMED,
+            parent=bundle,
+            category=self.category,
+        )
+        child2 = Transaction.objects.create(
+            user=self.user,
+            description="Water",
+            amount=Decimal("6.00"),
+            currency="CLP",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.BANK_ACCOUNT,
+            status=TransactionStatus.CONFIRMED,
+            parent=bundle,
+        )
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = {row["id"] for row in response.data["results"]}
+        self.assertNotIn(str(bundle.id), ids)
+        self.assertIn(str(child1.id), ids)
+        self.assertIn(str(child2.id), ids)
+
+    def test_split_creates_children_and_sums(self):
+        bundle = self._create_tx(
+            self.user, description="Bill", source=Source.MERCADOPAGO
+        )
+        bundle.amount = Decimal("100.00")
+        bundle.save()
+        self.client.force_authenticate(user=self.user)
+        url = reverse("transaction-split", args=[bundle.id])
+        body = {
+            "items": [
+                {
+                    "description": "A",
+                    "amount": "40.00",
+                    "category": str(self.category.id),
+                },
+                {
+                    "description": "B",
+                    "amount": "60.00",
+                    "category": None,
+                },
+            ],
+        }
+        r = self.client.post(url, body, format="json")
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(r.data), 2)
+        self.assertEqual(str(r.data[0]["parent"]), str(bundle.id))
+        self.assertEqual(r.data[0]["description"], "A")
+        self.assertEqual(r.data[1]["description"], "B")
+
+        list_r = self.client.get(self.list_url)
+        self.assertEqual(list_r.status_code, status.HTTP_200_OK)
+        listed = {row["id"] for row in list_r.data["results"]}
+        self.assertNotIn(str(bundle.id), listed)
+
+    def test_split_rejects_wrong_sum(self):
+        bundle = self._create_tx(self.user, description="B")
+        bundle.amount = Decimal("10.00")
+        bundle.save()
+        self.client.force_authenticate(user=self.user)
+        url = reverse("transaction-split", args=[bundle.id])
+        body = {
+            "items": [
+                {"description": "A", "amount": "4.00", "category": None},
+                {"description": "B", "amount": "5.00", "category": None},
+            ],
+        }
+        r = self.client.post(url, body, format="json")
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)

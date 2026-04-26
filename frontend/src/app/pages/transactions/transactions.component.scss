@@ -86,3 +86,23 @@
 .amount-expense {
   @apply text-primary;
 }
+
+.tx-modal-backdrop {
+  @apply fixed inset-0 z-40 bg-black/40;
+}
+
+.tx-modal {
+  @apply fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[min(100%-2rem,28rem)] max-h-[min(100vh-2rem,90vh)] overflow-y-auto rounded-3xl border border-outline-variant/60 bg-surface-container-lowest p-6 shadow-xl;
+
+  &--wide {
+    @apply w-[min(100%-2rem,40rem)];
+  }
+}
+
+.tx-input {
+  @apply w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm font-semibold text-on-surface shadow-sm;
+}
+
+.tx-split-badge {
+  border-width: 1px;
+}

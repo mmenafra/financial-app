@@ -24,6 +24,10 @@ export interface Transaction {
   raw_data: Record<string, unknown> | null;
   imported_at: string | null;
   status: TransactionStatus;
+  /** Set when this row is a split line; the bundle is not listed. */
+  parent: string | null;
+  /** IDs of child split lines; empty unless this is a bundle (bundles are hidden from list). */
+  splits: string[];
 }
 
 export type TransactionType = 'DEBIT' | 'CREDIT' | 'TRANSFER';
@@ -65,4 +69,11 @@ export interface TransactionFilters {
   source?: Source;
   page?: number;
   pageSize?: number;
+}
+
+/** Body for POST /api/transactions/:id/split/ */
+export interface SplitItem {
+  description: string;
+  amount: string;
+  category: string | null;
 }

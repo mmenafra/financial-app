@@ -6,6 +6,7 @@ import { environment } from '../../environments/environment';
 import type {
   Category,
   PaginatedResponse,
+  SplitItem,
   Transaction,
   TransactionFilters,
 } from '../models/transaction.model';
@@ -43,5 +44,12 @@ export class TransactionService {
   /** Categories list is unpaginated on the backend (no pagination class on `CategoryViewSet`). */
   getCategories(): Observable<Category[]> {
     return this.http.get<Category[]>(`${environment.apiUrl}/api/categories/`);
+  }
+
+  splitTransaction(id: string, items: SplitItem[]): Observable<Transaction[]> {
+    return this.http.post<Transaction[]>(
+      `${environment.apiUrl}/api/transactions/${id}/split/`,
+      { items },
+    );
   }
 }

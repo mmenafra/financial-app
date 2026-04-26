@@ -157,6 +157,12 @@
                             >{{ categoryIcon(t) }}</span
                           >
                           <span class="font-semibold text-on-surface">{{ t.description }}</span>
+                          @if (t.parent) {
+                            <span
+                              class="tx-split-badge inline-flex items-center rounded-full border border-outline-variant/60 bg-surface-container px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant shrink-0"
+                              >Split</span
+                            >
+                          }
                         </div>
                       </td>
                       <td>
@@ -202,6 +208,21 @@
                               >
                               Edit
                             </button>
+                            @if (!t.parent) {
+                              <button
+                                type="button"
+                                class="tx-dropdown-item"
+                                role="menuitem"
+                                (click)="onSplit(t, $event)"
+                              >
+                                <span
+                                  class="material-symbols-outlined text-[16px]"
+                                  style="font-variation-settings: 'FILL' 0"
+                                  >call_split</span
+                                >
+                                Split
+                              </button>
+                            }
                             <button
                               type="button"
                               class="tx-dropdown-item tx-dropdown-item--danger"
@@ -277,3 +298,117 @@
     </main>
   </div>
 </div>
+
+@if (splitModalOpen() && pendingSplit(); as bundle) {
+    <div
+      class="tx-modal-backdrop"
+      role="button"
+      tabindex="0"
+      aria-label="Close dialog"
+      (click)="!splitSubmitting() && closeSplitModal()"
+      (keydown.enter)="!splitSubmitting() && closeSplitModal()"
+      (keydown.space)="$event.preventDefault(); !splitSubmitting() && closeSplitModal()"
+    ></div>
+    <div class="tx-modal tx-modal--wide" role="dialog" aria-modal="true" aria-labelledby="tx-split-title">
+      <h2 id="tx-split-title" class="text-xl font-extrabold text-primary m-0 font-headline">
+        Split transaction: <span class="text-on-surface font-bold">{{ bundle.description }}</span>
+      </h2>
+      <p class="text-sm text-on-surface-variant font-semibold m-0 mt-2">
+        Original amount:
+        <span class="text-on-surface">{{ formatMoney(bundle.amount, bundle.currency) }}</span>
+        — split lines must add up to this total exactly.
+      </p>
+      <form class="mt-4 flex flex-col gap-3" [formGroup]="splitForm" (ngSubmit)="confirmSplit()">
+        <div class="flex flex-col gap-3" formArrayName="rows">
+          @for (ctrl of splitRows.controls; track $index) {
+            <div
+              class="rounded-2xl border border-outline-variant/60 bg-surface-container/30 p-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end"
+              [formGroup]="$any(ctrl)"
+            >
+              <div class="flex flex-col gap-1 flex-1 min-w-[8rem]">
+                <label class="text-xs font-semibold text-on-surface-variant" [attr.for]="'tx-split-desc-' + $index"
+                  >Description</label
+                >
+                <input
+                  [id]="'tx-split-desc-' + $index"
+                  type="text"
+                  class="tx-input"
+                  formControlName="description"
+                  autocomplete="off"
+                  placeholder="e.g. Electric"
+                />
+              </div>
+              <div class="flex flex-col gap-1 w-full sm:w-28">
+                <label class="text-xs font-semibold text-on-surface-variant" [attr.for]="'tx-split-amt-' + $index"
+                  >Amount</label
+                >
+                <input
+                  [id]="'tx-split-amt-' + $index"
+                  type="text"
+                  inputmode="decimal"
+                  class="tx-input"
+                  formControlName="amount"
+                  autocomplete="off"
+                  placeholder="0.00"
+                />
+              </div>
+              <div class="flex flex-col gap-1 flex-1 min-w-[8rem]">
+                <label class="text-xs font-semibold text-on-surface-variant" [attr.for]="'tx-split-cat-' + $index"
+                  >Category</label
+                >
+                <select [id]="'tx-split-cat-' + $index" class="tx-input" formControlName="category">
+                  <option [ngValue]="null">Uncategorized</option>
+                  @for (c of categories(); track c.id) {
+                    <option [ngValue]="c.id">{{ c.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="flex gap-1 justify-end sm:pb-0.5">
+                @if (splitRows.length > 2) {
+                  <button
+                    type="button"
+                    class="tx-pill-btn ghost text-sm py-2"
+                    (click)="removeSplitRow($index)"
+                    [disabled]="splitSubmitting()"
+                  >
+                    Remove
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+          <button
+            type="button"
+            class="tx-pill-btn ghost"
+            (click)="addSplitRow()"
+            [disabled]="splitSubmitting()"
+          >
+            <span class="material-symbols-outlined text-[18px]">add</span>
+            Add line
+          </button>
+          <p class="m-0 text-sm font-bold" [class.text-red-600]="!splitAmountsMatchTarget()" [class.text-on-surface]="splitAmountsMatchTarget()">
+            Total:
+            {{ formatMoney(splitRowsTotal().toFixed(2), bundle.currency) }}
+            / {{ formatMoney(bundle.amount, bundle.currency) }}
+          </p>
+        </div>
+        @if (splitError()) {
+          <p class="text-sm font-semibold text-red-600 m-0">{{ splitError() }}</p>
+        }
+        <div class="flex flex-wrap gap-2 justify-end pt-2">
+          <button type="button" class="tx-pill-btn ghost" (click)="closeSplitModal()" [disabled]="splitSubmitting()">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="tx-pill-btn"
+            [disabled]="splitSubmitting() || !canSubmitSplit()"
+          >
+            {{ splitSubmitting() ? 'Splitting…' : 'Confirm split' }}
+          </button>
+        </div>
+      </form>
+    </div>
+}

@@ -113,6 +113,8 @@ function tx(
     raw_data: partial.raw_data ?? null,
     imported_at: partial.imported_at ?? createdAt,
     status: (partial.status as TransactionStatus | undefined) ?? 'CONFIRMED',
+    parent: partial.parent ?? null,
+    splits: partial.splits ?? [],
   };
 }
 

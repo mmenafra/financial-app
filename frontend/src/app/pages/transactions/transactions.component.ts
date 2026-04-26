@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, DestroyRef, HostListener, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
@@ -15,13 +16,22 @@ const AGG_PAGE_SIZE = 100;
 @Component({
   selector: 'app-transactions',
   standalone: true,
-  imports: [CommonModule, SidebarComponent, TopNavComponent],
+  imports: [CommonModule, ReactiveFormsModule, SidebarComponent, TopNavComponent],
   templateUrl: './transactions.component.html',
   styleUrl: './transactions.component.scss',
 })
 export class TransactionsComponent {
   private readonly transactionService = inject(TransactionService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly fb = inject(FormBuilder);
+
+  private createSplitRow(): FormGroup {
+    return this.fb.group({
+      description: ['', [Validators.required, Validators.maxLength(255)]],
+      amount: ['', [Validators.required]],
+      category: [null as string | null],
+    });
+  }
 
   protected readonly pageSize = PAGE_SIZE;
   protected readonly connectedSources = CONNECTED_SOURCES;
@@ -41,6 +51,15 @@ export class TransactionsComponent {
   protected readonly filterSource = signal<Source | undefined>(undefined);
 
   protected readonly openMenuId = signal<string | null>(null);
+
+  protected readonly splitModalOpen = signal(false);
+  protected readonly splitSubmitting = signal(false);
+  protected readonly splitError = signal<string | null>(null);
+  protected readonly pendingSplit = signal<Transaction | null>(null);
+
+  protected readonly splitForm = this.fb.group({
+    rows: this.fb.array([this.createSplitRow(), this.createSplitRow()]),
+  });
 
   protected readonly totalSpentThisMonth = signal(0);
   protected readonly trendVsPrevMonthPct = signal<number | null>(null);
@@ -325,6 +344,121 @@ export class TransactionsComponent {
     console.log('Delete', t);
   }
 
+  protected onSplit(t: Transaction, event: MouseEvent): void {
+    event.stopPropagation();
+    this.openMenuId.set(null);
+    this.openSplitModal(t);
+  }
+
+  protected openSplitModal(t: Transaction): void {
+    this.splitError.set(null);
+    this.pendingSplit.set(t);
+    this.splitForm.setControl('rows', this.fb.array([this.createSplitRow(), this.createSplitRow()]));
+    this.splitModalOpen.set(true);
+  }
+
+  protected closeSplitModal(): void {
+    this.splitModalOpen.set(false);
+    this.pendingSplit.set(null);
+    this.splitError.set(null);
+  }
+
+  protected get splitRows(): FormArray {
+    return this.splitForm.get('rows') as FormArray;
+  }
+
+  protected addSplitRow(): void {
+    this.splitRows.push(this.createSplitRow());
+  }
+
+  protected removeSplitRow(index: number): void {
+    if (this.splitRows.length <= 2) {
+      return;
+    }
+    this.splitRows.removeAt(index);
+  }
+
+  protected splitRowsTotal(): number {
+    let sum = 0;
+    for (const ctrl of this.splitRows.controls) {
+      const g = ctrl as FormGroup;
+      const raw = (g.get('amount')?.value as string | number | null | undefined) ?? '';
+      const n = parseAmount(String(raw).trim());
+      if (n !== null) {
+        sum += n;
+      }
+    }
+    return sum;
+  }
+
+  protected splitAmountsMatchTarget(): boolean {
+    const p = this.pendingSplit();
+    if (!p) {
+      return false;
+    }
+    const target = round2(Number(p.amount));
+    return Math.abs(this.splitRowsTotal() - target) < 0.0001;
+  }
+
+  protected canSubmitSplit(): boolean {
+    if (!this.pendingSplit() || this.splitSubmitting()) {
+      return false;
+    }
+    if (!this.splitAmountsMatchTarget()) {
+      return false;
+    }
+    for (const ctrl of this.splitRows.controls) {
+      const g = ctrl as FormGroup;
+      if (g.invalid) {
+        return false;
+      }
+    }
+    return this.splitRows.length >= 2;
+  }
+
+  protected confirmSplit(): void {
+    const bundle = this.pendingSplit();
+    if (!bundle) {
+      return;
+    }
+    this.splitForm.markAllAsTouched();
+    if (!this.canSubmitSplit()) {
+      this.splitError.set('Check all fields; amounts must sum to the original total.');
+      return;
+    }
+    this.splitError.set(null);
+    this.splitSubmitting.set(true);
+    const items = this.splitRows.controls.map((ctrl) => {
+      const g = ctrl as FormGroup;
+      const desc = String(g.get('description')?.value ?? '').trim();
+      const amountNum = round2(
+        parseAmount(String(g.get('amount')?.value ?? '').trim()) ?? 0,
+      );
+      const catRaw = g.get('category')?.value;
+      const category =
+        catRaw === null || catRaw === undefined || catRaw === '' ? null : String(catRaw);
+      return {
+        description: desc,
+        amount: amountNum.toFixed(2),
+        category,
+      };
+    });
+    this.transactionService
+      .splitTransaction(bundle.id, items)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.splitSubmitting.set(false);
+          this.closeSplitModal();
+          this.reload();
+        },
+        error: (err: unknown) => {
+          this.splitSubmitting.set(false);
+          this.splitError.set(this.httpErrorMessage(err) ?? 'Could not split transaction.');
+        },
+      });
+  }
+
   protected trendText(): string {
     const pct = this.trendVsPrevMonthPct();
     const less = this.trendSpentLess();
@@ -339,10 +473,50 @@ export class TransactionsComponent {
     }
     return `${pct}% more than last month`;
   }
+
+  private httpErrorMessage(err: unknown): string | null {
+    if (err && typeof err === 'object' && 'error' in err) {
+      const e = (err as { error?: unknown }).error;
+      if (typeof e === 'string' && e) {
+        return e;
+      }
+      if (e && typeof e === 'object' && 'detail' in e) {
+        const d = (e as { detail?: unknown }).detail;
+        if (typeof d === 'string') {
+          return d;
+        }
+      }
+      if (e && typeof e === 'object' && 'items' in e) {
+        const it = (e as { items?: unknown }).items;
+        if (typeof it === 'string') {
+          return it;
+        }
+        if (Array.isArray(it) && it.length > 0 && typeof it[0] === 'string') {
+          return it[0] as string;
+        }
+      }
+    }
+    return null;
+  }
 }
 
 function sumExpenses(rows: Transaction[]): number {
   return rows
     .filter((t) => t.direction === 'EXPENSE')
     .reduce((acc, t) => acc + Number(t.amount), 0);
+}
+
+function parseAmount(s: string): number | null {
+  if (!s) {
+    return null;
+  }
+  const n = Number(s);
+  if (Number.isNaN(n) || n <= 0) {
+    return null;
+  }
+  return n;
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
 }

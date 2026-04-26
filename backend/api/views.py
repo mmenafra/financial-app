@@ -1,5 +1,6 @@
 import logging
 import os
+from decimal import Decimal
 
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
@@ -14,6 +15,7 @@ from drf_spectacular.utils import (
 from google.auth.transport import requests as google_auth_requests
 from google.oauth2 import id_token as google_id_token
 from rest_framework import serializers, status
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -24,6 +26,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
+from django.db import transaction as db_transaction
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.utils.encoding import force_bytes, force_str
@@ -44,6 +47,7 @@ from .serializers import (
     SignInSerializer,
     SignUpSerializer,
     TransactionSerializer,
+    TransactionSplitRequestSerializer,
 )
 from .visa_internacional_parser import parse_visa_internacional_statement_pdf
 from .visa_nacional_parser import parse_visa_nacional_statement_pdf
@@ -725,9 +729,87 @@ class TransactionViewSet(ModelViewSet):
         qs = Transaction.objects.filter(user=self.request.user)
         if self.action != "list":
             return qs
+        qs = qs.filter(splits__isnull=True)
         return _filter_transactions_list_queryset(
             qs, self.request.query_params, self.request.user
         )
+
+    @extend_schema(
+        request=TransactionSplitRequestSerializer,
+        responses={201: TransactionSerializer(many=True)},
+    )
+    @action(detail=True, methods=["post"], url_path="split")
+    @db_transaction.atomic
+    def split(self, request, pk=None):
+        """Split a top-level transaction into multiple lines (strict amount match)."""
+        bundle = self.get_object()
+        if bundle.parent_id is not None:
+            raise ValidationError(
+                {"detail": "Cannot split a transaction that is already a split line."}
+            )
+        if bundle.splits.exists():
+            raise ValidationError({"detail": "This transaction is already split."})
+
+        ser = TransactionSplitRequestSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        items = ser.validated_data["items"]
+        if len(items) < 2:
+            raise ValidationError(
+                {"items": "At least two split lines are required."}
+            )
+
+        total = sum((row["amount"] for row in items), Decimal("0"))
+        if total != bundle.amount:
+            raise ValidationError(
+                {
+                    "items": "Sum of split amounts must equal the transaction amount."
+                }
+            )
+
+        created = []
+        for row in items:
+            cat_id = row.get("category")
+            category = None
+            if cat_id is not None:
+                try:
+                    category = Category.objects.get(pk=cat_id, user=request.user)
+                except Category.DoesNotExist as err:
+                    raise ValidationError(
+                        {
+                            "items": "Each category must belong to the authenticated user."
+                        }
+                    ) from err
+
+            child = Transaction.objects.create(
+                user=bundle.user,
+                description=row["description"],
+                amount=row["amount"],
+                currency=bundle.currency,
+                amount_local=None,
+                exchange_rate=bundle.exchange_rate,
+                transaction_type=bundle.transaction_type,
+                direction=bundle.direction,
+                category=category,
+                subcategory=None,
+                source=bundle.source,
+                original_reference=bundle.original_reference,
+                external_id=None,
+                is_installment=False,
+                installment_current=None,
+                installment_total=None,
+                installment_amount=None,
+                installment_group_id=None,
+                raw_data=None,
+                imported_at=bundle.imported_at,
+                status=bundle.status,
+                parent=bundle,
+            )
+            created.append(child)
+
+        out = TransactionSerializer(
+            created, many=True, context={"request": request}
+        )
+        return Response(out.data, status=status.HTTP_201_CREATED)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
