@@ -1,5 +1,6 @@
+import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
 
 import { DashboardComponent } from './dashboard.component';
 
@@ -7,6 +8,7 @@ describe('DashboardComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
+      providers: [provideHttpClient(), provideRouter([])],
     }).compileComponents();
   });
 
@@ -15,17 +17,10 @@ describe('DashboardComponent', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('should display the Dashboard heading', () => {
-    const fixture = TestBed.createComponent(DashboardComponent);
-    fixture.detectChanges();
-    const heading = fixture.debugElement.query(By.css('h1'));
-    expect(heading.nativeElement.textContent).toContain('Dashboard');
-  });
-
-  it('should display the placeholder description', () => {
+  it('should show the app shell', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('financial overview');
+    expect(compiled.textContent).toContain('LedgerArch');
   });
 });

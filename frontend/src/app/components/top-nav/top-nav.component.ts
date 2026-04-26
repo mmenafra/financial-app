@@ -1,6 +1,5 @@
 import { Component, ElementRef, HostListener, inject, signal, viewChild } from '@angular/core';
-import { NavigationEnd, Router } from '@angular/router';
-import { filter } from 'rxjs/operators';
+import { Router } from '@angular/router';
 
 import { AuthService } from '../../services/auth.service';
 
@@ -16,26 +15,7 @@ export class TopNavComponent {
   private readonly auth = inject(AuthService);
   private readonly userMenuRoot = viewChild.required<ElementRef<HTMLElement>>('userMenuRoot');
 
-  protected readonly pageTitle = signal('Dashboard');
   protected readonly menuOpen = signal(false);
-
-  constructor() {
-    this.updateTitle(this.router.url);
-    this.router.events
-      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
-      .subscribe((e) => this.updateTitle(e.urlAfterRedirects));
-  }
-
-  private updateTitle(url: string): void {
-    const segment = url.split('?')[0].split('/').filter(Boolean).pop() ?? 'dashboard';
-    const titles: Record<string, string> = {
-      dashboard: 'Dashboard',
-      connections: 'Connections',
-      transactions: 'Transaction History',
-      projections: 'Projections',
-    };
-    this.pageTitle.set(titles[segment] ?? 'Dashboard');
-  }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {

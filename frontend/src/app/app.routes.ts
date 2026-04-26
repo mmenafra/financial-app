@@ -5,6 +5,7 @@ import { guestGuard } from './guards/guest.guard';
 import { LoginComponent } from './pages/login/login.component';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
 import { SignupComponent } from './pages/signup/signup.component';
+import { TransactionsComponent } from './pages/transactions/transactions.component';
 
 export const routes: Routes = [
   { path: '', component: LoginComponent, canActivate: [guestGuard] },
@@ -12,7 +13,7 @@ export const routes: Routes = [
   { path: 'signup', component: SignupComponent, canActivate: [guestGuard] },
   { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
   { path: 'connections', component: DashboardComponent, canActivate: [authGuard] },
-  { path: 'transactions', component: DashboardComponent, canActivate: [authGuard] },
+  { path: 'transactions', component: TransactionsComponent, canActivate: [authGuard] },
   { path: 'projections', component: DashboardComponent, canActivate: [authGuard] },
   { path: '**', redirectTo: '' },
 ];
