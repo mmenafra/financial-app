@@ -63,7 +63,12 @@
 }
 
 .tx-dropdown {
-  @apply absolute right-2 top-full mt-1 z-20 min-w-[8rem] rounded-xl border border-outline-variant bg-surface-container-lowest shadow-lg py-1;
+  @apply absolute right-2 top-full mt-1 z-[100] min-w-[8rem] rounded-xl border border-outline-variant bg-surface-container-lowest shadow-lg py-1;
+}
+
+// Last row: open above the kebab so the menu is not clipped by overflow / card bounds.
+.tx-dropdown--up {
+  @apply top-auto bottom-full mb-1;
 }
 
 .tx-dropdown-item {

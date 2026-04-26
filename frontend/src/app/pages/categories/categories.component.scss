@@ -1,0 +1,79 @@
+// Categories page. Global tokens live in src/tailwind.css.
+// Table body matches transactions list (see transactions.component.scss `.tx-table`).
+
+.tx-table {
+  th {
+    @apply px-6 py-3 text-xs font-bold uppercase tracking-wider text-on-surface-variant bg-surface-container/50 border-b border-outline-variant/40;
+  }
+
+  td {
+    @apply px-6 py-4 text-sm border-b border-outline-variant/30 align-middle;
+  }
+
+  tbody tr:hover td {
+    @apply bg-surface-container/30;
+  }
+}
+
+.cat-pill-btn {
+  @apply inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-sm font-bold text-primary shadow-sm transition-colors hover:bg-surface-container;
+
+  &.ghost {
+    @apply bg-transparent text-primary border border-outline-variant;
+  }
+
+  &.danger {
+    @apply border-red-200 bg-red-50 text-red-800 hover:bg-red-100;
+  }
+}
+
+.cat-swatch {
+  @apply w-9 h-9 rounded-xl flex items-center justify-center border border-outline-variant/50 shrink-0;
+
+  background: color-mix(in srgb, var(--swatch-color, #94a3b8) 18%, white);
+  color: var(--swatch-color, #94a3b8);
+}
+
+.cat-swatch-icon {
+  font-variation-settings: 'FILL' 0, 'wght' 500;
+}
+
+.cat-menu-btn {
+  @apply inline-flex items-center justify-center w-8 h-8 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors;
+}
+
+.cat-dropdown {
+  @apply absolute right-0 top-full mt-1 z-[100] min-w-[8rem] rounded-xl border border-outline-variant bg-surface-container-lowest shadow-lg py-1;
+}
+
+// Last row: open above the kebab so the menu is not clipped by card bounds / overflow.
+.cat-dropdown--up {
+  @apply top-auto bottom-full mb-1;
+}
+
+.cat-dropdown-item {
+  @apply flex w-full items-center gap-2 px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container transition-colors;
+
+  &--danger {
+    @apply text-red-600 hover:bg-red-50;
+  }
+}
+
+.cat-modal-backdrop {
+  @apply fixed inset-0 z-40 bg-black/40;
+}
+
+.cat-modal {
+  @apply fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[min(100%-2rem,28rem)] max-h-[min(100vh-2rem,32rem)] overflow-y-auto rounded-3xl border border-outline-variant/60 bg-surface-container-lowest p-6 shadow-xl;
+}
+
+.cat-input,
+.cat-select {
+  @apply w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm font-semibold text-on-surface shadow-sm;
+}
+
+.cat-color {
+  @apply w-full h-10 rounded-xl border border-outline-variant bg-surface-container-lowest cursor-pointer p-0.5;
+
+  min-height: 2.5rem;
+}

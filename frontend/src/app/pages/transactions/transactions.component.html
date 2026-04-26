@@ -121,7 +121,7 @@
         </section>
 
         <section
-          class="rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm overflow-hidden"
+          class="rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm"
         >
           <div class="px-6 py-4 border-b border-outline-variant/50">
             <h2 class="text-lg font-bold text-primary m-0 font-headline">All Transactions</h2>
@@ -130,7 +130,7 @@
           @if (isLoading()) {
             <div class="px-6 py-16 text-center text-on-surface-variant font-semibold">Loading…</div>
           } @else {
-            <div class="overflow-x-auto">
+            <div class="w-full min-w-0">
               <table class="tx-table w-full text-left border-collapse">
                 <thead>
                   <tr>
@@ -188,7 +188,7 @@
                           <span class="material-symbols-outlined text-[20px]">more_vert</span>
                         </button>
                         @if (openMenuId() === t.id) {
-                          <div class="tx-dropdown" role="menu">
+                          <div class="tx-dropdown" [class.tx-dropdown--up]="$last" role="menu">
                             <button
                               type="button"
                               class="tx-dropdown-item"

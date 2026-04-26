@@ -1,0 +1,235 @@
+<div class="flex min-h-screen bg-surface font-body">
+  <app-sidebar />
+  <div class="flex flex-col flex-1 min-w-0">
+    <app-top-nav />
+    <main class="flex-1 p-8 overflow-x-auto">
+      <div class="mx-auto flex flex-col gap-6">
+        <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 class="text-3xl font-extrabold text-primary tracking-tight m-0 font-headline">Categories</h1>
+            <p class="text-on-surface-variant text-sm m-0 mt-1">Organize spending and income with custom categories.</p>
+          </div>
+          <div class="shrink-0">
+            <button type="button" class="cat-pill-btn" (click)="openAddModal()">
+              <span
+                class="material-symbols-outlined text-[20px]"
+                style="font-variation-settings: 'FILL' 0"
+                >add</span
+              >
+              Add category
+            </button>
+          </div>
+        </header>
+
+        @if (loadError()) {
+          <div class="rounded-xl border border-red-200 bg-red-50 text-red-900 px-4 py-3 text-sm font-semibold">
+            {{ loadError() }}
+          </div>
+        }
+
+        <section
+          class="rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm"
+        >
+          @if (isLoading()) {
+            <div class="px-6 py-16 text-center text-on-surface-variant font-semibold">Loading categories…</div>
+          } @else {
+            <div class="w-full min-w-0">
+              <table class="tx-table w-full text-left border-collapse">
+                <thead>
+                  <tr>
+                    <th class="w-10"></th>
+                    <th class="text-left">Name</th>
+                    <th class="text-left hidden sm:table-cell">Parent</th>
+                    <th class="w-12 text-right" aria-label="Actions"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (c of categories(); track c.id) {
+                    <tr>
+                      <td>
+                        <div
+                          class="cat-swatch"
+                          [style.--swatch-color]="(c.color && c.color.length) ? c.color : '#94a3b8'"
+                        >
+                          <span class="material-symbols-outlined text-[20px] cat-swatch-icon">{{
+                            c.icon && c.icon.length ? c.icon : 'label'
+                          }}</span>
+                        </div>
+                      </td>
+                      <td class="font-bold text-on-surface">{{ c.name }}</td>
+                      <td class="text-on-surface-variant font-semibold hidden sm:table-cell">
+                        {{ parentName(c.parent) }}
+                      </td>
+                      <td class="text-right">
+                        <div class="inline-block relative text-left">
+                          <button
+                            type="button"
+                            class="cat-menu-btn"
+                            aria-label="More options"
+                            (click)="toggleMenu(c.id, $event)"
+                          >
+                            <span class="material-symbols-outlined text-[20px]">more_vert</span>
+                          </button>
+                          @if (openMenuId() === c.id) {
+                            <div class="cat-dropdown" [class.cat-dropdown--up]="$last" role="menu">
+                              <button
+                                type="button"
+                                class="cat-dropdown-item"
+                                role="menuitem"
+                                (click)="openEditModal(c, $event)"
+                              >
+                                <span
+                                  class="material-symbols-outlined text-[16px]"
+                                  style="font-variation-settings: 'FILL' 0"
+                                  >edit</span
+                                >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                class="cat-dropdown-item cat-dropdown-item--danger"
+                                role="menuitem"
+                                (click)="openDeleteModal(c, $event)"
+                              >
+                                <span
+                                  class="material-symbols-outlined text-[16px]"
+                                  style="font-variation-settings: 'FILL' 0"
+                                  >delete</span
+                                >
+                                Delete
+                              </button>
+                            </div>
+                          }
+                        </div>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="4" class="px-6 py-12 text-center text-on-surface-variant font-medium">
+                        No categories yet. Add your first one to get started.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+@if (formModalOpen()) {
+  <div
+    class="cat-modal-backdrop"
+    role="button"
+    tabindex="0"
+    aria-label="Close dialog"
+    (click)="closeFormModal()"
+    (keydown.enter)="closeFormModal()"
+    (keydown.space)="$event.preventDefault(); closeFormModal()"
+  ></div>
+  <div
+    class="cat-modal"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="isEditMode() ? 'Edit category' : 'New category'"
+  >
+    <h2 class="text-xl font-extrabold text-primary m-0 font-headline">
+      {{ isEditMode() ? 'Edit category' : 'New category' }}
+    </h2>
+    <form class="mt-4 flex flex-col gap-3" [formGroup]="form" (ngSubmit)="saveCategory()">
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-on-surface-variant" for="cat-name">Name</label>
+        <input
+          id="cat-name"
+          type="text"
+          class="cat-input"
+          formControlName="name"
+          autocomplete="off"
+          placeholder="e.g. Groceries"
+        />
+        @if (form.controls.name.touched && form.controls.name.hasError('required')) {
+          <span class="text-sm font-semibold text-red-600">Name is required.</span>
+        }
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-on-surface-variant" for="cat-icon">Icon (Material Symbol name)</label>
+        <input
+          id="cat-icon"
+          type="text"
+          class="cat-input"
+          formControlName="icon"
+          autocomplete="off"
+          placeholder="e.g. shopping_cart"
+        />
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-on-surface-variant" for="cat-color">Color</label>
+        <input id="cat-color" type="color" class="cat-color" formControlName="color" />
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-on-surface-variant" for="cat-parent">Parent</label>
+        <select id="cat-parent" class="cat-select" formControlName="parent">
+          <option [ngValue]="null">None (top level)</option>
+          @for (p of parentOptions(); track p.id) {
+            <option [ngValue]="p.id">{{ p.name }}</option>
+          }
+        </select>
+      </div>
+      @if (formError()) {
+        <p class="text-sm font-semibold text-red-600 m-0">{{ formError() }}</p>
+      }
+      <div class="flex flex-wrap gap-2 justify-end pt-2">
+        <button type="button" class="cat-pill-btn ghost" (click)="closeFormModal()" [disabled]="formSubmitting()">
+          Cancel
+        </button>
+        <button type="submit" class="cat-pill-btn" [disabled]="formSubmitting()">
+          {{ formSubmitting() ? 'Saving…' : (isEditMode() ? 'Save' : 'Create') }}
+        </button>
+      </div>
+    </form>
+  </div>
+}
+
+@if (deleteModalOpen()) {
+  @if (pendingDelete(); as d) {
+    <div
+      class="cat-modal-backdrop"
+      role="button"
+      tabindex="0"
+      [attr.aria-label]="deleteSubmitting() ? 'Cannot close while deleting' : 'Close dialog'"
+      (click)="!deleteSubmitting() && closeDeleteModal()"
+      (keydown.enter)="!deleteSubmitting() && closeDeleteModal()"
+      (keydown.space)="$event.preventDefault(); !deleteSubmitting() && closeDeleteModal()"
+    ></div>
+    <div
+      class="cat-modal"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="cat-delete-title"
+    >
+      <h2 id="cat-delete-title" class="text-xl font-extrabold text-primary m-0 font-headline">Delete category?</h2>
+      <p class="text-on-surface m-0 mt-2 text-sm">
+        <span class="font-bold">{{ d.name }}</span> will be removed. This cannot be undone.
+      </p>
+      @if (loadDeleteError()) {
+        <p class="text-sm font-semibold text-red-600 m-0 mt-2">{{ loadDeleteError() }}</p>
+      }
+      <div class="flex flex-wrap gap-2 justify-end mt-4">
+        <button type="button" class="cat-pill-btn ghost" (click)="closeDeleteModal()" [disabled]="deleteSubmitting()">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="cat-pill-btn danger"
+          (click)="confirmDelete()"
+          [disabled]="deleteSubmitting()"
+        >
+          {{ deleteSubmitting() ? 'Deleting…' : 'Delete' }}
+        </button>
+      </div>
+    </div>
+  }
+}
