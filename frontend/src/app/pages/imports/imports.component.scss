@@ -1,0 +1,35 @@
+// Imports page — aligned with transactions table tokens (see transactions.component.scss).
+
+.tx-table {
+  th {
+    @apply px-6 py-3 text-xs font-bold uppercase tracking-wider text-on-surface-variant bg-surface-container/50 border-b border-outline-variant/40;
+  }
+
+  td {
+    @apply px-6 py-4 text-sm border-b border-outline-variant/30 align-middle;
+  }
+
+  tbody tr:hover td {
+    @apply bg-surface-container/30;
+  }
+}
+
+.tx-page {
+  @apply inline-flex items-center justify-center min-w-[2.25rem] h-9 rounded-lg border border-outline-variant/70 bg-surface text-on-surface font-semibold text-sm transition-colors hover:bg-surface-container disabled:opacity-40 disabled:pointer-events-none;
+
+  &.num.active {
+    @apply bg-primary-container text-on-primary border-primary-container;
+  }
+}
+
+.tx-menu-btn {
+  @apply inline-flex items-center justify-center w-8 h-8 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors;
+}
+
+.tx-dropdown {
+  @apply absolute right-2 top-full mt-1 z-[100] min-w-[8rem] rounded-xl border border-outline-variant bg-surface-container-lowest shadow-lg py-1;
+}
+
+.tx-dropdown-item {
+  @apply flex w-full items-center gap-2 px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container transition-colors;
+}

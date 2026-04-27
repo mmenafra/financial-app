@@ -34,8 +34,13 @@ from django.core.mail import send_mail
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
-from .bank_statement_parser import parse_bsa_bank_statement
-from .bsa_import import import_bsa_row
+from .import_pipeline import (
+    bank_statement_import_pipeline,
+    copy_file_import_upload,
+    dispatch_import_pipeline,
+    visa_internacional_import_pipeline,
+    visa_nacional_import_pipeline,
+)
 from .models import (
     Category,
     FileImport,
@@ -45,7 +50,7 @@ from .models import (
     Source,
     Transaction,
 )
-from .pagination import TransactionPagination
+from .pagination import FileImportPagination, TransactionPagination
 from .serializers import (
     CategorySerializer,
     FileImportSerializer,
@@ -61,8 +66,6 @@ from .serializers import (
     TransactionSerializer,
     TransactionSplitRequestSerializer,
 )
-from .visa_internacional_parser import parse_visa_internacional_statement_pdf
-from .visa_nacional_parser import parse_visa_nacional_statement_pdf
 
 User = get_user_model()
 
@@ -458,85 +461,7 @@ class ImportBankStatementView(APIView):
         file_import.status = ImportStatus.PROCESSING
         file_import.save(update_fields=["status", "updated_at"])
 
-        try:
-            file_import.file.open("rb")
-            try:
-                content = file_import.file.read().decode("utf-8")
-            finally:
-                file_import.file.close()
-            logger.debug(
-                "Bank statement file decoded, length=%s characters", len(content)
-            )
-            parsed = parse_bsa_bank_statement(content)
-        except UnicodeDecodeError as exc:
-            logger.error("Bank statement UTF-8 decode failed: %s", exc)
-            file_import.status = ImportStatus.FAILED
-            file_import.error_message = "File must be UTF-8 encoded text."
-            file_import.save(
-                update_fields=["status", "error_message", "updated_at"]
-            )
-            return Response(
-                {"detail": "File must be UTF-8 encoded text."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        except ValueError as exc:
-            logger.error("Bank statement parse failed: %s", exc)
-            file_import.status = ImportStatus.FAILED
-            file_import.error_message = str(exc)
-            file_import.save(update_fields=["status", "error_message", "updated_at"])
-            return Response(
-                {"detail": str(exc)},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        created_count = 0
-        skipped_count = 0
-        failed_count = 0
-        created_instances = []
-        errors: list[dict] = []
-        for row in parsed.get("transactions", []):
-            result = import_bsa_row(request.user, row, file_import=file_import)
-            if "error" in result:
-                failed_count += 1
-                errors.append({"row": row, "error": result["error"]})
-                continue
-            if result.get("ok") == "skipped":
-                skipped_count += 1
-            elif result.get("ok") == "created" and result.get("instance"):
-                created_count += 1
-                created_instances.append(result["instance"])
-
-        logger.info(
-            "Import bank statement persist: user_id=%s created=%s skipped=%s failed=%s",
-            request.user.pk,
-            created_count,
-            skipped_count,
-            failed_count,
-        )
-        file_import.rows_imported = created_count
-        file_import.rows_skipped = skipped_count
-        file_import.status = ImportStatus.COMPLETED
-        file_import.save(
-            update_fields=[
-                "rows_imported",
-                "rows_skipped",
-                "status",
-                "updated_at",
-            ]
-        )
-        ser = TransactionSerializer(
-            created_instances, many=True, context={"request": request}
-        )
-        return Response(
-            {
-                "created": created_count,
-                "skipped": skipped_count,
-                "failed": failed_count,
-                "transactions": ser.data,
-                "errors": errors,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        return bank_statement_import_pipeline(request, file_import)
 
 
 class ImportVisaNationalStatementView(APIView):
@@ -589,41 +514,7 @@ class ImportVisaNationalStatementView(APIView):
         file_import.status = ImportStatus.PROCESSING
         file_import.save(update_fields=["status", "updated_at"])
 
-        try:
-            file_import.file.open("rb")
-            try:
-                pdf_bytes = file_import.file.read()
-            finally:
-                file_import.file.close()
-            logger.debug("Visa Nacional PDF size=%s bytes", len(pdf_bytes))
-            parsed = parse_visa_nacional_statement_pdf(pdf_bytes)
-        except ValueError as exc:
-            logger.error("Visa Nacional import failed: %s", exc)
-            file_import.status = ImportStatus.FAILED
-            file_import.error_message = str(exc)
-            file_import.save(update_fields=["status", "error_message", "updated_at"])
-            return Response(
-                {"detail": str(exc)},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        tx_count = len(parsed.get("transactions", []))
-        logger.info(
-            "Import Visa Nacional success: transactions=%s",
-            tx_count,
-        )
-        file_import.rows_imported = tx_count
-        file_import.rows_skipped = 0
-        file_import.status = ImportStatus.COMPLETED
-        file_import.save(
-            update_fields=[
-                "rows_imported",
-                "rows_skipped",
-                "status",
-                "updated_at",
-            ]
-        )
-        return Response(parsed, status=status.HTTP_200_OK)
+        return visa_nacional_import_pipeline(request, file_import)
 
 
 class ImportVisaInternationalStatementView(APIView):
@@ -676,50 +567,68 @@ class ImportVisaInternationalStatementView(APIView):
         file_import.status = ImportStatus.PROCESSING
         file_import.save(update_fields=["status", "updated_at"])
 
-        try:
-            file_import.file.open("rb")
-            try:
-                pdf_bytes = file_import.file.read()
-            finally:
-                file_import.file.close()
-            logger.debug("Visa Internacional PDF size=%s bytes", len(pdf_bytes))
-            parsed = parse_visa_internacional_statement_pdf(pdf_bytes)
-        except ValueError as exc:
-            logger.error("Visa Internacional import failed: %s", exc)
-            file_import.status = ImportStatus.FAILED
-            file_import.error_message = str(exc)
-            file_import.save(update_fields=["status", "error_message", "updated_at"])
-            return Response(
-                {"detail": str(exc)},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        tx_count = len(parsed.get("transactions", []))
-        logger.info(
-            "Import Visa Internacional success: transactions=%s",
-            tx_count,
-        )
-        file_import.rows_imported = tx_count
-        file_import.rows_skipped = 0
-        file_import.status = ImportStatus.COMPLETED
-        file_import.save(
-            update_fields=[
-                "rows_imported",
-                "rows_skipped",
-                "status",
-                "updated_at",
-            ]
-        )
-        return Response(parsed, status=status.HTTP_200_OK)
+        return visa_internacional_import_pipeline(request, file_import)
 
 
 class FileImportViewSet(ModelViewSet):
     serializer_class = FileImportSerializer
     permission_classes = [IsAuthenticated]
-    http_method_names = ["get", "head", "options"]
+    pagination_class = FileImportPagination
+    http_method_names = ["get", "head", "options", "post"]
 
     def get_queryset(self):
         return FileImport.objects.filter(user=self.request.user)
+
+    @extend_schema(
+        request=None,
+        responses={
+            200: OpenApiResponse(
+                description=(
+                    "New file_import row plus import_result "
+                    "(same shape as the original import endpoint response)."
+                ),
+            ),
+            400: OpenApiResponse(description="Invalid pipeline or unreadable stored file"),
+        },
+        description=(
+            "Re-process the stored file: creates a new FileImport row and runs "
+            "the same pipeline as the original upload."
+        ),
+    )
+    @action(detail=True, methods=["post"], url_path="re-run")
+    def re_run(self, request, pk=None):  # pylint: disable=unused-argument
+        existing = self.get_object()
+        try:
+            content_file = copy_file_import_upload(existing)
+        except OSError:
+            logger.warning(
+                "Re-run import: could not read stored file for file_import id=%s",
+                existing.pk,
+            )
+            return Response(
+                {"detail": "Stored import file could not be read."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        new_fi = FileImport.objects.create(
+            user=request.user,
+            source=existing.source,
+            file=content_file,
+            original_filename=existing.original_filename,
+            status=ImportStatus.PENDING,
+        )
+        pipeline_resp = dispatch_import_pipeline(request, new_fi)
+        new_fi.refresh_from_db()
+        ser = FileImportSerializer(new_fi, context={"request": request})
+        payload: dict = {"file_import": ser.data}
+        if pipeline_resp.status_code >= status.HTTP_400_BAD_REQUEST:
+            detail = "Import failed."
+            if isinstance(pipeline_resp.data, dict) and "detail" in pipeline_resp.data:
+                detail = pipeline_resp.data["detail"]
+            payload["detail"] = detail
+            return Response(payload, status=pipeline_resp.status_code)
+        payload["import_result"] = pipeline_resp.data
+        return Response(payload, status=status.HTTP_200_OK)
 
 
 class CategoryViewSet(ModelViewSet):

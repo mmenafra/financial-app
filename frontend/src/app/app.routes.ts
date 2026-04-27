@@ -7,6 +7,7 @@ import { DashboardComponent } from './pages/dashboard/dashboard.component';
 import { SignupComponent } from './pages/signup/signup.component';
 import { TransactionsComponent } from './pages/transactions/transactions.component';
 import { CategoriesComponent } from './pages/categories/categories.component';
+import { ImportsComponent } from './pages/imports/imports.component';
 
 export const routes: Routes = [
   { path: '', component: LoginComponent, canActivate: [guestGuard] },
@@ -16,6 +17,7 @@ export const routes: Routes = [
   { path: 'connections', component: DashboardComponent, canActivate: [authGuard] },
   { path: 'transactions', component: TransactionsComponent, canActivate: [authGuard] },
   { path: 'categories', component: CategoriesComponent, canActivate: [authGuard] },
+  { path: 'imports', component: ImportsComponent, canActivate: [authGuard] },
   { path: 'projections', component: DashboardComponent, canActivate: [authGuard] },
   { path: '**', redirectTo: '' },
 ];

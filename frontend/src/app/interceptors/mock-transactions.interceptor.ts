@@ -272,6 +272,22 @@ function isCategoriesListGet(url: string, method: string): boolean {
   return path === '/api/categories' || path === '/api/categories/';
 }
 
+function isFileImportsListGet(url: string, method: string): boolean {
+  if (method !== 'GET') {
+    return false;
+  }
+  const path = parsePathname(url);
+  return path === '/api/file-imports' || path === '/api/file-imports/';
+}
+
+function isFileImportRerunPost(url: string, method: string): boolean {
+  if (method !== 'POST') {
+    return false;
+  }
+  const path = parsePathname(url);
+  return /^\/api\/file-imports\/[^/]+\/re-run\/?$/.test(path);
+}
+
 function readIntParam(url: string, key: string): number | undefined {
   try {
     const u = new URL(url.includes('http') ? url : `http://local.invalid${url}`);
@@ -309,6 +325,63 @@ export const mockTransactionsInterceptor: HttpInterceptorFn = (req, next) => {
 
   if (isCategoriesListGet(req.url, req.method)) {
     return of(new HttpResponse({ status: 200, body: MOCK_CATEGORIES }));
+  }
+
+  if (isFileImportsListGet(req.url, req.method)) {
+    const mockImport = {
+      id: 'f3000000-0000-4000-8000-000000000001',
+      created_at: '2026-04-01T12:00:00Z',
+      updated_at: '2026-04-01T12:00:00Z',
+      user: 1,
+      source: 'BANK_ACCOUNT',
+      file: '/media/imports/mock.dat',
+      original_filename: 'mock.dat',
+      status: 'COMPLETED',
+      rows_imported: 2,
+      rows_skipped: 0,
+      error_message: null,
+    };
+    return of(
+      new HttpResponse({
+        status: 200,
+        body: {
+          count: 1,
+          next: null,
+          previous: null,
+          results: [mockImport],
+        },
+      }),
+    );
+  }
+
+  if (isFileImportRerunPost(req.url, req.method)) {
+    return of(
+      new HttpResponse({
+        status: 200,
+        body: {
+          file_import: {
+            id: 'f3000000-0000-4000-8000-000000000002',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            user: 1,
+            source: 'BANK_ACCOUNT',
+            file: '/media/imports/mock-rerun.dat',
+            original_filename: 'mock.dat',
+            status: 'COMPLETED',
+            rows_imported: 0,
+            rows_skipped: 2,
+            error_message: null,
+          },
+          import_result: {
+            created: 0,
+            skipped: 2,
+            failed: 0,
+            transactions: [],
+            errors: [],
+          },
+        },
+      }),
+    );
   }
 
   if (isTransactionsCreate(req.url, req.method)) {

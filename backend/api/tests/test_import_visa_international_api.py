@@ -45,7 +45,7 @@ class ImportVisaInternationalAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["detail"], "Only .pdf files are supported.")
 
-    @patch("api.views.parse_visa_internacional_statement_pdf")
+    @patch("api.import_pipeline.parse_visa_internacional_statement_pdf")
     def test_success_returns_transactions_json(self, mock_parse):
         mock_parse.return_value = {
             "transactions": [

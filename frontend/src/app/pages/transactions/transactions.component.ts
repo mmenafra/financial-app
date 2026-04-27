@@ -1,8 +1,17 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, DestroyRef, HostListener, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import {
+  AbstractControl,
+  FormArray,
+  FormBuilder,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
+import { forkJoin, type Observable } from 'rxjs';
 
 import { CategorySelectComponent } from '../../components/category-select/category-select.component';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
@@ -79,6 +88,10 @@ export class TransactionsComponent {
   protected readonly importSubmitting = signal(false);
   protected readonly importResult = signal<BankStatementImportResult | null>(null);
   protected readonly importError = signal<string | null>(null);
+  protected readonly importReviewStep = signal(false);
+  protected importReviewControls: FormControl<string | null>[] = [];
+  protected readonly importFinishing = signal(false);
+  protected readonly importFinishError = signal<string | null>(null);
 
   protected readonly editModalOpen = signal(false);
   protected readonly editSubmitting = signal(false);
@@ -599,17 +612,25 @@ export class TransactionsComponent {
     this.importFile.set(null);
     this.importResult.set(null);
     this.importError.set(null);
+    this.importReviewStep.set(false);
+    this.importReviewControls = [];
+    this.importFinishing.set(false);
+    this.importFinishError.set(null);
     this.importModalOpen.set(true);
   }
 
   protected closeImportModal(): void {
-    if (this.importSubmitting()) {
+    if (this.importSubmitting() || this.importFinishing()) {
       return;
     }
     this.importModalOpen.set(false);
     this.importFile.set(null);
     this.importResult.set(null);
     this.importError.set(null);
+    this.importReviewStep.set(false);
+    this.importReviewControls = [];
+    this.importFinishing.set(false);
+    this.importFinishError.set(null);
   }
 
   protected onImportFileChange(event: Event): void {
@@ -634,6 +655,9 @@ export class TransactionsComponent {
         next: (res) => {
           this.importSubmitting.set(false);
           this.importResult.set(res);
+          this.importReviewStep.set(false);
+          this.importReviewControls = [];
+          this.importFinishError.set(null);
           this.reload();
         },
         error: (err: unknown) => {
@@ -643,10 +667,72 @@ export class TransactionsComponent {
       });
   }
 
-  protected importAnother(): void {
-    this.importResult.set(null);
-    this.importFile.set(null);
-    this.importError.set(null);
+  protected goToReviewStep(): void {
+    const res = this.importResult();
+    if (!res) {
+      return;
+    }
+    this.importReviewControls = res.transactions.map((tx) =>
+      this.fb.control<string | null>(tx.category ?? null),
+    );
+    this.importReviewStep.set(true);
+    this.importFinishError.set(null);
+  }
+
+  protected finishImportReview(): void {
+    const res = this.importResult();
+    if (!res || this.importFinishing()) {
+      return;
+    }
+    const txs = res.transactions;
+    const patches: Observable<Transaction>[] = [];
+    for (let i = 0; i < txs.length; i++) {
+      const tx = txs[i];
+      const ctrl = this.importReviewControls[i];
+      if (!ctrl) {
+        continue;
+      }
+      const nextCat = ctrl.value ?? null;
+      const prevCat = tx.category ?? null;
+      if (nextCat === prevCat) {
+        continue;
+      }
+      patches.push(this.transactionService.updateTransaction(tx.id, { category: nextCat }));
+    }
+    if (patches.length === 0) {
+      this.importModalOpen.set(false);
+      this.importFile.set(null);
+      this.importResult.set(null);
+      this.importError.set(null);
+      this.importReviewStep.set(false);
+      this.importReviewControls = [];
+      this.importFinishError.set(null);
+      this.reload();
+      return;
+    }
+    this.importFinishing.set(true);
+    this.importFinishError.set(null);
+    forkJoin(patches)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.importFinishing.set(false);
+          this.importModalOpen.set(false);
+          this.importFile.set(null);
+          this.importResult.set(null);
+          this.importError.set(null);
+          this.importReviewStep.set(false);
+          this.importReviewControls = [];
+          this.importFinishError.set(null);
+          this.reload();
+        },
+        error: (err: unknown) => {
+          this.importFinishing.set(false);
+          this.importFinishError.set(
+            this.httpErrorMessage(err) ?? 'Could not update categories. Try again.',
+          );
+        },
+      });
   }
 
   protected importErrorRowPreview(row: Record<string, unknown>): string {
