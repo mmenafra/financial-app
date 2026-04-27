@@ -5,12 +5,14 @@ FRONTEND = frontend
 
 .PHONY: help docker-build docker-up docker-down docker-prod \
 	lint fmt test seed lint-all test-all \
-	fe-install fe-dev fe-build fe-lint fe-test fe-test-ci fe-betterer fe-betterer-update
+	fe-install fe-dev fe-build fe-lint fe-test fe-test-ci fe-betterer fe-betterer-update \
+	db-clean-all db-clean-user db-clean-transactions
 
 help:
 	@echo "Docker (dev):  make docker-build | docker-up | docker-down"
 	@echo "Docker (prod): make docker-prod  (Django+Postgres+nginx frontend)"
 	@echo "Backend:       make lint (django check + ruff + flake8 + pylint) | fmt (autoflake + isort + black + ruff format) | test (pytest) | seed"
+	@echo "DB clean:      make db-clean-all | db-clean-user USER=<username> | db-clean-transactions USER=<username>"
 	@echo "Frontend:      make fe-install | fe-dev | fe-build"
 	@echo "               make fe-lint (ESLint + Stylelint) | fe-test (Vitest) | fe-test-ci (Vitest, no watch)"
 	@echo "               make fe-betterer | fe-betterer-update"
@@ -58,6 +60,17 @@ fe-betterer-update:
 
 seed:
 	$(DC) run --rm $(BACKEND) python manage.py seed_finance_data --reset
+
+db-clean-all:
+	$(DC) run --rm $(BACKEND) python manage.py clean_db --all
+
+db-clean-user:
+	@test -n "$(USER)" || (echo "Usage: make db-clean-user USER=<username>" && exit 1)
+	$(DC) run --rm $(BACKEND) python manage.py clean_db --user "$(USER)"
+
+db-clean-transactions:
+	@test -n "$(USER)" || (echo "Usage: make db-clean-transactions USER=<username>" && exit 1)
+	$(DC) run --rm $(BACKEND) python manage.py clean_db --transactions "$(USER)"
 
 fe-install:
 	cd $(FRONTEND) && npm ci
