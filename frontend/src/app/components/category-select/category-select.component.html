@@ -1,0 +1,89 @@
+<div class="relative">
+  <!-- Trigger button -->
+  <button
+    type="button"
+    class="w-full flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm font-semibold text-on-surface shadow-sm text-left transition-colors hover:bg-surface-container/40"
+    [class.opacity-50]="isDisabled()"
+    [class.pointer-events-none]="isDisabled()"
+    (click)="open()"
+  >
+    @if (selectedColor(); as color) {
+      <span
+        class="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+        [style.background-color]="color"
+      ></span>
+    } @else {
+      <span class="inline-block w-2.5 h-2.5 rounded-full shrink-0 bg-slate-300"></span>
+    }
+    <span class="flex-1 truncate">{{ selectedLabel() }}</span>
+    <span
+      class="material-symbols-outlined text-[16px] text-on-surface-variant shrink-0 transition-transform"
+      [class.rotate-180]="isOpen()"
+      style="font-variation-settings: 'FILL' 0"
+      >expand_more</span
+    >
+  </button>
+
+  <!-- Dropdown — opens upward so it stays within the modal bounds -->
+  @if (isOpen()) {
+    <div
+      class="absolute z-[200] bottom-full mb-1 left-0 right-0 rounded-xl border border-outline-variant bg-surface-container-lowest shadow-xl overflow-hidden"
+    >
+      <!-- Search input -->
+      <div class="px-2 pt-2 pb-1">
+        <div class="relative">
+          <span
+            class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant pointer-events-none"
+            style="font-variation-settings: 'FILL' 0"
+            >search</span
+          >
+          <input
+            type="text"
+            class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 pl-8 text-sm font-semibold text-on-surface placeholder:text-on-surface-variant/60 outline-none focus:border-primary"
+            placeholder="Search categories…"
+            [value]="searchText()"
+            (input)="onSearchInput($event)"
+            (click)="$event.stopPropagation()"
+            autofocus
+          />
+        </div>
+      </div>
+
+      <!-- Options list -->
+      <ul class="max-h-52 overflow-y-auto py-1 m-0 p-0 list-none">
+        <li>
+          <button
+            type="button"
+            class="flex w-full items-center gap-2.5 px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container transition-colors"
+            [class.bg-primary-container]="selectedId() === null"
+            [class.text-on-primary-container]="selectedId() === null"
+            (click)="select(null)"
+          >
+            <span class="inline-block w-2.5 h-2.5 rounded-full shrink-0 bg-slate-300"></span>
+            <span>Uncategorized</span>
+          </button>
+        </li>
+
+        @for (cat of filtered(); track cat.id) {
+          <li>
+            <button
+              type="button"
+              class="flex w-full items-center gap-2.5 px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container transition-colors"
+              [class.bg-primary-container]="selectedId() === cat.id"
+              [class.text-on-primary-container]="selectedId() === cat.id"
+              (click)="select(cat.id)"
+            >
+              <span
+                class="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                [style.background-color]="cat.color ?? '#94a3b8'"
+              ></span>
+              <span class="truncate">{{ cat.name }}</span>
+            </button>
+          </li>
+        } @empty {
+          <li class="px-3 py-2 text-sm text-on-surface-variant font-medium">No categories match.</li>
+        }
+      </ul>
+    </div>
+  }
+</div>

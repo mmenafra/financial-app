@@ -532,13 +532,8 @@
       </div>
 
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-semibold text-on-surface-variant" for="ntx-category">Category</label>
-        <select id="ntx-category" class="tx-input" formControlName="category">
-          <option [ngValue]="null">Uncategorized</option>
-          @for (c of categories(); track c.id) {
-            <option [ngValue]="c.id">{{ c.name }}</option>
-          }
-        </select>
+        <label class="text-xs font-semibold text-on-surface-variant">Category</label>
+        <app-category-select [categories]="categories()" formControlName="category" />
       </div>
 
       @if (newTxError()) {
@@ -637,13 +632,8 @@
       </div>
 
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-semibold text-on-surface-variant" for="etx-category">Category</label>
-        <select id="etx-category" class="tx-input" formControlName="category">
-          <option [ngValue]="null">Uncategorized</option>
-          @for (c of categories(); track c.id) {
-            <option [ngValue]="c.id">{{ c.name }}</option>
-          }
-        </select>
+        <label class="text-xs font-semibold text-on-surface-variant">Category</label>
+        <app-category-select [categories]="categories()" formControlName="category" />
       </div>
 
       @if (editError()) {
@@ -765,15 +755,8 @@
                 />
               </div>
               <div class="flex flex-col gap-1 flex-1 min-w-[8rem]">
-                <label class="text-xs font-semibold text-on-surface-variant" [attr.for]="'tx-split-cat-' + $index"
-                  >Category</label
-                >
-                <select [id]="'tx-split-cat-' + $index" class="tx-input" formControlName="category">
-                  <option [ngValue]="null">Uncategorized</option>
-                  @for (c of categories(); track c.id) {
-                    <option [ngValue]="c.id">{{ c.name }}</option>
-                  }
-                </select>
+                <label class="text-xs font-semibold text-on-surface-variant">Category</label>
+                <app-category-select [categories]="categories()" formControlName="category" />
               </div>
               <div class="flex gap-1 justify-end sm:pb-0.5">
                 @if (splitRows.length > 2) {

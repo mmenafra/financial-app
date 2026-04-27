@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 
+import { CategorySelectComponent } from '../../components/category-select/category-select.component';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { TopNavComponent } from '../../components/top-nav/top-nav.component';
 import type {
@@ -24,7 +25,7 @@ const CONNECTED_SOURCES = 4;
 @Component({
   selector: 'app-transactions',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, SidebarComponent, TopNavComponent],
+  imports: [CommonModule, ReactiveFormsModule, CategorySelectComponent, SidebarComponent, TopNavComponent],
   templateUrl: './transactions.component.html',
   styleUrl: './transactions.component.scss',
 })
