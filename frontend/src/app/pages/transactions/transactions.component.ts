@@ -31,6 +31,13 @@ import { TransactionService } from '../../services/transaction.service';
 const PAGE_SIZE = 100;
 const CONNECTED_SOURCES = 4;
 
+const SOURCE_LABELS: Record<Source, string> = {
+  BANK_ACCOUNT: 'Bank Account',
+  CREDIT_CARD_NATIONAL: 'Visa National',
+  CREDIT_CARD_INTERNATIONAL: 'Visa International',
+  MERCADOPAGO: 'MercadoPago',
+};
+
 @Component({
   selector: 'app-transactions',
   standalone: true,
@@ -251,6 +258,33 @@ export class TransactionsComponent {
   protected clearFilters(): void {
     this.filterCategoryId.set(undefined);
     this.filterSource.set(undefined);
+    this.currentPage.set(1);
+    this.filterOpen.set(false);
+    this.reload();
+  }
+
+  protected activeCategoryLabel(): string {
+    const id = this.filterCategoryId();
+    if (!id) {
+      return '';
+    }
+    return this.categoryById().get(id)?.name ?? id;
+  }
+
+  protected activeSourceLabel(): string {
+    const src = this.filterSource();
+    if (!src) {
+      return '';
+    }
+    return SOURCE_LABELS[src] ?? src;
+  }
+
+  protected removeFilter(kind: 'category' | 'source'): void {
+    if (kind === 'category') {
+      this.filterCategoryId.set(undefined);
+    } else {
+      this.filterSource.set(undefined);
+    }
     this.currentPage.set(1);
     this.reload();
   }

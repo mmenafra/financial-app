@@ -58,6 +58,27 @@
   border-width: 1px;
 }
 
+.tx-active-filter-row {
+  @apply px-1;
+}
+
+// Same surface as the sidebar aside (bg-surface-container-low).
+.tx-active-filter-pill {
+  @apply inline-flex items-center gap-1 rounded-full border border-outline-variant/60 bg-surface-container-low px-3 py-1 text-xs font-bold uppercase tracking-wide text-on-surface shadow-sm;
+
+  &__label {
+    @apply max-w-[14rem] truncate;
+  }
+
+  &__clear {
+    @apply inline-flex items-center justify-center rounded-full p-0.5 text-on-surface-variant hover:bg-surface-container transition-colors -mr-1;
+
+    &:focus-visible {
+      @apply outline outline-2 outline-offset-1 outline-primary;
+    }
+  }
+}
+
 .tx-menu-btn {
   @apply inline-flex items-center justify-center w-8 h-8 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors;
 }

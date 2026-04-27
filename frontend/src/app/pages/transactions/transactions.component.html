@@ -77,9 +77,9 @@
                 [value]="filterCategoryId() ?? ''"
                 (change)="onFilterCategory($event)"
               >
-                <option value="">All categories</option>
+                <option value="" [selected]="filterCategoryId() === undefined">All categories</option>
                 @for (c of categories(); track c.id) {
-                  <option [value]="c.id">{{ c.name }}</option>
+                  <option [value]="c.id" [selected]="c.id === filterCategoryId()">{{ c.name }}</option>
                 }
               </select>
             </div>
@@ -91,17 +91,56 @@
                 [value]="filterSource() ?? ''"
                 (change)="onFilterSource($event)"
               >
-                <option value="">All sources</option>
-                <option value="BANK_ACCOUNT">Bank Account</option>
-                <option value="CREDIT_CARD_NATIONAL">Visa National</option>
-                <option value="CREDIT_CARD_INTERNATIONAL">Visa International</option>
-                <option value="MERCADOPAGO">MercadoPago</option>
+                <option value="" [selected]="filterSource() === undefined">All sources</option>
+                <option value="BANK_ACCOUNT" [selected]="filterSource() === 'BANK_ACCOUNT'">Bank Account</option>
+                <option value="CREDIT_CARD_NATIONAL" [selected]="filterSource() === 'CREDIT_CARD_NATIONAL'"
+                  >Visa National</option
+                >
+                <option value="CREDIT_CARD_INTERNATIONAL" [selected]="filterSource() === 'CREDIT_CARD_INTERNATIONAL'"
+                  >Visa International</option
+                >
+                <option value="MERCADOPAGO" [selected]="filterSource() === 'MERCADOPAGO'">MercadoPago</option>
               </select>
             </div>
             <div class="flex gap-2">
               <button type="button" class="tx-pill-btn" (click)="applyFilters()">Apply</button>
               <button type="button" class="tx-pill-btn ghost" (click)="clearFilters()">Clear</button>
             </div>
+          </div>
+        }
+
+        @if (filterCategoryId() || filterSource()) {
+          <div class="flex flex-wrap items-center gap-2 tx-active-filter-row">
+            @if (filterCategoryId()) {
+              <span class="tx-active-filter-pill">
+                <span class="tx-active-filter-pill__label">{{ activeCategoryLabel() }}</span>
+                <button
+                  type="button"
+                  class="tx-active-filter-pill__clear"
+                  (click)="removeFilter('category')"
+                  aria-label="Remove category filter"
+                >
+                  <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 0"
+                    >close</span
+                  >
+                </button>
+              </span>
+            }
+            @if (filterSource()) {
+              <span class="tx-active-filter-pill">
+                <span class="tx-active-filter-pill__label">{{ activeSourceLabel() }}</span>
+                <button
+                  type="button"
+                  class="tx-active-filter-pill__clear"
+                  (click)="removeFilter('source')"
+                  aria-label="Remove source filter"
+                >
+                  <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 0"
+                    >close</span
+                  >
+                </button>
+              </span>
+            }
           </div>
         }
 
