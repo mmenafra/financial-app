@@ -60,6 +60,10 @@ export interface PaginatedResponse<T> {
   next: string | null;
   previous: string | null;
   results: T[];
+  /** Sum of EXPENSE amounts for the filtered period (injected by the list endpoint). */
+  total_spent?: string;
+  /** Sum of EXPENSE amounts for the previous calendar month. */
+  prev_month_spent?: string;
 }
 
 export interface TransactionFilters {

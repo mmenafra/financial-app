@@ -10,6 +10,8 @@ import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 
+import { authInterceptor } from './interceptors/auth.interceptor';
+import { tokenRefreshInterceptor } from './interceptors/token-refresh.interceptor';
 import { mockTransactionsInterceptor } from './interceptors/mock-transactions.interceptor';
 import { routes } from './app.routes';
 import { AppEffects } from './store/app.effects';
@@ -19,7 +21,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([mockTransactionsInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, tokenRefreshInterceptor, mockTransactionsInterceptor])),
     provideStore({}),
     provideEffects([AppEffects]),
     provideStoreDevtools({ maxAge: 25, logOnly: !isDevMode() }),

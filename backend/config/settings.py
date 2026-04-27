@@ -1,6 +1,7 @@
 """Django settings for config project."""
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -217,6 +218,13 @@ LOGGING = {
             "propagate": False,
         },
     },
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": False,
 }
 
 # Google Sign-In (ID token verification). Set GOOGLE_CLIENT_ID in .env

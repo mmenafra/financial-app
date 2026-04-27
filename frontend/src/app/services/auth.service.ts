@@ -4,6 +4,11 @@ import { Observable, tap } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 
+export interface TokenRefreshResponse {
+  access: string;
+  refresh?: string;
+}
+
 export interface SignInPayload {
   username: string;
   password: string;
@@ -77,6 +82,26 @@ export class AuthService {
 
   getAccessToken(): string | null {
     return sessionStorage.getItem(ACCESS_KEY) ?? localStorage.getItem(ACCESS_KEY);
+  }
+
+  getRefreshToken(): string | null {
+    return sessionStorage.getItem(REFRESH_KEY) ?? localStorage.getItem(REFRESH_KEY);
+  }
+
+  refreshAccessToken(): Observable<TokenRefreshResponse> {
+    const refresh = this.getRefreshToken();
+    return this.http
+      .post<TokenRefreshResponse>(`${environment.apiUrl}/api/auth/token/refresh/`, { refresh })
+      .pipe(
+        tap((res) => {
+          const inLocal = !!localStorage.getItem(ACCESS_KEY);
+          const storage = inLocal ? localStorage : sessionStorage;
+          storage.setItem(ACCESS_KEY, res.access);
+          if (res.refresh) {
+            storage.setItem(REFRESH_KEY, res.refresh);
+          }
+        }),
+      );
   }
 
   isAuthenticated(): boolean {

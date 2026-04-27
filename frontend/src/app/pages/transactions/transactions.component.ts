@@ -11,7 +11,6 @@ import { TransactionService } from '../../services/transaction.service';
 
 const PAGE_SIZE = 10;
 const CONNECTED_SOURCES = 4;
-const AGG_PAGE_SIZE = 100;
 
 @Component({
   selector: 'app-transactions',
@@ -117,14 +116,11 @@ export class TransactionsComponent {
 
     const y = this.selectedYear();
     const m = this.selectedMonth();
-    const prevYear = m === 1 ? y - 1 : y;
-    const prevMonth = m === 1 ? 12 : m - 1;
     const page = this.currentPage();
     const cat = this.filterCategoryId();
     const src = this.filterSource();
 
     const baseFilters = { year: y, month: m, category: cat, source: src };
-    const prevFilters = { year: prevYear, month: prevMonth, category: cat, source: src };
 
     forkJoin({
       categories: this.transactionService.getCategories(),
@@ -133,26 +129,16 @@ export class TransactionsComponent {
         page,
         pageSize: PAGE_SIZE,
       }),
-      monthAgg: this.transactionService.getTransactions({
-        ...baseFilters,
-        page: 1,
-        pageSize: AGG_PAGE_SIZE,
-      }),
-      prevAgg: this.transactionService.getTransactions({
-        ...prevFilters,
-        page: 1,
-        pageSize: AGG_PAGE_SIZE,
-      }),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({ categories, page: p, monthAgg, prevAgg }) => {
+        next: ({ categories, page: p }) => {
           this.categories.set(categories);
           this.transactions.set(p.results);
           this.totalCount.set(p.count);
 
-          const spentThis = sumExpenses(monthAgg.results);
-          const spentPrev = sumExpenses(prevAgg.results);
+          const spentThis = Number(p.total_spent ?? '0');
+          const spentPrev = Number(p.prev_month_spent ?? '0');
           this.totalSpentThisMonth.set(spentThis);
 
           if (spentPrev <= 0) {
@@ -582,11 +568,6 @@ function positiveNumberValidator(control: AbstractControl): ValidationErrors | n
   return null;
 }
 
-function sumExpenses(rows: Transaction[]): number {
-  return rows
-    .filter((t) => t.direction === 'EXPENSE')
-    .reduce((acc, t) => acc + Number(t.amount), 0);
-}
 
 function parseAmount(s: string): number | null {
   if (!s) {

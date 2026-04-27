@@ -14,6 +14,8 @@ from drf_spectacular.utils import (
 )
 from google.auth.transport import requests as google_auth_requests
 from google.oauth2 import id_token as google_id_token
+from django.db.models import Sum
+
 from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -732,6 +734,57 @@ class TransactionViewSet(ModelViewSet):
         qs = qs.filter(splits__isnull=True)
         return _filter_transactions_list_queryset(
             qs, self.request.query_params, self.request.user
+        )
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Aggregate total expenses for the current filter period.
+        total_spent = (
+            queryset.filter(direction="EXPENSE")
+            .aggregate(total=Sum("amount"))["total"]
+            or Decimal("0")
+        )
+
+        # Aggregate expenses for the previous calendar month (same category/source).
+        year_raw = request.query_params.get("year")
+        month_raw = request.query_params.get("month")
+        prev_spent = Decimal("0")
+        if _query_param_non_empty(year_raw) and _query_param_non_empty(month_raw):
+            year = int(year_raw)
+            month = int(month_raw)
+            prev_year = year - 1 if month == 1 else year
+            prev_month = 12 if month == 1 else month - 1
+            prev_qs = Transaction.objects.filter(
+                user=request.user, splits__isnull=True
+            ).filter(created_at__year=prev_year, created_at__month=prev_month)
+            prev_qs = _apply_transaction_category_filter(
+                prev_qs, request.query_params.get("category"), request.user
+            )
+            prev_qs = _apply_transaction_source_filter(
+                prev_qs, request.query_params.get("source")
+            )
+            prev_spent = (
+                prev_qs.filter(direction="EXPENSE")
+                .aggregate(total=Sum("amount"))["total"]
+                or Decimal("0")
+            )
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response = self.get_paginated_response(serializer.data)
+            response.data["total_spent"] = str(total_spent)
+            response.data["prev_month_spent"] = str(prev_spent)
+            return response
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(
+            {
+                "results": serializer.data,
+                "total_spent": str(total_spent),
+                "prev_month_spent": str(prev_spent),
+            }
         )
 
     @extend_schema(

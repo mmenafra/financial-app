@@ -11,7 +11,7 @@ import type {
 } from '../models/transaction.model';
 
 /** Set to `false` to pass requests through to the real API. */
-export const MOCK_ENABLED = true;
+export const MOCK_ENABLED = false;
 
 const CAT_TECH = 'a1000000-0000-4000-8000-000000000001';
 const CAT_DINING = 'a1000000-0000-4000-8000-000000000002';
