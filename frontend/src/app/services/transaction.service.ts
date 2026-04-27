@@ -11,6 +11,7 @@ import type {
   SplitItem,
   Transaction,
   TransactionFilters,
+  UpdateTransactionPayload,
 } from '../models/transaction.model';
 
 @Injectable({ providedIn: 'root' })
@@ -68,6 +69,19 @@ export class TransactionService {
     return this.http.post<Transaction[]>(
       `${environment.apiUrl}/api/transactions/${id}/split/`,
       { items },
+    );
+  }
+
+  updateTransaction(id: string, payload: UpdateTransactionPayload): Observable<Transaction> {
+    return this.http.patch<Transaction>(
+      `${environment.apiUrl}/api/transactions/${id}/`,
+      payload,
+    );
+  }
+
+  deleteTransaction(id: string): Observable<void> {
+    return this.http.delete<void>(
+      `${environment.apiUrl}/api/transactions/${id}/`,
     );
   }
 }

@@ -107,3 +107,14 @@ export interface CreateTransactionPayload {
   category?: string | null;
   created_at?: string;
 }
+
+/** Body for PATCH /api/transactions/:id/ */
+export interface UpdateTransactionPayload {
+  description?: string;
+  amount?: string;
+  currency?: string;
+  direction?: Direction;
+  transaction_type?: TransactionType;
+  category?: string | null;
+  created_at?: string;
+}

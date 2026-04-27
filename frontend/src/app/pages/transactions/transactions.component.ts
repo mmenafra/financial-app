@@ -14,6 +14,7 @@ import type {
   Source,
   Transaction,
   TransactionType,
+  UpdateTransactionPayload,
 } from '../../models/transaction.model';
 import { TransactionService } from '../../services/transaction.service';
 
@@ -77,6 +78,25 @@ export class TransactionsComponent {
   protected readonly importSubmitting = signal(false);
   protected readonly importResult = signal<BankStatementImportResult | null>(null);
   protected readonly importError = signal<string | null>(null);
+
+  protected readonly editModalOpen = signal(false);
+  protected readonly editSubmitting = signal(false);
+  protected readonly editError = signal<string | null>(null);
+  protected readonly editingTx = signal<Transaction | null>(null);
+
+  protected readonly deleteModalOpen = signal(false);
+  protected readonly deleteSubmitting = signal(false);
+  protected readonly deleteError = signal<string | null>(null);
+  protected readonly pendingDelete = signal<Transaction | null>(null);
+
+  protected readonly editTxForm = this.fb.group({
+    description: ['', [Validators.required, Validators.maxLength(255)]],
+    amount: ['', [Validators.required, positiveNumberValidator]],
+    currency: ['CLP', [Validators.required]],
+    direction: ['EXPENSE', [Validators.required]],
+    category: [null as string | null],
+    date: [''],
+  });
 
   protected readonly newTxForm = this.fb.group({
     description: ['', [Validators.required, Validators.maxLength(255)]],
@@ -348,15 +368,96 @@ export class TransactionsComponent {
   protected onEdit(t: Transaction, event: MouseEvent): void {
     event.stopPropagation();
     this.openMenuId.set(null);
-    // TODO: open edit dialog for t
-    console.log('Edit', t);
+    this.editingTx.set(t);
+    this.editError.set(null);
+    this.editTxForm.reset({
+      description: t.description,
+      amount: t.amount,
+      currency: t.currency,
+      direction: t.direction,
+      category: t.category ?? null,
+      date: t.created_at.slice(0, 10),
+    });
+    this.editModalOpen.set(true);
+  }
+
+  protected closeEditModal(): void {
+    if (this.editSubmitting()) return;
+    this.editModalOpen.set(false);
+    this.editingTx.set(null);
+    this.editError.set(null);
+  }
+
+  protected submitEditTx(): void {
+    this.editTxForm.markAllAsTouched();
+    if (this.editTxForm.invalid) return;
+    const tx = this.editingTx();
+    if (!tx) return;
+    const v = this.editTxForm.value;
+    const direction = (v.direction ?? 'EXPENSE') as Direction;
+    const txType: TransactionType = direction === 'INCOME' ? 'CREDIT' : 'DEBIT';
+    const dateVal = v.date ? new Date(v.date + 'T12:00:00').toISOString() : undefined;
+    const payload: UpdateTransactionPayload = {
+      description: String(v.description ?? '').trim(),
+      amount: round2(Number(v.amount)).toFixed(2),
+      currency: String(v.currency ?? 'CLP'),
+      direction,
+      transaction_type: txType,
+      category: v.category ?? null,
+      ...(dateVal && { created_at: dateVal }),
+    };
+    this.editSubmitting.set(true);
+    this.editError.set(null);
+    this.transactionService
+      .updateTransaction(tx.id, payload)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.editSubmitting.set(false);
+          this.closeEditModal();
+          this.reload();
+        },
+        error: (err: unknown) => {
+          this.editSubmitting.set(false);
+          this.editError.set(this.httpErrorMessage(err) ?? 'Could not update transaction.');
+        },
+      });
   }
 
   protected onDelete(t: Transaction, event: MouseEvent): void {
     event.stopPropagation();
     this.openMenuId.set(null);
-    // TODO: confirm and delete t
-    console.log('Delete', t);
+    this.pendingDelete.set(t);
+    this.deleteError.set(null);
+    this.deleteModalOpen.set(true);
+  }
+
+  protected closeDeleteModal(): void {
+    if (this.deleteSubmitting()) return;
+    this.deleteModalOpen.set(false);
+    this.pendingDelete.set(null);
+    this.deleteError.set(null);
+  }
+
+  protected confirmDelete(): void {
+    const tx = this.pendingDelete();
+    if (!tx) return;
+    this.deleteSubmitting.set(true);
+    this.deleteError.set(null);
+    this.transactionService
+      .deleteTransaction(tx.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.deleteSubmitting.set(false);
+          this.closeDeleteModal();
+          this.reload();
+        },
+        error: (err: unknown) => {
+          this.deleteSubmitting.set(false);
+          this.deleteError.set(this.httpErrorMessage(err) ?? 'Could not delete transaction.');
+        },
+      });
   }
 
   protected onSplit(t: Transaction, event: MouseEvent): void {

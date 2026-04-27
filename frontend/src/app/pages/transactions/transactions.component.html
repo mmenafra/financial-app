@@ -561,6 +561,156 @@
   </div>
 }
 
+@if (editModalOpen() && editingTx(); as tx) {
+  <div
+    class="tx-modal-backdrop"
+    role="button"
+    tabindex="0"
+    aria-label="Close dialog"
+    (click)="closeEditModal()"
+    (keydown.enter)="closeEditModal()"
+    (keydown.space)="$event.preventDefault(); closeEditModal()"
+  ></div>
+  <div class="tx-modal" role="dialog" aria-modal="true" aria-labelledby="tx-edit-title">
+    <h2 id="tx-edit-title" class="text-xl font-extrabold text-primary m-0 font-headline">Edit Transaction</h2>
+    <form class="mt-4 flex flex-col gap-4" [formGroup]="editTxForm" (ngSubmit)="submitEditTx()">
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-on-surface-variant" for="etx-desc">
+          Description <span class="text-red-500">*</span>
+        </label>
+        <input
+          id="etx-desc"
+          type="text"
+          class="tx-input"
+          [class.border-red-400]="editTxForm.get('description')!.invalid && editTxForm.get('description')!.touched"
+          formControlName="description"
+          autocomplete="off"
+        />
+        @if (editTxForm.get('description')!.touched && editTxForm.get('description')!.hasError('required')) {
+          <p class="text-xs text-red-600 font-semibold m-0">Description is required.</p>
+        } @else if (editTxForm.get('description')!.touched && editTxForm.get('description')!.hasError('maxlength')) {
+          <p class="text-xs text-red-600 font-semibold m-0">Maximum 255 characters.</p>
+        }
+      </div>
+
+      <div class="flex gap-3">
+        <div class="flex flex-col gap-1 flex-1">
+          <label class="text-xs font-semibold text-on-surface-variant" for="etx-amount">
+            Amount <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="etx-amount"
+            type="text"
+            inputmode="decimal"
+            class="tx-input"
+            [class.border-red-400]="editTxForm.get('amount')!.invalid && editTxForm.get('amount')!.touched"
+            formControlName="amount"
+            autocomplete="off"
+          />
+          @if (editTxForm.get('amount')!.touched && editTxForm.get('amount')!.hasError('required')) {
+            <p class="text-xs text-red-600 font-semibold m-0">Amount is required.</p>
+          } @else if (editTxForm.get('amount')!.touched && editTxForm.get('amount')!.hasError('positiveNumber')) {
+            <p class="text-xs text-red-600 font-semibold m-0">Enter a valid amount greater than 0.</p>
+          }
+        </div>
+        <div class="flex flex-col gap-1 w-28">
+          <label class="text-xs font-semibold text-on-surface-variant" for="etx-currency">Currency</label>
+          <select id="etx-currency" class="tx-input" formControlName="currency">
+            <option value="USD">USD</option>
+            <option value="CLP">CLP</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex gap-3">
+        <div class="flex flex-col gap-1 flex-1">
+          <label class="text-xs font-semibold text-on-surface-variant" for="etx-direction">Type</label>
+          <select id="etx-direction" class="tx-input" formControlName="direction">
+            <option value="EXPENSE">Expense</option>
+            <option value="INCOME">Income</option>
+          </select>
+        </div>
+        <div class="flex flex-col gap-1 flex-1">
+          <label class="text-xs font-semibold text-on-surface-variant" for="etx-date">Date</label>
+          <input id="etx-date" type="date" class="tx-input" formControlName="date" />
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-on-surface-variant" for="etx-category">Category</label>
+        <select id="etx-category" class="tx-input" formControlName="category">
+          <option [ngValue]="null">Uncategorized</option>
+          @for (c of categories(); track c.id) {
+            <option [ngValue]="c.id">{{ c.name }}</option>
+          }
+        </select>
+      </div>
+
+      @if (editError()) {
+        <p class="text-sm font-semibold text-red-600 m-0">{{ editError() }}</p>
+      }
+
+      <div class="flex flex-wrap gap-2 justify-end pt-1">
+        <button type="button" class="tx-pill-btn ghost" (click)="closeEditModal()" [disabled]="editSubmitting()">
+          Cancel
+        </button>
+        <button type="submit" class="tx-pill-btn" [disabled]="editSubmitting()">
+          {{ editSubmitting() ? 'Saving…' : 'Save changes' }}
+        </button>
+      </div>
+    </form>
+  </div>
+}
+
+@if (deleteModalOpen() && pendingDelete(); as tx) {
+  <div
+    class="tx-modal-backdrop"
+    role="button"
+    tabindex="0"
+    aria-label="Close dialog"
+    (click)="closeDeleteModal()"
+    (keydown.enter)="closeDeleteModal()"
+    (keydown.space)="$event.preventDefault(); closeDeleteModal()"
+  ></div>
+  <div class="tx-modal" role="dialog" aria-modal="true" aria-labelledby="tx-delete-title">
+    <div class="flex items-start gap-3">
+      <span
+        class="material-symbols-outlined text-3xl text-red-500 shrink-0 mt-0.5"
+        style="font-variation-settings: 'FILL' 0"
+        >delete_forever</span
+      >
+      <div>
+        <h2 id="tx-delete-title" class="text-xl font-extrabold text-on-surface m-0 font-headline">Delete transaction?</h2>
+        <p class="text-sm text-on-surface-variant font-semibold m-0 mt-1">
+          "<span class="text-on-surface">{{ tx.description }}</span>" —
+          <span [class]="tx.direction === 'INCOME' ? 'amount-income' : 'amount-expense'" class="font-bold">
+            {{ displayAmount(tx) }}
+          </span>
+          on {{ formatDate(tx.created_at) }}
+        </p>
+        <p class="text-sm text-on-surface-variant m-0 mt-2">This action cannot be undone.</p>
+      </div>
+    </div>
+    @if (deleteError()) {
+      <p class="text-sm font-semibold text-red-600 m-0 mt-4">{{ deleteError() }}</p>
+    }
+    <div class="flex flex-wrap gap-2 justify-end pt-5">
+      <button type="button" class="tx-pill-btn ghost" (click)="closeDeleteModal()" [disabled]="deleteSubmitting()">
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="tx-pill-btn"
+        style="background-color: var(--color-error, #dc2626); border-color: var(--color-error, #dc2626);"
+        (click)="confirmDelete()"
+        [disabled]="deleteSubmitting()"
+      >
+        {{ deleteSubmitting() ? 'Deleting…' : 'Delete' }}
+      </button>
+    </div>
+  </div>
+}
+
 @if (splitModalOpen() && pendingSplit(); as bundle) {
     <div
       class="tx-modal-backdrop"
