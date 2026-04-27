@@ -336,7 +336,7 @@ export const mockTransactionsInterceptor: HttpInterceptorFn = (req, next) => {
   const year = readIntParam(req.url, 'year');
   const month = readIntParam(req.url, 'month');
   const page = readIntParam(req.url, 'page') ?? 1;
-  const pageSize = readIntParam(req.url, 'page_size') ?? 20;
+  const pageSize = readIntParam(req.url, 'page_size') ?? 100;
 
   let filtered = filterByYearMonth(ALL_MOCK, year, month);
 

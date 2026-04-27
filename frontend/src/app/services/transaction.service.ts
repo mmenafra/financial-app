@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 import type {
+  BankStatementImportResult,
   Category,
   CreateTransactionPayload,
   PaginatedResponse,
@@ -45,6 +46,15 @@ export class TransactionService {
   /** Categories list is unpaginated on the backend (no pagination class on `CategoryViewSet`). */
   getCategories(): Observable<Category[]> {
     return this.http.get<Category[]>(`${environment.apiUrl}/api/categories/`);
+  }
+
+  importBankStatement(file: File): Observable<BankStatementImportResult> {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    return this.http.post<BankStatementImportResult>(
+      `${environment.apiUrl}/api/transactions/import-bank-statement/`,
+      body,
+    );
   }
 
   createTransaction(payload: CreateTransactionPayload): Observable<Transaction> {

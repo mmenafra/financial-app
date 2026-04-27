@@ -14,8 +14,6 @@ from drf_spectacular.utils import (
 )
 from google.auth.transport import requests as google_auth_requests
 from google.oauth2 import id_token as google_id_token
-from django.db.models import Sum
-
 from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -29,13 +27,21 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.db import transaction as db_transaction
+from django.db.models import Sum
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
 from .bank_statement_parser import parse_bsa_bank_statement
-from .models import Category, RecurringPattern, SocialAccount, Source, Transaction
+from .bsa_import import import_bsa_row
+from .models import (
+    Category,
+    RecurringPattern,
+    SocialAccount,
+    Source,
+    Transaction,
+)
 from .pagination import TransactionPagination
 from .serializers import (
     CategorySerializer,
@@ -398,12 +404,21 @@ class ImportBankStatementView(APIView):
             encoding={"file": {"contentType": "application/octet-stream"}},
         ),
         responses={
-            200: inline_serializer(
-                name="ImportBankStatementResponse",
+            201: inline_serializer(
+                name="ImportBankStatementPersistResponse",
                 fields={
-                    "metadata": serializers.JSONField(),
-                    "transactions": serializers.ListField(
-                        child=serializers.JSONField()
+                    "created": serializers.IntegerField(),
+                    "skipped": serializers.IntegerField(),
+                    "failed": serializers.IntegerField(),
+                    "transactions": TransactionSerializer(many=True),
+                    "errors": serializers.ListField(
+                        child=inline_serializer(
+                            name="ImportBankStatementRowError",
+                            fields={
+                                "row": serializers.JSONField(),
+                                "error": serializers.CharField(),
+                            },
+                        )
                     ),
                 },
             ),
@@ -448,11 +463,43 @@ class ImportBankStatementView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        created_count = 0
+        skipped_count = 0
+        failed_count = 0
+        created_instances = []
+        errors: list[dict] = []
+        for row in parsed.get("transactions", []):
+            result = import_bsa_row(request.user, row)
+            if "error" in result:
+                failed_count += 1
+                errors.append({"row": row, "error": result["error"]})
+                continue
+            if result.get("ok") == "skipped":
+                skipped_count += 1
+            elif result.get("ok") == "created" and result.get("instance"):
+                created_count += 1
+                created_instances.append(result["instance"])
+
         logger.info(
-            "Import bank statement success: transactions=%s",
-            len(parsed.get("transactions", [])),
+            "Import bank statement persist: user_id=%s created=%s skipped=%s failed=%s",
+            request.user.pk,
+            created_count,
+            skipped_count,
+            failed_count,
         )
-        return Response(parsed, status=status.HTTP_200_OK)
+        ser = TransactionSerializer(
+            created_instances, many=True, context={"request": request}
+        )
+        return Response(
+            {
+                "created": created_count,
+                "skipped": skipped_count,
+                "failed": failed_count,
+                "transactions": ser.data,
+                "errors": errors,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class ImportVisaNationalStatementView(APIView):
@@ -717,7 +764,7 @@ def _filter_transactions_list_queryset(qs, query_params, user):
                     "Number of results per page. "
                     "Capped at the API maximum (e.g. 100)."
                 ),
-                examples=[OpenApiExample("Default size", value=20)],
+                examples=[OpenApiExample("Default size", value=100)],
             ),
         ],
     ),

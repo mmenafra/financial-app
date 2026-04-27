@@ -6,10 +6,18 @@ import { forkJoin } from 'rxjs';
 
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { TopNavComponent } from '../../components/top-nav/top-nav.component';
-import type { Category, CreateTransactionPayload, Direction, Source, Transaction, TransactionType } from '../../models/transaction.model';
+import type {
+  BankStatementImportResult,
+  Category,
+  CreateTransactionPayload,
+  Direction,
+  Source,
+  Transaction,
+  TransactionType,
+} from '../../models/transaction.model';
 import { TransactionService } from '../../services/transaction.service';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 100;
 const CONNECTED_SOURCES = 4;
 
 @Component({
@@ -63,6 +71,12 @@ export class TransactionsComponent {
   protected readonly newTxModalOpen = signal(false);
   protected readonly newTxSubmitting = signal(false);
   protected readonly newTxError = signal<string | null>(null);
+
+  protected readonly importModalOpen = signal(false);
+  protected readonly importFile = signal<File | null>(null);
+  protected readonly importSubmitting = signal(false);
+  protected readonly importResult = signal<BankStatementImportResult | null>(null);
+  protected readonly importError = signal<string | null>(null);
 
   protected readonly newTxForm = this.fb.group({
     description: ['', [Validators.required, Validators.maxLength(255)]],
@@ -255,7 +269,8 @@ export class TransactionsComponent {
   }
 
   protected formatDate(iso: string): string {
-    const d = new Date(iso);
+    const [year, month, day] = iso.slice(0, 10).split('-').map(Number);
+    const d = new Date(year, month - 1, day);
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
@@ -476,6 +491,80 @@ export class TransactionsComponent {
   protected closeNewTxModal(): void {
     this.newTxModalOpen.set(false);
     this.newTxError.set(null);
+  }
+
+  protected openImportModal(): void {
+    this.importFile.set(null);
+    this.importResult.set(null);
+    this.importError.set(null);
+    this.importModalOpen.set(true);
+  }
+
+  protected closeImportModal(): void {
+    if (this.importSubmitting()) {
+      return;
+    }
+    this.importModalOpen.set(false);
+    this.importFile.set(null);
+    this.importResult.set(null);
+    this.importError.set(null);
+  }
+
+  protected onImportFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const f = input.files?.[0];
+    this.importFile.set(f ?? null);
+    this.importError.set(null);
+  }
+
+  protected submitBankImport(): void {
+    const file = this.importFile();
+    if (!file) {
+      this.importError.set('Choose a bank statement file (.dat) first.');
+      return;
+    }
+    this.importSubmitting.set(true);
+    this.importError.set(null);
+    this.transactionService
+      .importBankStatement(file)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.importSubmitting.set(false);
+          this.importResult.set(res);
+          this.reload();
+        },
+        error: (err: unknown) => {
+          this.importSubmitting.set(false);
+          this.importError.set(this.httpErrorMessage(err) ?? 'Import failed. Check the file and try again.');
+        },
+      });
+  }
+
+  protected importAnother(): void {
+    this.importResult.set(null);
+    this.importFile.set(null);
+    this.importError.set(null);
+  }
+
+  protected importErrorRowPreview(row: Record<string, unknown>): string {
+    const d = row['date'];
+    const desc = row['description'];
+    const parts: string[] = [];
+    if (typeof d === 'string') {
+      parts.push(d);
+    }
+    if (typeof desc === 'string') {
+      parts.push(desc);
+    }
+    if (parts.length) {
+      return parts.join(' — ');
+    }
+    try {
+      return JSON.stringify(row);
+    } catch {
+      return String(row);
+    }
   }
 
   protected submitNewTx(): void {

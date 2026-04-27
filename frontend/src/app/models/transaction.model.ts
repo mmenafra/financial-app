@@ -82,6 +82,20 @@ export interface SplitItem {
   category: string | null;
 }
 
+/** POST /api/transactions/import-bank-statement/ (Banco Santander .dat) */
+export interface BankStatementImportRowError {
+  row: Record<string, unknown>;
+  error: string;
+}
+
+export interface BankStatementImportResult {
+  created: number;
+  skipped: number;
+  failed: number;
+  transactions: Transaction[];
+  errors: BankStatementImportRowError[];
+}
+
 /** Body for POST /api/transactions/ */
 export interface CreateTransactionPayload {
   description: string;
