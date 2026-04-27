@@ -20,7 +20,7 @@
               (change)="onMonthChange($event)"
             >
               @for (m of monthOptions; track m.value) {
-                <option [value]="m.value">{{ m.label }}</option>
+                <option [value]="m.value" [selected]="m.value === selectedMonth()">{{ m.label }}</option>
               }
             </select>
 
@@ -32,7 +32,7 @@
               (change)="onYearChange($event)"
             >
               @for (y of yearOptions; track y) {
-                <option [value]="y">{{ y }}</option>
+                <option [value]="y" [selected]="y === selectedYear()">{{ y }}</option>
               }
             </select>
 

@@ -68,7 +68,7 @@ export class TransactionsComponent {
   protected readonly newTxForm = this.fb.group({
     description: ['', [Validators.required, Validators.maxLength(255)]],
     amount: ['', [Validators.required, positiveNumberValidator]],
-    currency: ['USD', [Validators.required]],
+    currency: ['CLP', [Validators.required]],
     direction: ['EXPENSE', [Validators.required]],
     source: ['BANK_ACCOUNT', [Validators.required]],
     category: [null as string | null],
@@ -478,7 +478,7 @@ export class TransactionsComponent {
     this.newTxForm.reset({
       description: '',
       amount: '',
-      currency: 'USD',
+      currency: 'CLP',
       direction: 'EXPENSE',
       source: 'BANK_ACCOUNT',
       category: null,

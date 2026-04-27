@@ -121,7 +121,7 @@ function tx(
 /** Design-like rows + generated rows to reach 248 for Oct 2023. */
 function buildAllMockTransactions(): Transaction[] {
   const seed: Transaction[] = [
-    tx('000000000001', '2023-10-24T14:30:00Z', {
+    tx('000000000001', '2026-04-24T14:30:00Z', {
       description: 'Apple Store Infinite Loop',
       amount: '1299.00',
       currency: 'USD',
@@ -130,37 +130,37 @@ function buildAllMockTransactions(): Transaction[] {
       category: CAT_TECH,
       source: 'CREDIT_CARD_INTERNATIONAL',
     }),
-    tx('000000000002', '2023-10-23T19:00:00Z', {
+    tx('000000000002', '2026-04-23T19:00:00Z', {
       description: 'The Modern Bistro',
       amount: '84.50',
-      currency: 'USD',
+      currency: 'CLP',
       transaction_type: 'DEBIT',
       direction: 'EXPENSE',
       category: CAT_DINING,
       source: 'BANK_ACCOUNT',
     }),
-    tx('000000000003', '2023-10-21T09:00:00Z', {
+    tx('000000000003', '2026-04-21T09:00:00Z', {
       description: 'Monthly Salary Deposit',
       amount: '8500.00',
-      currency: 'USD',
+      currency: 'CLP',
       transaction_type: 'CREDIT',
       direction: 'INCOME',
       category: CAT_INCOME,
       source: 'BANK_ACCOUNT',
     }),
-    tx('000000000004', '2023-10-21T08:15:00Z', {
+    tx('000000000004', '2026-04-21T08:15:00Z', {
       description: 'Uber Technologies Inc.',
       amount: '32.15',
-      currency: 'ARS',
+      currency: 'CLP',
       transaction_type: 'DEBIT',
       direction: 'EXPENSE',
       category: CAT_TRANSPORT,
       source: 'CREDIT_CARD_NATIONAL',
     }),
-    tx('000000000005', '2023-10-18T11:20:00Z', {
+    tx('000000000005', '2026-04-18T11:20:00Z', {
       description: 'Equinox Luxury Fitness',
       amount: '215.00',
-      currency: 'USD',
+      currency: 'CLP',
       transaction_type: 'DEBIT',
       direction: 'EXPENSE',
       category: CAT_HEALTH,
@@ -179,7 +179,7 @@ function buildAllMockTransactions(): Transaction[] {
 
   const extra: Transaction[] = [];
   let n = seed.length;
-  for (let d = 31; d >= 1 && n < 248; d--) {
+  for (let d = 30; d >= 1 && n < 248; d--) {
     for (let k = 0; k < 9 && n < 248; k++) {
       const direction: Direction = n % 12 === 0 ? 'INCOME' : 'EXPENSE';
       const amountNum =
@@ -187,7 +187,7 @@ function buildAllMockTransactions(): Transaction[] {
           ? 2000 + (n % 50) * 100
           : 12.5 + (n % 97) * 3.17 + (k % 5) * 10;
       const amount = amountNum.toFixed(2);
-      const createdAt = `2023-10-${String(d).padStart(2, '0')}T${String((10 + k) % 24).padStart(2, '0')}:15:00Z`;
+      const createdAt = `2026-04-${String(d).padStart(2, '0')}T${String((10 + k) % 24).padStart(2, '0')}:15:00Z`;
       const suffix = String(n + 1).padStart(12, '0');
       extra.push(
         tx(suffix, createdAt, {
@@ -196,7 +196,7 @@ function buildAllMockTransactions(): Transaction[] {
               ? `Transfer in #${n}`
               : `Card purchase ${n} — Merchant ${k}`,
           amount,
-          currency: n % 7 === 0 ? 'ARS' : 'USD',
+          currency: n % 7 === 0 ? 'USD' : 'CLP',
           transaction_type: types[n % types.length],
           direction,
           category: direction === 'INCOME' ? CAT_INCOME : categoryIds[n % categoryIds.length],
@@ -207,20 +207,20 @@ function buildAllMockTransactions(): Transaction[] {
     }
   }
 
-  const october = [...seed, ...extra];
+  const april = [...seed, ...extra];
 
-  /** Prior month expenses for trend line when viewing October 2023. */
-  const september: Transaction[] = [];
+  /** Prior month expenses for trend line when viewing April 2026. */
+  const march: Transaction[] = [];
   let s = 0;
-  for (let d = 28; d >= 1 && s < 180; d--) {
+  for (let d = 31; d >= 1 && s < 180; d--) {
     for (let j = 0; j < 7 && s < 180; j++) {
       const amountNum = 18.25 + (s % 89) * 4.11 + j * 3;
       const suffix = `9${String(s + 1).padStart(11, '0')}`;
-      september.push(
-        tx(suffix, `2023-09-${String(d).padStart(2, '0')}T${String((8 + j) % 24).padStart(2, '0')}:20:00Z`, {
-          description: `September spend ${s + 1}`,
+      march.push(
+        tx(suffix, `2026-03-${String(d).padStart(2, '0')}T${String((8 + j) % 24).padStart(2, '0')}:20:00Z`, {
+          description: `March spend ${s + 1}`,
           amount: amountNum.toFixed(2),
-          currency: s % 6 === 0 ? 'ARS' : 'USD',
+          currency: s % 6 === 0 ? 'USD' : 'CLP',
           transaction_type: 'DEBIT',
           direction: 'EXPENSE',
           category: categoryIds[s % categoryIds.length],
@@ -231,7 +231,7 @@ function buildAllMockTransactions(): Transaction[] {
     }
   }
 
-  const all = [...october, ...september];
+  const all = [...april, ...march];
   return all.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
 }
 
