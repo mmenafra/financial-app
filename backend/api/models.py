@@ -100,6 +100,40 @@ class Frequency(models.TextChoices):
     YEARLY = "YEARLY", "Yearly"
 
 
+class ImportStatus(models.TextChoices):
+    PENDING = "PENDING", "Pending"
+    PROCESSING = "PROCESSING", "Processing"
+    COMPLETED = "COMPLETED", "Completed"
+    FAILED = "FAILED", "Failed"
+
+
+class FileImport(AbstractBaseModel):
+    """Recorded file upload for statement/import flows (metadata + stored copy)."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="file_imports",
+    )
+    source = models.CharField(max_length=30, choices=Source.choices)
+    file = models.FileField(upload_to="imports/%Y/%m/")
+    original_filename = models.CharField(max_length=255)
+    status = models.CharField(
+        max_length=20,
+        choices=ImportStatus.choices,
+        default=ImportStatus.PENDING,
+    )
+    rows_imported = models.PositiveIntegerField(default=0)
+    rows_skipped = models.PositiveIntegerField(default=0)
+    error_message = models.TextField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.original_filename} ({self.source})"
+
+
 class TransactionQuerySet(models.QuerySet):
     def expenses(self):
         return self.filter(direction=Direction.EXPENSE)
@@ -168,6 +202,7 @@ class Transaction(AbstractBaseModel):
     source = models.CharField(max_length=30, choices=Source.choices)
     original_reference = models.CharField(max_length=255, null=True, blank=True)
     external_id = models.CharField(max_length=255, null=True, blank=True)
+    external_name = models.CharField(max_length=255, null=True, blank=True)
     is_installment = models.BooleanField(default=False)
     installment_current = models.PositiveSmallIntegerField(null=True, blank=True)
     installment_total = models.PositiveSmallIntegerField(null=True, blank=True)
@@ -192,6 +227,13 @@ class Transaction(AbstractBaseModel):
         blank=True,
         related_name="splits",
     )
+    file_import = models.ForeignKey(
+        FileImport,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="transactions",
+    )
 
     objects = TransactionManager()
 
@@ -204,6 +246,11 @@ class Transaction(AbstractBaseModel):
                 name="unique_external_id_per_user_source_when_present",
             )
         ]
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and self.external_name is None:
+            self.external_name = self.description
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.description} ({self.amount} {self.currency})"

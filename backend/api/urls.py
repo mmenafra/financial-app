@@ -5,6 +5,7 @@ from django.urls import include, path
 
 from .views import (
     CategoryViewSet,
+    FileImportViewSet,
     ForgotPasswordView,
     GoogleAuthView,
     HealthCheckView,
@@ -24,6 +25,7 @@ router.register("transactions", TransactionViewSet, basename="transaction")
 router.register(
     "recurring-patterns", RecurringPatternViewSet, basename="recurring-pattern"
 )
+router.register("file-imports", FileImportViewSet, basename="file-import")
 
 urlpatterns = [
     path("health/", HealthCheckView.as_view(), name="health-check"),

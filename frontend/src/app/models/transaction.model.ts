@@ -16,6 +16,7 @@ export interface Transaction {
   source: Source;
   original_reference: string | null;
   external_id: string | null;
+  external_name: string | null;
   is_installment: boolean;
   installment_current: number | null;
   installment_total: number | null;

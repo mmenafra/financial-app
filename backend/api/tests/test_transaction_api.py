@@ -21,7 +21,7 @@ from api.pagination import TransactionPagination
 User = get_user_model()
 
 
-class TransactionAPITests(APITestCase):
+class TransactionAPITests(APITestCase):  # pylint: disable=too-many-public-methods
     def setUp(self):
         self.user = User.objects.create_user(
             username="tester",

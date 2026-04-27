@@ -53,8 +53,8 @@ class Command(BaseCommand):
     def _get_user(self, username):
         try:
             return User.objects.get(username=username)
-        except User.DoesNotExist:
-            raise CommandError(f"User '{username}' not found.")
+        except User.DoesNotExist as exc:
+            raise CommandError(f"User '{username}' not found.") from exc
 
     def _clean_user(self, username):
         user = self._get_user(username)

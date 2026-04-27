@@ -1,11 +1,11 @@
-from rest_framework import serializers
-
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 
-from .models import Category, RecurringPattern, Transaction
+from rest_framework import serializers
+
+from .models import Category, FileImport, RecurringPattern, Transaction
 
 User = get_user_model()
 
@@ -70,6 +70,25 @@ class ImportVisaInternationalStatementSerializer(serializers.Serializer):
     file = serializers.FileField()
 
 
+class FileImportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FileImport
+        fields = (
+            "id",
+            "created_at",
+            "updated_at",
+            "user",
+            "source",
+            "file",
+            "original_filename",
+            "status",
+            "rows_imported",
+            "rows_skipped",
+            "error_message",
+        )
+        read_only_fields = fields
+
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
@@ -116,6 +135,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             "source",
             "original_reference",
             "external_id",
+            "external_name",
             "is_installment",
             "installment_current",
             "installment_total",
@@ -125,9 +145,18 @@ class TransactionSerializer(serializers.ModelSerializer):
             "imported_at",
             "status",
             "parent",
+            "file_import",
             "splits",
         )
-        read_only_fields = ("id", "created_at", "updated_at", "user", "splits")
+        read_only_fields = (
+            "id",
+            "created_at",
+            "updated_at",
+            "user",
+            "splits",
+            "external_name",
+            "file_import",
+        )
 
     def validate_category(self, value):
         request = self.context.get("request")

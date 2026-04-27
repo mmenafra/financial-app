@@ -9,6 +9,7 @@ from django.utils import timezone
 from .models import (
     Category,
     Direction,
+    FileImport,
     Source,
     Transaction,
     TransactionStatus,
@@ -65,7 +66,9 @@ def inferred_category_for_bsa(user, description: str):
     return Category.objects.filter(pk=prior_id, user=user).first()
 
 
-def import_bsa_row(user, row: dict) -> dict:  # pylint: disable=too-many-return-statements
+def import_bsa_row(  # pylint: disable=too-many-return-statements
+    user, row: dict, file_import: FileImport | None = None
+) -> dict:
     """
     Import one BSA-parsed row. Returns one of:
     {"ok": "created", "instance": Transaction}
@@ -121,6 +124,7 @@ def import_bsa_row(user, row: dict) -> dict:  # pylint: disable=too-many-return-
                 "raw_data": bsa_row_json_safe(row),
                 "imported_at": statement_dt,
                 "status": TransactionStatus.CONFIRMED,
+                "file_import": file_import,
             },
         )
         if not was_created:

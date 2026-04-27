@@ -94,6 +94,7 @@ function tx(
     updated_at: createdAt,
     user: 1,
     description: partial.description,
+    external_name: partial.external_name ?? partial.description,
     amount: partial.amount,
     currency: partial.currency,
     amount_local: partial.amount_local ?? null,
