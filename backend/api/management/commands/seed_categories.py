@@ -46,6 +46,8 @@ SEED_CATEGORIES: list[tuple[str, str, str]] = [
     ("Dividendos Deptos", "real_estate_agent", "#fde68a"),
     ("Colegio Ninos", "school", "#818cf8"),
     ("Isapre Ninos", "health_and_safety", "#34d399"),
+    ("Visa Nacional", "credit_card", "#0369a1"),
+    ("Visa Internacional", "credit_card", "#7c3aed"),
     ("Income", "trending_up", "#10b981"),
 ]
 

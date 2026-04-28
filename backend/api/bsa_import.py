@@ -58,11 +58,15 @@ _MAX_INFERENCE_SCAN = 2000
 
 
 def inferred_category_for_bsa(user, description: str):
-    """Match normalized description against prior categorized rows (recent-first)."""
+    """Match normalized description against prior categorized rows (recent-first).
+
+    Returns (category, description_to_use). When a prior row matches, description_to_use
+    is that row's stored description so imports reuse the user's corrected wording.
+    """
 
     norm = _normalize_description(description[:255])
     if not norm:
-        return None
+        return None, None
     scanned = 0
     for tx in (
         Transaction.objects.filter(user=user, category__isnull=False)
@@ -74,8 +78,10 @@ def inferred_category_for_bsa(user, description: str):
         scanned += 1
         if _normalize_description(tx.description) != norm:
             continue
-        return Category.objects.filter(pk=tx.category_id, user=user).first()
-    return None
+        category = Category.objects.filter(pk=tx.category_id, user=user).first()
+        desc_from_prior = (tx.description or "")[:255] or description[:255]
+        return category, desc_from_prior
+    return None, None
 
 
 def import_bsa_row(  # pylint: disable=too-many-return-statements
@@ -114,7 +120,11 @@ def import_bsa_row(  # pylint: disable=too-many-return-statements
         if len(ext_id) > 255:
             return {"error": "Could not build external_id: row data too long."}
         desc = (row.get("description") or "")[:255]
-        category = inferred_category_for_bsa(user, desc) if desc else None
+        category = None
+        if desc:
+            category, desc_override = inferred_category_for_bsa(user, desc)
+            if desc_override:
+                desc = desc_override
         statement_dt = bsa_statement_dt(row["date"])
         tx, was_created = Transaction.objects.get_or_create(
             user=user,

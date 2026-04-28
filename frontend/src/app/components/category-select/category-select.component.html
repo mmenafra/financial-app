@@ -38,13 +38,13 @@
             >search</span
           >
           <input
+            #categorySearchInput
             type="text"
             class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 pl-8 text-sm font-semibold text-on-surface placeholder:text-on-surface-variant/60 outline-none focus:border-primary"
             placeholder="Search categories…"
             [value]="searchText()"
             (input)="onSearchInput($event)"
             (click)="$event.stopPropagation()"
-            autofocus
           />
         </div>
       </div>
@@ -54,9 +54,10 @@
         <li>
           <button
             type="button"
-            class="flex w-full items-center gap-2.5 px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container transition-colors"
-            [class.bg-primary-container]="selectedId() === null"
-            [class.text-on-primary-container]="selectedId() === null"
+            class="flex w-full items-center gap-2.5 px-3 py-2 text-sm font-semibold hover:bg-surface-container transition-colors"
+            [class.bg-primary-fixed]="selectedId() === null"
+            [class.text-on-primary-fixed]="selectedId() === null"
+            [class.text-on-surface]="selectedId() !== null"
             (click)="select(null)"
           >
             <span class="inline-block w-2.5 h-2.5 rounded-full shrink-0 bg-slate-300"></span>
@@ -68,9 +69,10 @@
           <li>
             <button
               type="button"
-              class="flex w-full items-center gap-2.5 px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container transition-colors"
-              [class.bg-primary-container]="selectedId() === cat.id"
-              [class.text-on-primary-container]="selectedId() === cat.id"
+              class="flex w-full items-center gap-2.5 px-3 py-2 text-sm font-semibold hover:bg-surface-container transition-colors"
+              [class.bg-primary-fixed]="selectedId() === cat.id"
+              [class.text-on-primary-fixed]="selectedId() === cat.id"
+              [class.text-on-surface]="selectedId() !== cat.id"
               (click)="select(cat.id)"
             >
               <span

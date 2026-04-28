@@ -3,10 +3,14 @@ import {
   Component,
   ElementRef,
   HostListener,
+  Injector,
   Input,
+  afterNextRender,
   computed,
   forwardRef,
+  inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
@@ -27,6 +31,9 @@ import type { Category } from '../../models/transaction.model';
 })
 export class CategorySelectComponent implements ControlValueAccessor {
   @Input() categories: Category[] = [];
+
+  private readonly injector = inject(Injector);
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('categorySearchInput');
 
   protected readonly isOpen = signal(false);
   protected readonly searchText = signal('');
@@ -77,6 +84,12 @@ export class CategorySelectComponent implements ControlValueAccessor {
     this.searchText.set('');
     this.isOpen.set(true);
     this.onTouched();
+    afterNextRender(
+      () => {
+        this.searchInput()?.nativeElement?.focus();
+      },
+      { injector: this.injector },
+    );
   }
 
   protected select(id: string | null): void {

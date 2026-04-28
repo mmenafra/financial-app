@@ -131,7 +131,6 @@ class ImportBankStatementAPITests(APITestCase):
         cat = Category.objects.create(
             name="TestCat", user=self.user, icon="home", color="#f59e0b"
         )
-        desc_norm = "MERCHANT NAME HERE"
         Transaction.objects.create(
             user=self.user,
             description="MERCHANT  NAME    HERE",
@@ -157,7 +156,7 @@ class ImportBankStatementAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(len(response.data["transactions"]), 1)
         tx = response.data["transactions"][0]
-        self.assertEqual(tx["description"], desc_norm)
+        self.assertEqual(tx["description"], "MERCHANT  NAME    HERE")
         self.assertEqual(str(tx["category"]), str(cat.id))
 
     def test_import_errors_included_in_response(self):

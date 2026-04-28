@@ -391,6 +391,7 @@
               <thead>
                 <tr>
                   <th>Description</th>
+                  <th class="text-right">Amount</th>
                   <th>Category</th>
                 </tr>
               </thead>
@@ -399,6 +400,9 @@
                   <tr>
                     <td class="font-semibold text-on-surface max-w-[14rem] sm:max-w-md">
                       <span class="line-clamp-2" [title]="tx.description">{{ tx.description }}</span>
+                    </td>
+                    <td class="text-right font-bold whitespace-nowrap" [ngClass]="amountClass(tx)">
+                      {{ displayAmount(tx) }}
                     </td>
                     <td class="min-w-[12rem]">
                       <app-category-select
