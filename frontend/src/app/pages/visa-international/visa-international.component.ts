@@ -1,8 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, computed, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
+import { ImportModalComponent } from '../../components/import-modal/import-modal.component';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { TopNavComponent } from '../../components/top-nav/top-nav.component';
+import type { Category } from '../../models/transaction.model';
+import { TransactionService } from '../../services/transaction.service';
 
 type TimelineKind = 'subscription' | 'installment' | 'other';
 type TimelineTab = 'all' | 'subscriptions' | 'installments';
@@ -33,11 +37,26 @@ const BAR_CHART_MOCK_SERIES: readonly number[] = [
 @Component({
   selector: 'app-visa-international',
   standalone: true,
-  imports: [CommonModule, SidebarComponent, TopNavComponent],
+  imports: [CommonModule, ImportModalComponent, SidebarComponent, TopNavComponent],
   templateUrl: './visa-international.component.html',
   styleUrl: './visa-international.component.scss',
 })
 export class VisaInternationalComponent {
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly transactionService = inject(TransactionService);
+
+  constructor() {
+    this.transactionService
+      .getCategories()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((cats) => this.categories.set(cats));
+  }
+
+  protected readonly categories = signal<Category[]>([]);
+  protected readonly importModalOpen = signal(false);
+  protected readonly importVisaInternationalSubmit = (file: File) =>
+    this.transactionService.importVisaInternational(file);
+
   protected readonly monthShort = MONTH_SHORT;
 
   protected readonly selectedYear = signal(new Date().getFullYear());
@@ -210,8 +229,18 @@ export class VisaInternationalComponent {
 
   /** Stub until import flow exists for Visa International. */
   protected openImportModal(): void {
-    // noop
+    this.importModalOpen.set(true);
   }
+
+  protected closeImportModal(): void {
+    this.importModalOpen.set(false);
+  }
+
+  /** Future: refresh Visa International timeline from API after import completes. */
+  protected onVisaImportDone(): void {
+    //
+  }
+
 
   @HostListener('document:click')
   protected closeMenus(): void {

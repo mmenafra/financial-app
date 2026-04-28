@@ -150,7 +150,7 @@
                       class="material-symbols-outlined text-[20px]"
                       style="font-variation-settings: 'FILL' 1"
                       aria-hidden="true"
-                      >play_arrow</span
+                      >circle</span
                     >
                   </span>
                   @if (!$last) {
@@ -254,3 +254,16 @@
     </main>
   </div>
 </div>
+
+@if (importModalOpen()) {
+  <app-import-modal
+    [submitImportFn]="importVisaInternationalSubmit"
+    accept=".pdf"
+    modalTitle="Import Visa International statement"
+    modalDescription="Select a Scotia Visa Internacional (USD) statement PDF. Existing references are skipped; descriptions match prior categories where possible."
+    [categories]="categories()"
+    chooseFilePrompt="Choose a Visa Internacional PDF first."
+    (closed)="closeImportModal()"
+    (imported)="onVisaImportDone()"
+  />
+}

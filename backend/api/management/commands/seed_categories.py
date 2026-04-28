@@ -53,7 +53,6 @@ SEED_CATEGORIES: list[tuple[str, str, str]] = [
 ]
 
 
-
 class Command(BaseCommand):
     help = "Seed categories for a user (by email) with fixed names, icons, and colors."
 

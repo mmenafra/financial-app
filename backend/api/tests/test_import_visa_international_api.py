@@ -67,10 +67,13 @@ class ImportVisaInternationalAPITests(APITestCase):
             content_type="application/pdf",
         )
         response = self.client.post(self.url, {"file": pdf}, format="multipart")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["created"], 1)
+        self.assertEqual(response.data["skipped"], 0)
         self.assertEqual(len(response.data["transactions"]), 1)
-        self.assertEqual(
-            response.data["transactions"][0]["reference"], "000000001498572431"
-        )
-        self.assertEqual(response.data["transactions"][0]["amount_usd"], "16.15")
+        tx0 = response.data["transactions"][0]
+        self.assertEqual(tx0["external_id"], "000000001498572431")
+        self.assertEqual(tx0["description"], "NETFLIX.COM 844-5052993")
+        self.assertEqual(tx0["amount"], "16.15")
+        self.assertEqual(tx0["currency"], "USD")
         mock_parse.assert_called_once()

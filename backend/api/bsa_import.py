@@ -84,7 +84,7 @@ def inferred_category_for_bsa(user, description: str):
     return None, None
 
 
-def import_bsa_row(  # pylint: disable=too-many-return-statements
+def import_bsa_row(  # pylint: disable=too-many-return-statements  # noqa: C901
     user, row: dict, file_import: FileImport | None = None
 ) -> dict:
     """

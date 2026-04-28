@@ -1,0 +1,190 @@
+<div
+  class="tx-modal-backdrop"
+  role="button"
+  tabindex="0"
+  aria-label="Close dialog"
+  (click)="!importSubmitting() && !importFinishing() && close()"
+  (keydown.enter)="!importSubmitting() && !importFinishing() && close()"
+  (keydown.space)="$event.preventDefault(); !importSubmitting() && !importFinishing() && close()"
+></div>
+<div
+  class="tx-modal tx-modal--wide"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-labelledby]="'import-modal-title'"
+>
+  <h2 id="import-modal-title" class="text-xl font-extrabold text-primary m-0 font-headline">
+    {{ modalTitle }}
+  </h2>
+  <p class="text-sm text-on-surface-variant font-semibold m-0 mt-2">
+    {{ modalDescription }}
+  </p>
+
+  @if (importResult(); as res) {
+    @if (importReviewStep()) {
+      <div class="mt-5 flex flex-col gap-4">
+        <p class="text-sm font-extrabold text-on-surface m-0">
+          Review categories ({{ res.transactions.length }} imported)
+        </p>
+        <div class="w-full min-w-0 max-h-[min(24rem,50vh)] overflow-auto rounded-xl border border-outline-variant/50">
+          <table class="tx-table w-full text-left border-collapse">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th class="text-right">Amount</th>
+                <th>Category</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (tx of res.transactions; track tx.id; let i = $index) {
+                <tr>
+                  <td class="font-semibold text-on-surface align-top min-w-0 w-[45%] sm:w-[50%]">
+                    <span class="block break-words text-pretty" [title]="tx.description">{{ tx.description }}</span>
+                  </td>
+                  <td class="text-right font-bold whitespace-nowrap" [ngClass]="amountClass(tx)">
+                    {{ displayAmount(tx) }}
+                  </td>
+                  <td class="min-w-[12rem]">
+                    <app-category-select
+                      [categories]="categories"
+                      [formControl]="importReviewControls[i]"
+                    />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (importFinishError()) {
+          <p class="text-sm font-semibold text-red-600 m-0" role="alert">{{ importFinishError() }}</p>
+        }
+        <div class="flex flex-wrap gap-2 justify-end pt-1">
+          <button
+            type="button"
+            class="tx-pill-btn"
+            (click)="finishImportReview()"
+            [disabled]="importFinishing()"
+          >
+            @if (importFinishing()) {
+              <span>Saving…</span>
+            } @else {
+              <span>Finish</span>
+            }
+          </button>
+        </div>
+      </div>
+    } @else {
+      <div class="mt-5 flex flex-col gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="rounded-2xl border border-outline-variant/60 bg-surface-container/30 px-4 py-3">
+            <p class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">Created</p>
+            <p class="text-2xl font-extrabold text-primary m-0 mt-1">{{ res.created }}</p>
+          </div>
+          <div class="rounded-2xl border border-outline-variant/60 bg-surface-container/30 px-4 py-3">
+            <p class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">Skipped (duplicate)</p>
+            <p class="text-2xl font-extrabold text-on-surface m-0 mt-1">{{ res.skipped }}</p>
+          </div>
+          <div class="rounded-2xl border border-outline-variant/60 bg-surface-container/30 px-4 py-3">
+            <p class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">Failed</p>
+            <p
+              class="text-2xl font-extrabold m-0 mt-1"
+              [class.text-red-600]="res.failed > 0"
+              [class.text-on-surface]="res.failed === 0"
+            >
+              {{ res.failed }}
+            </p>
+          </div>
+        </div>
+
+        @if (res.ai_categorization_failed) {
+          <div
+            class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950"
+            role="status"
+          >
+            <p class="text-sm font-extrabold m-0">Automatic categorization did not finish</p>
+            <p class="text-sm m-0 mt-1 opacity-95">
+              You can still categorize these rows manually on the next step.
+              @if (res.ai_failure_detail) {
+                <span class="block mt-2 text-xs font-mono text-amber-950/85">{{ res.ai_failure_detail }}</span>
+              }
+            </p>
+          </div>
+        }
+
+        @if (res.errors.length > 0) {
+          <div class="rounded-2xl border border-red-200 bg-red-50/80 px-4 py-3">
+            <p class="text-sm font-extrabold text-red-900 m-0">Rows that could not be imported</p>
+            <ul class="mt-2 space-y-2 m-0 pl-0 list-none">
+              @for (e of res.errors; track $index) {
+                <li class="text-sm text-red-900 border-t border-red-200/60 pt-2 first:border-0 first:pt-0">
+                  <span class="font-bold">{{ e.error }}</span>
+                  <span class="block text-xs font-mono text-red-800/90 mt-1 break-all">{{ importErrorRowPreview(e.row) }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+
+        @if (res.transactions.length > 0) {
+          <div>
+            <p class="text-sm font-extrabold text-on-surface m-0">Newly added ({{ res.transactions.length }})</p>
+            <ul
+              class="mt-2 max-h-48 overflow-y-auto rounded-xl border border-outline-variant/50 divide-y divide-outline-variant/40 m-0 p-0 list-none"
+            >
+              @for (t of res.transactions; track t.id) {
+                <li class="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                  <span class="font-semibold text-on-surface truncate">{{ t.description }}</span>
+                  <span class="shrink-0 font-bold" [ngClass]="amountClass(t)">{{ displayAmount(t) }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+
+        <div class="flex flex-wrap gap-2 justify-end pt-1">
+          <button type="button" class="tx-pill-btn" (click)="goToReviewStep()">Next</button>
+        </div>
+      </div>
+    }
+  } @else if (importSubmitting()) {
+    <div class="mt-8 flex flex-col items-center justify-center gap-4 py-6" aria-live="polite" aria-busy="true">
+      <span
+        class="material-symbols-outlined text-5xl text-primary animate-pulse"
+        style="font-variation-settings: 'FILL' 0"
+        >hourglass_top</span
+      >
+      <p class="text-base font-bold text-on-surface m-0">Importing your statement…</p>
+      <p class="text-sm text-on-surface-variant text-center m-0 max-w-sm">This can take a moment for large files.</p>
+    </div>
+  } @else {
+    <div class="mt-5 flex flex-col gap-4">
+      <div class="flex flex-col gap-2">
+        <label class="text-xs font-semibold text-on-surface-variant" for="app-import-file">File</label>
+        <input
+          id="app-import-file"
+          type="file"
+          [accept]="accept"
+          class="tx-input file:mr-3 file:rounded-lg file:border-0 file:bg-primary-container file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-on-primary"
+          (change)="onImportFileChange($event)"
+        />
+        @if (importFile()) {
+          <p class="text-sm font-semibold text-on-surface m-0">Selected: {{ importFile()!.name }}</p>
+        }
+      </div>
+      @if (importError()) {
+        <p class="text-sm font-semibold text-red-600 m-0">{{ importError() }}</p>
+      }
+      <div class="flex flex-wrap gap-2 justify-end">
+        <button type="button" class="tx-pill-btn ghost" (click)="close()">Cancel</button>
+        <button
+          type="button"
+          class="tx-pill-btn"
+          (click)="submitImport()"
+          [disabled]="!importFile() || importSubmitting()"
+        >
+          Import
+        </button>
+      </div>
+    </div>
+  }
+</div>

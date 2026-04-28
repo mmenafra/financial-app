@@ -10,6 +10,7 @@ from .bsa_import import import_bsa_row
 from .gemini_categorize import run_bulk_categorization
 from .models import FileImport, ImportStatus, Source, Transaction, UserProfile
 from .serializers import TransactionSerializer
+from .visa_internacional_import import import_visa_internacional_row
 from .visa_internacional_parser import parse_visa_internacional_statement_pdf
 from .visa_nacional_parser import parse_visa_nacional_statement_pdf
 
@@ -179,8 +180,8 @@ def visa_nacional_import_pipeline(_request, file_import):
     return Response(parsed, status=status.HTTP_200_OK)
 
 
-def visa_internacional_import_pipeline(_request, file_import):
-    """Parse Visa Internacional PDF from stored FileImport. Mutates `file_import`."""
+def visa_internacional_import_pipeline(request, file_import):
+    """Parse Visa Internacional PDF from stored FileImport and persist rows. Mutates `file_import`."""
     try:
         file_import.file.open("rb")
         try:
@@ -199,13 +200,38 @@ def visa_internacional_import_pipeline(_request, file_import):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    tx_count = len(parsed.get("transactions", []))
+    created_count = 0
+    skipped_count = 0
+    failed_count = 0
+    created_instances = []
+    errors: list[dict] = []
+    for row in parsed.get("transactions", []):
+        result = import_visa_internacional_row(request.user, row, file_import=file_import)
+        if "error" in result:
+            failed_count += 1
+            errors.append({"row": row, "error": result["error"]})
+            continue
+        if result.get("ok") == "skipped":
+            skipped_count += 1
+        elif result.get("ok") == "created" and result.get("instance"):
+            created_count += 1
+            created_instances.append(result["instance"])
+
     logger.info(
-        "Import Visa Internacional success: transactions=%s",
-        tx_count,
+        "Import Visa Internacional persist: user_id=%s created=%s skipped=%s failed=%s",
+        request.user.pk,
+        created_count,
+        skipped_count,
+        failed_count,
     )
-    file_import.rows_imported = tx_count
-    file_import.rows_skipped = 0
+
+    ai_categorization_attempted, ai_categorization_failed, ai_failure_detail = (
+        gemini_bulk_metadata_after_bank_import(request.user, created_instances)
+    )
+    created_instances = _refresh_transactions_preserving_order(created_instances)
+
+    file_import.rows_imported = created_count
+    file_import.rows_skipped = skipped_count
     file_import.status = ImportStatus.COMPLETED
     file_import.save(
         update_fields=[
@@ -215,7 +241,20 @@ def visa_internacional_import_pipeline(_request, file_import):
             "updated_at",
         ]
     )
-    return Response(parsed, status=status.HTTP_200_OK)
+    ser = TransactionSerializer(
+        created_instances, many=True, context={"request": request}
+    )
+    response_body = {
+        "created": created_count,
+        "skipped": skipped_count,
+        "failed": failed_count,
+        "transactions": ser.data,
+        "errors": errors,
+        "ai_categorization_attempted": ai_categorization_attempted,
+        "ai_categorization_failed": ai_categorization_failed,
+        "ai_failure_detail": ai_failure_detail,
+    }
+    return Response(response_body, status=status.HTTP_201_CREATED)
 
 
 def dispatch_import_pipeline(request, file_import):

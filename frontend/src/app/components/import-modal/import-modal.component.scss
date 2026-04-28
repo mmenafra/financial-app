@@ -1,0 +1,47 @@
+// Import modal overlays — must live here so they apply inside app-import-modal (Angular view encapsulation).
+
+.amount-income {
+  @apply text-green-700;
+}
+
+.amount-expense {
+  @apply text-primary;
+}
+
+.tx-pill-btn {
+  @apply rounded-xl px-4 py-2.5 text-sm font-bold bg-primary text-on-primary transition-opacity hover:opacity-90;
+
+  &.ghost {
+    @apply bg-transparent text-primary border border-outline-variant;
+  }
+}
+
+.tx-input {
+  @apply w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm font-semibold text-on-surface shadow-sm;
+}
+
+.tx-table {
+  th {
+    @apply px-6 py-3 text-xs font-bold uppercase tracking-wider text-on-surface-variant bg-surface-container/50 border-b border-outline-variant/40;
+  }
+
+  td {
+    @apply px-6 py-4 text-sm border-b border-outline-variant/30 align-middle;
+  }
+
+  tbody tr:hover td {
+    @apply bg-surface-container/30;
+  }
+}
+
+.tx-modal-backdrop {
+  @apply fixed inset-0 z-[100] bg-black/40;
+}
+
+.tx-modal {
+  @apply fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[101] w-[min(100%-2rem,28rem)] max-h-[min(100vh-2rem,90vh)] overflow-y-auto rounded-3xl border border-outline-variant/60 bg-surface-container-lowest p-6 shadow-xl;
+
+  &--wide {
+    @apply w-[min(100%-2rem,56rem)];
+  }
+}

@@ -58,6 +58,15 @@ export class TransactionService {
     );
   }
 
+  importVisaInternational(file: File): Observable<BankStatementImportResult> {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    return this.http.post<BankStatementImportResult>(
+      `${environment.apiUrl}/api/transactions/import-visa-international/`,
+      body,
+    );
+  }
+
   createTransaction(payload: CreateTransactionPayload): Observable<Transaction> {
     return this.http.post<Transaction>(
       `${environment.apiUrl}/api/transactions/`,
