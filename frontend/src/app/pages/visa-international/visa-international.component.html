@@ -74,15 +74,14 @@
             >
               <div class="vi-chart-bars flex items-end justify-between gap-1 sm:gap-1.5">
                 @for (total of barChartMockSeries; track $index; let i = $index) {
-                  <div class="vi-chart-col flex min-w-0 flex-1 flex-col items-center gap-2">
-                    @if (i === highlightMonthIndex()) {
-                      <span class="vi-chart-badge rounded px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-primary">
-                        Current
-                      </span>
-                    } @else {
-                      <span class="vi-chart-badge vi-chart-badge--spacer" aria-hidden="true"></span>
-                    }
-                    <div class="vi-chart-bar-track flex w-full flex-1 flex-col justify-end">
+                  <div class="vi-chart-col group flex min-w-0 flex-1 flex-col items-center gap-2">
+                    <div class="vi-chart-bar-track relative">
+                      <div
+                        class="vi-chart-tooltip pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-xs font-bold text-primary opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100"
+                        role="tooltip"
+                      >
+                        {{ formatChartBarValue(total) }}
+                      </div>
                       <div
                         class="vi-chart-bar rounded-t-xl transition-[height] duration-300"
                         [class.vi-chart-bar--current]="i === highlightMonthIndex()"

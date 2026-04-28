@@ -155,6 +155,11 @@ export class VisaInternationalComponent {
     return (value / this.barMax()) * 100;
   }
 
+  /** Mock bar chart values are USD liquidity (major units). */
+  protected formatChartBarValue(value: number): string {
+    return this.formatUsd(value);
+  }
+
   protected formatUsd(amount: number, fractionDigits = 2): string {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
