@@ -914,7 +914,7 @@ class TransactionViewSet(ModelViewSet):
                         }
                     ) from err
 
-            child = Transaction.objects.create(
+            child = Transaction(
                 user=bundle.user,
                 description=row["description"],
                 amount=row["amount"],
@@ -937,7 +937,13 @@ class TransactionViewSet(ModelViewSet):
                 imported_at=bundle.imported_at,
                 status=bundle.status,
                 parent=bundle,
+                file_import=bundle.file_import,
             )
+            child.save()
+            Transaction.objects.filter(pk=child.pk).update(
+                created_at=bundle.created_at
+            )
+            child.refresh_from_db()
             created.append(child)
 
         out = TransactionSerializer(

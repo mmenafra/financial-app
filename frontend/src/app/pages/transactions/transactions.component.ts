@@ -110,6 +110,9 @@ export class TransactionsComponent {
   protected readonly deleteError = signal<string | null>(null);
   protected readonly pendingDelete = signal<Transaction | null>(null);
 
+  /** Full transaction payload for debugging (row action → modal). */
+  protected readonly metadataTx = signal<Transaction | null>(null);
+
   protected readonly editTxForm = this.fb.group({
     description: ['', [Validators.required, Validators.maxLength(255)]],
     amount: ['', [Validators.required, positiveNumberValidator]],
@@ -478,6 +481,20 @@ export class TransactionsComponent {
     this.pendingDelete.set(t);
     this.deleteError.set(null);
     this.deleteModalOpen.set(true);
+  }
+
+  protected onMetadata(t: Transaction, event: MouseEvent): void {
+    event.stopPropagation();
+    this.openMenuId.set(null);
+    this.metadataTx.set(t);
+  }
+
+  protected closeMetadataModal(): void {
+    this.metadataTx.set(null);
+  }
+
+  protected transactionDebugJson(t: Transaction): string {
+    return JSON.stringify(t, null, 2);
   }
 
   protected closeDeleteModal(): void {

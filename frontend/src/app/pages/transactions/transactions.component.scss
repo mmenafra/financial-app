@@ -116,7 +116,8 @@
   @apply fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[min(100%-2rem,28rem)] max-h-[min(100vh-2rem,90vh)] overflow-y-auto rounded-3xl border border-outline-variant/60 bg-surface-container-lowest p-6 shadow-xl;
 
   &--wide {
-    @apply w-[min(100%-2rem,40rem)];
+    /* Room for long bank descriptions alongside amount + category controls */
+    @apply w-[min(100%-2rem,56rem)];
   }
 }
 

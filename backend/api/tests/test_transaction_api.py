@@ -385,6 +385,34 @@ class TransactionAPITests(APITestCase):  # pylint: disable=too-many-public-metho
         listed = {row["id"] for row in list_r.data["results"]}
         self.assertNotIn(str(bundle.id), listed)
 
+    def test_split_children_keep_bundle_created_at_for_month_filter(self):
+        """List filters by created_at; children must match the bundle's period."""
+        bundle = self._create_tx(
+            self.user, description="Bill", source=Source.MERCADOPAGO
+        )
+        bundle.amount = Decimal("100.00")
+        bundle.save()
+        past = timezone.make_aware(datetime(2026, 1, 15, 12, 0, 0))
+        Transaction.objects.filter(pk=bundle.pk).update(created_at=past)
+        bundle.refresh_from_db()
+
+        self.client.force_authenticate(user=self.user)
+        url = reverse("transaction-split", args=[bundle.id])
+        body = {
+            "items": [
+                {"description": "A", "amount": "40.00", "category": None},
+                {"description": "B", "amount": "60.00", "category": None},
+            ],
+        }
+        r = self.client.post(url, body, format="json")
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED)
+        child_ids = {row["id"] for row in r.data}
+
+        list_jan = self.client.get(self.list_url, {"year": 2026, "month": 1})
+        self.assertEqual(list_jan.status_code, status.HTTP_200_OK)
+        listed_jan = {row["id"] for row in list_jan.data["results"]}
+        self.assertTrue(child_ids.issubset(listed_jan))
+
     def test_split_rejects_wrong_sum(self):
         bundle = self._create_tx(self.user, description="B")
         bundle.amount = Decimal("10.00")

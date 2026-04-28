@@ -24,6 +24,37 @@ def _gemini_http_enabled() -> bool:
     return bool(getattr(settings, "GEMINI_HTTP_ENABLED", False))
 
 
+def _gemini_log_prompts_enabled() -> bool:
+    """Full prompt logging for live requests when DEBUG or GEMINI_LOG_PROMPTS=1."""
+    flag = getattr(settings, "GEMINI_LOG_PROMPTS", None)
+    if flag is not None:
+        return bool(flag)
+    return bool(settings.DEBUG)
+
+
+def _log_gemini_prompt(
+    label: str,
+    *,
+    user_id: int | None,
+    chunk_index: int,
+    total_chunks: int,
+    transaction_count: int,
+    user_message_text: str,
+) -> None:
+    logger.info(
+        "%s: user_id=%s model=%s chunk=%s/%s txs=%s\n"
+        "--- system_instruction ---\n%s\n--- user_message ---\n%s",
+        label,
+        user_id,
+        GEMINI_MODEL,
+        chunk_index + 1,
+        total_chunks,
+        transaction_count,
+        SYSTEM_PROMPT,
+        user_message_text,
+    )
+
+
 GEMINI_MODEL = "gemini-2.5-flash-lite"
 
 GENERATE_CONTENT_URL = (
@@ -309,18 +340,25 @@ def categorize_chunk(
             total_chunks,
             len(txs),
         )
-        logger.info(
-            "Gemini dry-run prompt (would be sent): user_id=%s model=%s chunk=%s/%s txs=%s\n"
-            "--- system_instruction ---\n%s\n--- user_message ---\n%s",
-            uid,
-            GEMINI_MODEL,
-            chunk_index + 1,
-            total_chunks,
-            len(txs),
-            SYSTEM_PROMPT,
-            user_message_text,
+        _log_gemini_prompt(
+            "Gemini dry-run prompt (would be sent)",
+            user_id=uid,
+            chunk_index=chunk_index,
+            total_chunks=total_chunks,
+            transaction_count=len(txs),
+            user_message_text=user_message_text,
         )
         return {t.pk: None for t in txs}
+
+    if _gemini_log_prompts_enabled():
+        _log_gemini_prompt(
+            "Gemini prompt",
+            user_id=uid,
+            chunk_index=chunk_index,
+            total_chunks=total_chunks,
+            transaction_count=len(txs),
+            user_message_text=user_message_text,
+        )
 
     body = {
         "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},

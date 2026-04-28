@@ -282,6 +282,19 @@
                             }
                             <button
                               type="button"
+                              class="tx-dropdown-item"
+                              role="menuitem"
+                              (click)="onMetadata(t, $event)"
+                            >
+                              <span
+                                class="material-symbols-outlined text-[16px]"
+                                style="font-variation-settings: 'FILL' 0"
+                                >data_object</span
+                              >
+                              Metadata
+                            </button>
+                            <button
+                              type="button"
                               class="tx-dropdown-item tx-dropdown-item--danger"
                               role="menuitem"
                               (click)="onDelete(t, $event)"
@@ -376,7 +389,7 @@
       Import bank statement
     </h2>
     <p class="text-sm text-on-surface-variant font-semibold m-0 mt-2">
-      Select a Banco Santander text export (<span class="font-mono">.dat</span>). Existing lines are skipped
+      Select a bank export (<span class="font-mono">.dat</span>) file. Existing lines are skipped
       automatically; new rows are added with your categories when descriptions match past transactions.
     </p>
 
@@ -398,8 +411,8 @@
               <tbody>
                 @for (tx of res.transactions; track tx.id; let i = $index) {
                   <tr>
-                    <td class="font-semibold text-on-surface max-w-[14rem] sm:max-w-md">
-                      <span class="line-clamp-2" [title]="tx.description">{{ tx.description }}</span>
+                    <td class="font-semibold text-on-surface align-top min-w-0 w-[45%] sm:w-[50%]">
+                      <span class="block break-words text-pretty" [title]="tx.description">{{ tx.description }}</span>
                     </td>
                     <td class="text-right font-bold whitespace-nowrap" [ngClass]="amountClass(tx)">
                       {{ displayAmount(tx) }}
@@ -756,6 +769,38 @@
         </button>
       </div>
     </form>
+  </div>
+}
+
+@if (metadataTx(); as mtx) {
+  <div
+    class="tx-modal-backdrop"
+    role="button"
+    tabindex="0"
+    aria-label="Close dialog"
+    (click)="closeMetadataModal()"
+    (keydown.enter)="closeMetadataModal()"
+    (keydown.space)="$event.preventDefault(); closeMetadataModal()"
+  ></div>
+  <div
+    class="tx-modal tx-modal--wide"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="tx-metadata-title"
+  >
+    <h2 id="tx-metadata-title" class="text-xl font-extrabold text-primary m-0 font-headline">
+      Transaction metadata
+    </h2>
+    <p class="text-sm text-on-surface-variant font-semibold m-0 mt-2">
+      Raw API object for debugging (<span class="font-mono text-on-surface">{{ mtx.id }}</span>).
+    </p>
+    <pre
+      class="mt-4 max-h-[min(24rem,50vh)] overflow-auto rounded-xl border border-outline-variant/50 bg-surface-container/30 p-4 text-xs font-mono text-on-surface m-0 whitespace-pre"
+      tabindex="0"
+    >{{ transactionDebugJson(mtx) }}</pre>
+    <div class="flex flex-wrap gap-2 justify-end pt-5">
+      <button type="button" class="tx-pill-btn" (click)="closeMetadataModal()">Close</button>
+    </div>
   </div>
 }
 

@@ -48,8 +48,10 @@ SEED_CATEGORIES: list[tuple[str, str, str]] = [
     ("Isapre Ninos", "health_and_safety", "#34d399"),
     ("Visa Nacional", "credit_card", "#0369a1"),
     ("Visa Internacional", "credit_card", "#7c3aed"),
+    ("Ahorro", "savings", "#059669"),
     ("Income", "trending_up", "#10b981"),
 ]
+
 
 
 class Command(BaseCommand):
