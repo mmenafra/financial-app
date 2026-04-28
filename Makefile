@@ -6,13 +6,15 @@ FRONTEND = frontend
 .PHONY: help docker-build docker-up docker-down docker-prod \
 	lint fmt test seed seed-categories lint-all test-all \
 	fe-install fe-dev fe-build fe-lint fe-test fe-test-ci fe-betterer fe-betterer-update \
-	db-clean-all db-clean-user db-clean-transactions
+	db-clean-all db-clean-user db-clean-transactions \
+	createsuperuser
 
 help:
 	@echo "Docker (dev):  make docker-build | docker-up | docker-down"
 	@echo "Docker (prod): make docker-prod  (Django+Postgres+nginx frontend)"
 	@echo "Backend:       make lint (django check + ruff + flake8 + pylint) | fmt (autoflake + isort + black + ruff format) | test (pytest) | seed"
 	@echo "               make seed-categories EMAIL=<email> (optional RESET=1 to clear user categories first)"
+	@echo "               make createsuperuser (interactive; admin UI at /admin/)"
 	@echo "DB clean:      make db-clean-all | db-clean-user USER=<username> | db-clean-transactions USER=<username>"
 	@echo "Frontend:      make fe-install | fe-dev | fe-build"
 	@echo "               make fe-lint (ESLint + Stylelint) | fe-test (Vitest) | fe-test-ci (Vitest, no watch)"
@@ -65,6 +67,9 @@ seed:
 seed-categories:
 	@test -n "$(EMAIL)" || (echo "Usage: make seed-categories EMAIL=<email> [RESET=1]" && exit 1)
 	$(DC) run --rm $(BACKEND) python manage.py seed_categories --email "$(EMAIL)" $(if $(RESET),--reset,)
+
+createsuperuser:
+	$(DC) run --rm -it $(BACKEND) python manage.py createsuperuser
 
 db-clean-all:
 	$(DC) run --rm $(BACKEND) python manage.py clean_db --all

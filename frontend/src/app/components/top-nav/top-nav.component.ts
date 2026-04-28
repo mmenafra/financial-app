@@ -55,6 +55,11 @@ export class TopNavComponent {
     void this.router.navigate(['/imports']);
   }
 
+  protected goToSettings(): void {
+    this.settingsMenuOpen.set(false);
+    void this.router.navigate(['/settings']);
+  }
+
   protected signOut(): void {
     this.menuOpen.set(false);
     this.settingsMenuOpen.set(false);

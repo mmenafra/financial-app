@@ -65,7 +65,7 @@ make docker-prod
 
 **Docker (prod):** `make docker-prod`
 
-**Backend:** `make lint` (Django `check` + ruff + flake8 + pylint) | `make fmt` (autoflake + isort + black + ruff format) | `make test` (pytest) | `make seed` (uses Compose `backend` service)
+**Backend:** `make lint` (Django `check` + ruff + flake8 + pylint) | `make fmt` (autoflake + isort + black + ruff format) | `make test` (pytest) | `make seed` (uses Compose `backend` service) | `make createsuperuser` (interactive; then open `/admin/`)
 
 **Frontend (host):** `make fe-install` | `make fe-dev` | `make fe-build`
 

@@ -5,9 +5,34 @@ from django.contrib.auth.password_validation import validate_password
 
 from rest_framework import serializers
 
-from .models import Category, FileImport, RecurringPattern, Transaction
+from .models import Category, FileImport, RecurringPattern, Transaction, UserProfile
 
 User = get_user_model()
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    """BYOK Gemini key: write-only; response only exposes ``has_gemini_key``."""
+
+    gemini_api_key = serializers.CharField(
+        write_only=True, required=False, allow_blank=True
+    )
+    has_gemini_key = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserProfile
+        fields = ("id", "created_at", "updated_at", "has_gemini_key", "gemini_api_key")
+        read_only_fields = ("id", "created_at", "updated_at", "has_gemini_key")
+
+    def get_has_gemini_key(self, obj: UserProfile):
+        return obj.has_gemini_api_key()
+
+    def update(self, instance, validated_data):
+        validated_rest = dict(validated_data)
+        gemini_raw = validated_rest.pop("gemini_api_key", serializers.empty)
+        # Omitting gemini_api_key on PATCH keeps the previously stored credential.
+        if gemini_raw is not serializers.empty:
+            instance.set_gemini_api_key(gemini_raw)
+        return super().update(instance, validated_rest)
 
 
 class SignUpSerializer(serializers.ModelSerializer):

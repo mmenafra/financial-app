@@ -18,6 +18,7 @@ from google.oauth2 import id_token as google_id_token
 from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import RetrieveUpdateAPIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -49,6 +50,7 @@ from .models import (
     SocialAccount,
     Source,
     Transaction,
+    UserProfile,
 )
 from .pagination import FileImportPagination, TransactionPagination
 from .serializers import (
@@ -65,6 +67,7 @@ from .serializers import (
     SignUpSerializer,
     TransactionSerializer,
     TransactionSplitRequestSerializer,
+    UserProfileSerializer,
 )
 
 User = get_user_model()
@@ -200,6 +203,17 @@ class SignInView(APIView):
                 },
             }
         )
+
+
+class UserProfileView(RetrieveUpdateAPIView):
+    """Read/update BYOK Gemini API key metadata (credential never exposed in GET)."""
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserProfileSerializer
+
+    def get_object(self):
+        profile, _created = UserProfile.objects.get_or_create(user=self.request.user)
+        return profile
 
 
 class GoogleAuthView(APIView):

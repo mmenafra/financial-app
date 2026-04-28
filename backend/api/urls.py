@@ -17,6 +17,7 @@ from .views import (
     SignInView,
     SignUpView,
     TransactionViewSet,
+    UserProfileView,
 )
 
 router = DefaultRouter()
@@ -35,6 +36,7 @@ urlpatterns = [
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("auth/forgot-password/", ForgotPasswordView.as_view(), name="forgot-password"),
     path("auth/reset-password/", ResetPasswordView.as_view(), name="reset-password"),
+    path("auth/profile/", UserProfileView.as_view(), name="user-profile"),
     path(
         "transactions/import-bank-statement/",
         ImportBankStatementView.as_view(),

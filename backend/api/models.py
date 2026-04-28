@@ -1,8 +1,22 @@
+import base64
+import hashlib
 import uuid
 
+from cryptography.fernet import Fernet
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import Q
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
+def _fernet_for_api_keys() -> Fernet:
+    """Symmetric key derived from Django SECRET_KEY (server-side-at-rest encryption)."""
+
+    digest = hashlib.sha256(settings.SECRET_KEY.encode("utf-8")).digest()
+    key = base64.urlsafe_b64encode(digest)
+    return Fernet(key)
 
 
 class AbstractBaseModel(models.Model):
@@ -35,6 +49,38 @@ class SocialAccount(AbstractBaseModel):
 
     def __str__(self):
         return f"{self.provider}:{self.provider_uid}"
+
+
+class UserProfile(AbstractBaseModel):
+    """Per-user preferences and secrets encrypted at rest (BYOK Gemini key)."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="profile",
+    )
+    _gemini_api_key = models.BinaryField(null=True, blank=True)
+
+    class Meta:
+        verbose_name_plural = "user_profiles"
+
+    def set_gemini_api_key(self, raw_key: str) -> None:
+        if not raw_key or not raw_key.strip():
+            self._gemini_api_key = None
+            return
+        fernet = _fernet_for_api_keys()
+        self._gemini_api_key = fernet.encrypt(raw_key.strip().encode("utf-8"))
+
+    def get_gemini_api_key(self) -> str | None:
+        """Decrypt API key — use only server-side."""
+
+        if not self._gemini_api_key:
+            return None
+        fernet = _fernet_for_api_keys()
+        return fernet.decrypt(bytes(self._gemini_api_key)).decode("utf-8")
+
+    def has_gemini_api_key(self) -> bool:
+        return bool(self._gemini_api_key)
 
 
 class Category(AbstractBaseModel):
@@ -283,3 +329,9 @@ class RecurringPattern(AbstractBaseModel):
 
     def __str__(self):
         return f"{self.description_pattern} [{self.frequency}]"
+
+
+@receiver(post_save, sender=get_user_model())
+def create_user_profile(_sender, instance, created, **_kwargs):
+    if created:
+        UserProfile.objects.get_or_create(user=instance)
