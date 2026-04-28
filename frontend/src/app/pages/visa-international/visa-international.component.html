@@ -1,0 +1,257 @@
+<div class="flex min-h-screen bg-surface font-body">
+  <app-sidebar />
+  <div class="flex flex-col flex-1 min-w-0">
+    <app-top-nav />
+    <main class="flex-1 p-8 overflow-x-auto">
+      <div class="mx-auto flex flex-col gap-6">
+        <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 class="font-headline m-0 text-3xl font-extrabold tracking-tight text-primary">
+              Visa International
+            </h1>
+          </div>
+
+          <div class="flex shrink-0 flex-wrap items-center gap-2">
+            <label class="sr-only" for="vi-month">Month</label>
+            <select
+              id="vi-month"
+              class="tx-select"
+              [value]="selectedMonth()"
+              (change)="onMonthChange($event)"
+            >
+              @for (m of monthOptions; track m.value) {
+                <option [value]="m.value" [selected]="m.value === selectedMonth()">{{ m.label }}</option>
+              }
+            </select>
+
+            <label class="sr-only" for="vi-year">Year</label>
+            <select
+              id="vi-year"
+              class="tx-select"
+              [value]="selectedYear()"
+              (change)="onYearChange($event)"
+            >
+              @for (y of yearOptions; track y) {
+                <option [value]="y" [selected]="y === selectedYear()">{{ y }}</option>
+              }
+            </select>
+
+            <button type="button" class="tx-pill-btn ghost" (click)="openImportModal()">
+              <span
+                class="material-symbols-outlined text-[18px]"
+                style="font-variation-settings: 'FILL' 0"
+                >upload_file</span
+              >
+              Import
+            </button>
+          </div>
+        </header>
+
+        <div class="flex flex-col gap-6 lg:flex-row lg:items-stretch">
+          <!-- Monthly Forecast -->
+          <section
+            class="vi-card vi-card--forecast flex flex-1 flex-col gap-6 rounded-3xl border border-outline-variant/40 bg-surface-container-low p-6 shadow-sm"
+          >
+            <div>
+              <h2 class="m-0 text-lg font-extrabold text-primary">{{ periodRangeLabel() }}</h2>
+            </div>
+
+            <div class="flex flex-wrap items-end gap-3">
+              <p class="vi-forecast-amount m-0 font-headline text-4xl font-extrabold tracking-tight text-primary">
+                {{ formatUsd(forecastAmountUsd) }}
+              </p>
+              <span
+                class="inline-flex items-center rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-800"
+              >
+                +{{ vsLastMonthPct }}% vs. Last Month
+              </span>
+            </div>
+
+            <div
+              class="vi-chart-wrap"
+              role="img"
+              [attr.aria-label]="chartAriaLabel()"
+            >
+              <div class="vi-chart-bars flex items-end justify-between gap-1 sm:gap-1.5">
+                @for (total of barChartMockSeries; track $index; let i = $index) {
+                  <div class="vi-chart-col flex min-w-0 flex-1 flex-col items-center gap-2">
+                    @if (i === highlightMonthIndex()) {
+                      <span class="vi-chart-badge rounded px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-primary">
+                        Current
+                      </span>
+                    } @else {
+                      <span class="vi-chart-badge vi-chart-badge--spacer" aria-hidden="true"></span>
+                    }
+                    <div class="vi-chart-bar-track flex w-full flex-1 flex-col justify-end">
+                      <div
+                        class="vi-chart-bar rounded-t-xl transition-[height] duration-300"
+                        [class.vi-chart-bar--current]="i === highlightMonthIndex()"
+                        [style.height.%]="barHeightPercent(total)"
+                      ></div>
+                    </div>
+                    <span class="text-[10px] font-bold uppercase tracking-tighter text-on-surface-variant sm:text-xs">
+                      {{ monthShort[i] }}
+                    </span>
+                  </div>
+                }
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Monthly timeline -->
+        <section
+          class="vi-card rounded-3xl border border-outline-variant/40 bg-surface-container-lowest p-6 shadow-sm"
+        >
+          <div class="flex flex-col gap-4 border-b border-outline-variant/30 pb-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 class="m-0 text-lg font-extrabold text-primary">Monthly Timeline</h2>
+            </div>
+
+            <div class="flex flex-wrap gap-2" role="tablist" aria-label="Timeline filters">
+              <button
+                type="button"
+                role="tab"
+                class="vi-tab"
+                [attr.aria-selected]="timelineTab() === 'all'"
+                [class.vi-tab--active]="timelineTab() === 'all'"
+                (click)="setTimelineTab('all')"
+              >
+                All
+              </button>
+              <button
+                type="button"
+                role="tab"
+                class="vi-tab"
+                [attr.aria-selected]="timelineTab() === 'subscriptions'"
+                [class.vi-tab--active]="timelineTab() === 'subscriptions'"
+                (click)="setTimelineTab('subscriptions')"
+              >
+                Subscriptions
+              </button>
+              <button
+                type="button"
+                role="tab"
+                class="vi-tab"
+                [attr.aria-selected]="timelineTab() === 'installments'"
+                [class.vi-tab--active]="timelineTab() === 'installments'"
+                (click)="setTimelineTab('installments')"
+              >
+                Installments
+              </button>
+            </div>
+          </div>
+
+          <ul class="vi-timeline m-0 mt-6 list-none p-0">
+            @for (row of filteredTimeline(); track row.id) {
+              <li class="vi-timeline-row relative flex gap-4 pb-8 last:pb-0">
+                <div class="vi-timeline-rail flex shrink-0 flex-col items-center">
+                  <span class="vi-timeline-dot flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary-fixed text-primary shadow-sm">
+                    <span
+                      class="material-symbols-outlined text-[20px]"
+                      style="font-variation-settings: 'FILL' 1"
+                      aria-hidden="true"
+                      >play_arrow</span
+                    >
+                  </span>
+                  @if (!$last) {
+                    <span class="vi-timeline-line flex min-h-[2rem] w-px flex-1 bg-outline-variant/70" aria-hidden="true"></span>
+                  }
+                </div>
+
+                <div
+                  class="vi-timeline-row__grid min-w-0 flex-1"
+                  role="group"
+                  [attr.aria-label]="row.title"
+                >
+                  <div class="vi-col-date">
+                    <p class="m-0 text-xs font-bold uppercase tracking-wide text-on-surface-variant">
+                      {{ row.dateLabel }}
+                    </p>
+                  </div>
+
+                  <div class="vi-col-main min-w-0">
+                    <p class="m-0 text-base font-extrabold leading-snug text-primary">{{ row.title }}</p>
+                    <p class="m-0 mt-1 text-sm font-medium leading-snug text-on-surface-variant">
+                      {{ row.subtitle }}
+                    </p>
+                  </div>
+
+                  <div class="vi-col-category flex items-center">
+                    <span
+                      class="tx-chip inline-flex max-w-full shrink-0 items-center truncate rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide"
+                      [ngStyle]="categoryBadgeStyles(row)"
+                      [attr.title]="row.categoryLabel"
+                    >
+                      {{ row.categoryLabel }}
+                    </span>
+                  </div>
+
+                  <div class="vi-col-amount">
+                    <p class="m-0 mt-1 font-headline text-lg font-extrabold tabular-nums text-primary">
+                      {{ formatMoney(row.amount, row.currency) }}
+                    </p>
+                    <p class="vi-currency-code m-0 mt-0.5 text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+                      {{ row.currency }}
+                    </p>
+                  </div>
+
+                  <div class="vi-col-actions relative flex items-start justify-end">
+                    <button
+                      type="button"
+                      class="tx-menu-btn"
+                      aria-label="More options"
+                      [attr.aria-expanded]="openMenuId() === row.id"
+                      aria-haspopup="true"
+                      (click)="toggleTimelineMenu(row.id, $event)"
+                    >
+                      <span class="material-symbols-outlined text-[20px]">more_vert</span>
+                    </button>
+                    @if (openMenuId() === row.id) {
+                      <div
+                        class="tx-dropdown"
+                        [class.tx-dropdown--up]="$last"
+                        role="menu"
+                      >
+                        <button
+                          type="button"
+                          class="tx-dropdown-item"
+                          role="menuitem"
+                          (click)="onEditRow(row, $event)"
+                        >
+                          <span
+                            class="material-symbols-outlined text-[16px]"
+                            style="font-variation-settings: 'FILL' 0"
+                            >edit</span
+                          >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          class="tx-dropdown-item"
+                          role="menuitem"
+                          (click)="onMetaDataRow(row, $event)"
+                        >
+                          <span
+                            class="material-symbols-outlined text-[16px]"
+                            style="font-variation-settings: 'FILL' 0"
+                            >data_object</span
+                          >
+                          Meta data
+                        </button>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </li>
+            }
+          </ul>
+
+          @if (filteredTimeline().length === 0) {
+            <p class="mt-6 text-center text-sm font-semibold text-on-surface-variant">No items for this filter.</p>
+          }
+        </section>
+      </div>
+    </main>
+  </div>
+</div>

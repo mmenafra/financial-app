@@ -1,0 +1,135 @@
+// Visa International — mock projections UI. Matches transactions header (.tx-*). Tokens: src/tailwind.css
+
+.tx-select {
+  @apply rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm font-semibold text-on-surface shadow-sm min-w-[8.5rem];
+}
+
+.tx-pill-btn {
+  @apply rounded-xl px-4 py-2.5 text-sm font-bold bg-primary text-on-primary transition-opacity hover:opacity-90;
+
+  &.ghost {
+    @apply bg-transparent text-primary border border-outline-variant;
+  }
+}
+
+.tx-menu-btn {
+  @apply inline-flex h-8 w-8 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors;
+}
+
+.tx-dropdown {
+  @apply absolute right-0 top-full z-[100] mt-1 min-w-[8rem] rounded-xl border border-outline-variant bg-surface-container-lowest py-1 shadow-lg;
+}
+
+.tx-dropdown--up {
+  @apply bottom-full top-auto mb-1 mt-0;
+}
+
+.tx-dropdown-item {
+  @apply flex w-full items-center gap-2 px-3 py-2 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container;
+}
+
+.tx-chip {
+  border-width: 1px;
+}
+
+.vi-forecast-amount {
+  line-height: 1.1;
+}
+
+.vi-chart-wrap {
+  min-height: 11rem;
+}
+
+.vi-chart-bars {
+  min-height: 9rem;
+}
+
+.vi-chart-badge {
+  min-height: 1.25rem;
+  line-height: 1;
+
+  &--spacer {
+    visibility: hidden;
+  }
+}
+
+.vi-chart-bar-track {
+  min-height: 7rem;
+  width: 100%;
+}
+
+.vi-chart-bar {
+  @apply w-full min-h-[6px] rounded-t-xl bg-secondary-fixed/80;
+
+  &--current {
+    @apply bg-secondary shadow-md ring-2 ring-primary/20;
+  }
+}
+
+.vi-cta {
+  @apply bg-secondary-fixed text-primary;
+}
+
+.vi-tab {
+  @apply rounded-full border border-outline-variant/80 bg-transparent px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-on-surface-variant transition-colors;
+
+  &--active {
+    @apply border-primary bg-primary text-on-primary shadow-sm;
+  }
+}
+
+.vi-amount-label {
+  letter-spacing: 0.14em;
+}
+
+// Timeline row: spread date / merchant / category / amount / menu across the width (vs one blob left + one blob right).
+.vi-timeline-row__grid {
+  display: grid;
+  gap: 0.625rem 0.75rem;
+  grid-template-columns: 1fr auto auto;
+  grid-template-areas:
+    'date date date'
+    'main main main'
+    'category amount actions';
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+
+  @media (min-width: 640px) {
+    grid-template-columns: 5rem minmax(0, 1fr) minmax(7rem, auto) minmax(6.5rem, auto) 2.25rem;
+    grid-template-areas: 'date main category amount actions';
+    gap: 0.5rem 1.25rem;
+    align-items: start;
+  }
+
+  @media (min-width: 1024px) {
+    gap: 0.5rem 1.75rem;
+  }
+}
+
+.vi-col-date {
+  grid-area: date;
+}
+
+.vi-col-main {
+  grid-area: main;
+}
+
+.vi-col-category {
+  grid-area: category;
+  justify-self: start;
+
+  @media (min-width: 640px) {
+    justify-self: center;
+  }
+}
+
+.vi-col-amount {
+  grid-area: amount;
+  text-align: right;
+}
+
+.vi-col-actions {
+  grid-area: actions;
+  justify-self: end;
+}

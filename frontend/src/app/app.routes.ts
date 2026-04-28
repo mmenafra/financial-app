@@ -9,6 +9,7 @@ import { TransactionsComponent } from './pages/transactions/transactions.compone
 import { CategoriesComponent } from './pages/categories/categories.component';
 import { ImportsComponent } from './pages/imports/imports.component';
 import { SettingsComponent } from './pages/settings/settings.component';
+import { VisaInternationalComponent } from './pages/visa-international/visa-international.component';
 
 export const routes: Routes = [
   { path: '', component: LoginComponent, canActivate: [guestGuard] },
@@ -17,6 +18,11 @@ export const routes: Routes = [
   { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
   { path: 'connections', component: DashboardComponent, canActivate: [authGuard] },
   { path: 'transactions', component: TransactionsComponent, canActivate: [authGuard] },
+  {
+    path: 'visa-international',
+    component: VisaInternationalComponent,
+    canActivate: [authGuard],
+  },
   { path: 'categories', component: CategoriesComponent, canActivate: [authGuard] },
   { path: 'imports', component: ImportsComponent, canActivate: [authGuard] },
   { path: 'settings', component: SettingsComponent, canActivate: [authGuard] },
