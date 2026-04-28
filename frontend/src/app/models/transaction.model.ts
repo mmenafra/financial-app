@@ -95,6 +95,10 @@ export interface BankStatementImportResult {
   failed: number;
   transactions: Transaction[];
   errors: BankStatementImportRowError[];
+  /** Gemini bulk categorization was invoked (needs API key + categories + uncategorized rows). */
+  ai_categorization_attempted?: boolean;
+  ai_categorization_failed?: boolean;
+  ai_failure_detail?: string | null;
 }
 
 /** Body for POST /api/transactions/ */

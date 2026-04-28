@@ -233,3 +233,11 @@ SIMPLE_JWT = {
 
 # Google Sign-In (ID token verification). Set GOOGLE_CLIENT_ID in .env
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+
+# When unset (default), bank import skips the Generative Language HTTP call.
+# Set GEMINI_HTTP_ENABLED=1 or true when you want real Gemini categorization on import.
+GEMINI_HTTP_ENABLED = os.environ.get("GEMINI_HTTP_ENABLED", "True").lower() in {
+    "1",
+    "true",
+    "yes",
+}

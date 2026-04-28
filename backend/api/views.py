@@ -441,6 +441,13 @@ class ImportBankStatementView(APIView):
                             },
                         )
                     ),
+                    "ai_categorization_attempted": serializers.BooleanField(),
+                    "ai_categorization_failed": serializers.BooleanField(),
+                    "ai_failure_detail": serializers.CharField(
+                        required=False,
+                        allow_null=True,
+                        allow_blank=True,
+                    ),
                 },
             ),
             400: OpenApiResponse(description="Invalid file payload"),

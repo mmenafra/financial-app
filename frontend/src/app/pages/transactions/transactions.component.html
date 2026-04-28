@@ -448,6 +448,21 @@
             </div>
           </div>
 
+          @if (res.ai_categorization_failed) {
+            <div
+              class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950"
+              role="status"
+            >
+              <p class="text-sm font-extrabold m-0">Automatic categorization did not finish</p>
+              <p class="text-sm m-0 mt-1 opacity-95">
+                You can still categorize these rows manually on the next step.
+                @if (res.ai_failure_detail) {
+                  <span class="block mt-2 text-xs font-mono text-amber-950/85">{{ res.ai_failure_detail }}</span>
+                }
+              </p>
+            </div>
+          }
+
           @if (res.errors.length > 0) {
             <div class="rounded-2xl border border-red-200 bg-red-50/80 px-4 py-3">
               <p class="text-sm font-extrabold text-red-900 m-0">Rows that could not be imported</p>

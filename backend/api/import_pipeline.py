@@ -7,12 +7,46 @@ from rest_framework.response import Response
 
 from .bank_statement_parser import parse_bsa_bank_statement
 from .bsa_import import import_bsa_row
-from .models import FileImport, ImportStatus, Source
+from .gemini_categorize import run_bulk_categorization
+from .models import FileImport, ImportStatus, Source, Transaction, UserProfile
 from .serializers import TransactionSerializer
 from .visa_internacional_parser import parse_visa_internacional_statement_pdf
 from .visa_nacional_parser import parse_visa_nacional_statement_pdf
 
 logger = logging.getLogger(__name__)
+
+
+def _refresh_transactions_preserving_order(
+    instances: list[Transaction],
+) -> list[Transaction]:
+    if not instances:
+        return instances
+    pks_ordered = [t.pk for t in instances]
+    fresh = Transaction.objects.filter(pk__in=pks_ordered)
+    by_pk = {t.pk: t for t in fresh}
+    return [by_pk[pk] for pk in pks_ordered if pk in by_pk]
+
+
+def gemini_bulk_metadata_after_bank_import(
+    user, created_instances: list[Transaction]
+) -> tuple[bool, bool, str | None]:
+    attempted = False
+    failed = False
+    failure_detail: str | None = None
+    pending_uncat = [inst for inst in created_instances if inst.category_id is None]
+    if not pending_uncat:
+        return attempted, failed, failure_detail
+
+    profile = UserProfile.objects.filter(user=user).first()
+    api_key = profile.get_gemini_api_key() if profile else None
+    if not api_key:
+        return attempted, failed, failure_detail
+
+    ai_state = run_bulk_categorization(user, pending_uncat, api_key)
+    attempted = ai_state["attempted"]
+    failed = bool(ai_state["attempted"] and not ai_state["applied"])
+    failure_detail = ai_state["failure_detail"]
+    return attempted, failed, failure_detail
 
 
 def bank_statement_import_pipeline(request, file_import):
@@ -73,6 +107,12 @@ def bank_statement_import_pipeline(request, file_import):
         skipped_count,
         failed_count,
     )
+
+    ai_categorization_attempted, ai_categorization_failed, ai_failure_detail = (
+        gemini_bulk_metadata_after_bank_import(request.user, created_instances)
+    )
+    created_instances = _refresh_transactions_preserving_order(created_instances)
+
     file_import.rows_imported = created_count
     file_import.rows_skipped = skipped_count
     file_import.status = ImportStatus.COMPLETED
@@ -87,16 +127,17 @@ def bank_statement_import_pipeline(request, file_import):
     ser = TransactionSerializer(
         created_instances, many=True, context={"request": request}
     )
-    return Response(
-        {
-            "created": created_count,
-            "skipped": skipped_count,
-            "failed": failed_count,
-            "transactions": ser.data,
-            "errors": errors,
-        },
-        status=status.HTTP_201_CREATED,
-    )
+    response_body = {
+        "created": created_count,
+        "skipped": skipped_count,
+        "failed": failed_count,
+        "transactions": ser.data,
+        "errors": errors,
+        "ai_categorization_attempted": ai_categorization_attempted,
+        "ai_categorization_failed": ai_categorization_failed,
+        "ai_failure_detail": ai_failure_detail,
+    }
+    return Response(response_body, status=status.HTTP_201_CREATED)
 
 
 def visa_nacional_import_pipeline(_request, file_import):

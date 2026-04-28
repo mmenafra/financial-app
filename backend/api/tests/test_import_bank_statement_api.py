@@ -1,10 +1,13 @@
+import json
 from decimal import Decimal
+from unittest.mock import patch
 
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from django.urls import reverse
 
 from api.models import (
@@ -14,6 +17,7 @@ from api.models import (
     Transaction,
     TransactionStatus,
     TransactionType,
+    UserProfile,
 )
 
 User = get_user_model()
@@ -72,6 +76,8 @@ class ImportBankStatementAPITests(APITestCase):
         self.assertEqual(t2["direction"], "INCOME")
         self.assertEqual(Decimal(t2["amount"]), Decimal("747040.00"))
         self.assertIn("2026-04-02", t2["created_at"])
+        self.assertFalse(response.data["ai_categorization_attempted"])
+        self.assertFalse(response.data["ai_categorization_failed"])
 
     def test_import_deduplication(self):
         self.client.force_authenticate(user=self.user)
@@ -120,6 +126,40 @@ class ImportBankStatementAPITests(APITestCase):
                 return
         self.fail("expected imported row with TEF description")
 
+    def test_import_category_inference_normalizes_whitespace(self):
+        self.client.force_authenticate(user=self.user)
+        cat = Category.objects.create(
+            name="TestCat", user=self.user, icon="home", color="#f59e0b"
+        )
+        desc_norm = "MERCHANT NAME HERE"
+        Transaction.objects.create(
+            user=self.user,
+            description="MERCHANT  NAME    HERE",
+            amount=Decimal("1.00"),
+            currency="CLP",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.BANK_ACCOUNT,
+            category=cat,
+            external_id="manual-prior-ws",
+            status=TransactionStatus.CONFIRMED,
+        )
+        one_row = (
+            b";Cartola\n"
+            b";Numero Cuenta : 97-10525-46\n"
+            b";Fecha Desde : 01/04/2026\n"
+            b";Fecha Hasta : 20/04/2026\n"
+            b"Fecha;Descripcion;NroDoc.;Cargos;Abonos;Saldo\n"
+            b"01042026;MERCHANT NAME HERE;00000001;0000000010000,00;;+0000005574672,00\n"
+        )
+        statement = SimpleUploadedFile("BSA.dat", one_row, content_type="text/plain")
+        response = self.client.post(self.url, {"file": statement}, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(response.data["transactions"]), 1)
+        tx = response.data["transactions"][0]
+        self.assertEqual(tx["description"], desc_norm)
+        self.assertEqual(str(tx["category"]), str(cat.id))
+
     def test_import_errors_included_in_response(self):
         self.client.force_authenticate(user=self.user)
         content = (
@@ -149,3 +189,66 @@ class ImportBankStatementAPITests(APITestCase):
         response = self.client.post(self.url, {"file": statement}, format="multipart")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["detail"], "Only .dat files are supported.")
+
+
+def _parsed_context_from_gemini_body(body: dict):
+    txt = body["contents"][0]["parts"][0]["text"]
+    start = txt.index("{")
+    return json.loads(txt[start:])
+
+
+@override_settings(GEMINI_HTTP_ENABLED=True)
+class GeminiBankStatementImportTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="gemini-import-user",
+            email="gemini-import@example.com",
+            password="StrongPass123!",
+        )
+        self.url = reverse("import-bank-statement")
+        self.cat = Category.objects.create(
+            name="AutoCat", user=self.user, icon="tag", color="#c026d3"
+        )
+        self.profile, _created = UserProfile.objects.get_or_create(user=self.user)
+        self.profile.set_gemini_api_key("fake-gemini-test-key-placeholder")
+        self.profile.save(update_fields=["_gemini_api_key", "updated_at"])
+
+    def test_gemini_applies_bulk_categories_via_mock(self):
+        def stub(_, body, **_kwargs):  # noqa: ANN001
+            blob = _parsed_context_from_gemini_body(body)
+            cid = blob["categories"][0]["id"]
+            return {
+                "assignments": [
+                    {"transaction_id": t["id"], "category_id": cid}
+                    for t in blob["transactions"]
+                ],
+            }
+
+        self.client.force_authenticate(user=self.user)
+        statement = SimpleUploadedFile("BSA.dat", _BSA_BASE, content_type="text/plain")
+        with patch("api.gemini_categorize._call_gemini_raw", side_effect=stub):
+            response = self.client.post(self.url, {"file": statement}, format="multipart")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["created"], 2)
+        self.assertTrue(response.data["ai_categorization_attempted"])
+        self.assertFalse(response.data["ai_categorization_failed"])
+        for tx in response.data["transactions"]:
+            self.assertEqual(str(tx["category"]), str(self.cat.id))
+
+    def test_gemini_soft_failure_leaves_uncategorized_rows(self):
+        def boom(_, body, **_kwargs):  # noqa: ANN001
+            _ = body
+            raise RuntimeError("simulated Gemini outage")
+
+        self.client.force_authenticate(user=self.user)
+        statement = SimpleUploadedFile("BSA.dat", _BSA_BASE, content_type="text/plain")
+        with patch("api.gemini_categorize._call_gemini_raw", side_effect=boom):
+            response = self.client.post(self.url, {"file": statement}, format="multipart")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data["ai_categorization_attempted"])
+        self.assertTrue(response.data["ai_categorization_failed"])
+        self.assertIn("Gemini outage", response.data["ai_failure_detail"])
+        for tx in response.data["transactions"]:
+            self.assertIsNone(tx["category"])

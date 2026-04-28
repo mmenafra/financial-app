@@ -50,20 +50,32 @@ def bsa_statement_dt(iso_date: str) -> datetime:
     return timezone.make_aware(dt, timezone.get_current_timezone())
 
 
+def _normalize_description(description: str) -> str:
+    return " ".join((description or "").split())
+
+
+_MAX_INFERENCE_SCAN = 2000
+
+
 def inferred_category_for_bsa(user, description: str):
-    prior_id = (
-        Transaction.objects.filter(
-            user=user,
-            description=description,
-            category__isnull=False,
-        )
-        .order_by("-created_at")
-        .values_list("category_id", flat=True)
-        .first()
-    )
-    if prior_id is None:
+    """Match normalized description against prior categorized rows (recent-first)."""
+
+    norm = _normalize_description(description[:255])
+    if not norm:
         return None
-    return Category.objects.filter(pk=prior_id, user=user).first()
+    scanned = 0
+    for tx in (
+        Transaction.objects.filter(user=user, category__isnull=False)
+        .order_by("-created_at")
+        .iterator(chunk_size=200)
+    ):
+        if scanned >= _MAX_INFERENCE_SCAN:
+            break
+        scanned += 1
+        if _normalize_description(tx.description) != norm:
+            continue
+        return Category.objects.filter(pk=tx.category_id, user=user).first()
+    return None
 
 
 def import_bsa_row(  # pylint: disable=too-many-return-statements
