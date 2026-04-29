@@ -17,6 +17,7 @@ def reuse_or_create_statement_for_import(  # pylint: disable=too-many-positional
     period_end: date,
     total_amount: Decimal,
     currency: str = "USD",
+    preferred_statement: VisaInternationalStatement | None = None,
 ) -> VisaInternationalStatement:
     """
     One logical statement per (user, period_start, period_end).
@@ -24,7 +25,30 @@ def reuse_or_create_statement_for_import(  # pylint: disable=too-many-positional
     Re-imports update the chosen row's ``file_import`` / totals instead of inserting
     a duplicate. Prefers an existing row that already has transactions so skipped
     imports stay attached to the same statement the dashboard shows.
+
+    If ``preferred_statement`` is set (e.g. from the Visa International dashboard),
+    that row is updated from the new parse and returned—useful when parsed
+    ``period_from``/``period_to`` drift would otherwise miss period-based reuse.
     """
+    if preferred_statement is not None:
+        stmt = preferred_statement
+        stmt.file_import = file_import
+        stmt.period_start = period_start
+        stmt.period_end = period_end
+        stmt.total_amount = total_amount
+        stmt.currency = currency
+        stmt.save(
+            update_fields=[
+                "file_import",
+                "period_start",
+                "period_end",
+                "total_amount",
+                "currency",
+                "updated_at",
+            ]
+        )
+        return stmt
+
     candidates = (
         VisaInternationalStatement.objects.filter(
             user=user,
@@ -70,6 +94,7 @@ def select_statement_for_period_end_month(
             period_end__month=month,
         )
         .annotate(_tx_count=Count("transactions"))
+        .select_related("file_import")
         .order_by("-_tx_count", "-created_at")
         .first()
     )

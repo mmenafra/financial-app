@@ -101,7 +101,9 @@ export class VisaInternationalComponent {
 
   protected readonly importModalOpen = signal(false);
   protected readonly importVisaInternationalSubmit = (file: File) =>
-    this.transactionService.importVisaInternational(file);
+    this.transactionService.importVisaInternational(file, {
+      visaInternationalStatementId: this.currentStatement()?.id,
+    });
 
   protected readonly selectedYear = signal(new Date().getFullYear());
   protected readonly selectedMonth = signal(new Date().getMonth() + 1);

@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -135,6 +136,87 @@ class ImportVisaInternationalAPITests(APITestCase):
 
         self.assertEqual(VisaInternationalStatement.objects.count(), 1)
         self.assertEqual(VisaInternationalStatement.objects.get().pk, stmt_id)
+
+    @patch("api.import_pipeline.parse_visa_internacional_statement_pdf")
+    def test_reimport_preferred_id_drifting_period_updates_same_statement_row(
+        self, mock_parse,
+    ):
+        """Reuse by id when parsed period differs (would bypass exact period match)."""
+        first_parse = {
+            "period_from": "2026-02-24",
+            "period_to": "2026-03-23",
+            "transactions": [
+                {
+                    "reference": "000000001498572431",
+                    "operation_date": "2026-02-25",
+                    "description": "NETFLIX.COM",
+                    "city": None,
+                    "country": "CA",
+                    "amount_local": "21.46",
+                    "amount_usd": "16.15",
+                }
+            ],
+        }
+        drift_parse = {
+            **first_parse,
+            "period_from": "2026-02-25",
+        }
+        self.client.force_authenticate(user=self.user)
+
+        pdf1 = SimpleUploadedFile(
+            "stmt1.pdf", b"%PDF-1.4", content_type="application/pdf"
+        )
+        mock_parse.return_value = first_parse
+        r1 = self.client.post(self.url, {"file": pdf1}, format="multipart")
+        self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
+
+        stmt = VisaInternationalStatement.objects.get()
+
+        pdf2 = SimpleUploadedFile(
+            "stmt2.pdf", b"%PDF-1.4", content_type="application/pdf"
+        )
+        mock_parse.return_value = drift_parse
+        r2 = self.client.post(
+            self.url,
+            {
+                "file": pdf2,
+                "visa_international_statement_id": str(stmt.pk),
+            },
+            format="multipart",
+        )
+        self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(VisaInternationalStatement.objects.count(), 1)
+        stmt.refresh_from_db()
+        self.assertEqual(stmt.pk, VisaInternationalStatement.objects.get().pk)
+        self.assertEqual(stmt.period_start.isoformat(), drift_parse["period_from"])
+        self.assertEqual(stmt.period_end.isoformat(), drift_parse["period_to"])
+
+    def test_invalid_preferred_statement_uuid_returns_400(self):
+        self.client.force_authenticate(user=self.user)
+        pdf = SimpleUploadedFile(
+            "stmt.pdf", b"%PDF-1.4", content_type="application/pdf"
+        )
+        response = self.client.post(
+            self.url,
+            {"file": pdf, "visa_international_statement_id": "not-a-uuid"},
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_unknown_preferred_statement_id_returns_400(self):
+        self.client.force_authenticate(user=self.user)
+        pdf = SimpleUploadedFile(
+            "stmt.pdf", b"%PDF-1.4", content_type="application/pdf"
+        )
+        response = self.client.post(
+            self.url,
+            {
+                "file": pdf,
+                "visa_international_statement_id": str(uuid.uuid4()),
+            },
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     @patch("api.import_pipeline.parse_visa_internacional_statement_pdf")
     def test_import_sets_matched_recurring_pattern(self, mock_parse):

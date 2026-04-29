@@ -79,6 +79,11 @@ class VisaInternationalDashboardAPITests(APITestCase):
         self.assertIsNotNone(body["statement"])
         self.assertEqual(str(body["statement"]["id"]), str(stmt.id))
         self.assertEqual(body["statement"]["period_end"], "2026-03-23")
+        self.assertEqual(body["statement"]["original_filename"], "st.pdf")
+        self.assertIn(
+            "/media/",
+            body["statement"]["uploaded_file_url"],
+        )
         self.assertEqual(len(body["transactions"]), 1)
         self.assertEqual(len(body["monthly_totals"]), 12)
         last = body["monthly_totals"][-1]

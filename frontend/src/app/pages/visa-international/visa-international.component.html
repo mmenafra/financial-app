@@ -54,6 +54,22 @@
           >
             <div>
               <h2 class="m-0 text-lg font-extrabold text-primary">{{ periodRangeLabel() }}</h2>
+              @if (currentStatement()?.uploaded_file_url) {
+                <p class="m-0 mt-2">
+                  <a
+                    class="text-sm font-semibold text-secondary underline underline-offset-2 hover:opacity-90"
+                    [href]="currentStatement()!.uploaded_file_url!"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Download statement PDF{{
+                      currentStatement()!.original_filename
+                        ? ' (' + currentStatement()!.original_filename + ')'
+                        : ''
+                    }}
+                  </a>
+                </p>
+              }
             </div>
 
             <div class="flex flex-wrap items-end gap-3">

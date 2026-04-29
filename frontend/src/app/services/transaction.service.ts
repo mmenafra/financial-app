@@ -88,9 +88,16 @@ export class TransactionService {
     );
   }
 
-  importVisaInternational(file: File): Observable<BankStatementImportResult> {
+  importVisaInternational(
+    file: File,
+    options?: { visaInternationalStatementId?: string },
+  ): Observable<BankStatementImportResult> {
     const body = new FormData();
     body.append('file', file, file.name);
+    const stmtId = options?.visaInternationalStatementId;
+    if (stmtId) {
+      body.append('visa_international_statement_id', stmtId);
+    }
     return this.http.post<BankStatementImportResult>(
       `${environment.apiUrl}/api/transactions/import-visa-international/`,
       body,

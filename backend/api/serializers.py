@@ -101,6 +101,13 @@ class ImportVisaInternationalStatementSerializer(serializers.Serializer):
     """Multipart upload: PDF Visa Internacional (USD) statement."""
 
     file = serializers.FileField()
+    visa_international_statement_id = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=36,
+        help_text="Optional UUID of existing statement to reuse (Visa International dashboard).",
+    )
 
 
 class FileImportSerializer(serializers.ModelSerializer):
@@ -123,6 +130,9 @@ class FileImportSerializer(serializers.ModelSerializer):
 
 
 class VisaInternationalStatementSerializer(serializers.ModelSerializer):
+    original_filename = serializers.SerializerMethodField()
+    uploaded_file_url = serializers.SerializerMethodField()
+
     class Meta:
         model = VisaInternationalStatement
         fields = (
@@ -132,8 +142,27 @@ class VisaInternationalStatementSerializer(serializers.ModelSerializer):
             "total_amount",
             "currency",
             "file_import",
+            "original_filename",
+            "uploaded_file_url",
         )
         read_only_fields = fields
+
+    def get_original_filename(self, obj):
+        if not getattr(obj, "file_import_id", None):
+            return None
+        return obj.file_import.original_filename
+
+    def get_uploaded_file_url(self, obj):
+        if not getattr(obj, "file_import_id", None):
+            return None
+        fi = obj.file_import
+        if not fi.file or not getattr(fi.file, "name", None):
+            return None
+        url = fi.file.url
+        request = self.context.get("request")
+        if request is not None:
+            return request.build_absolute_uri(url)
+        return url
 
 
 class VisaNacionalStatementSerializer(serializers.ModelSerializer):

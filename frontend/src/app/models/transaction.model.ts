@@ -127,6 +127,10 @@ export interface VisaInternationalStatement {
   total_amount: string;
   currency: string;
   file_import: string;
+  /** From linked FileImport.original_filename */
+  original_filename?: string | null;
+  /** Absolute URL to uploaded PDF under MEDIA_URL */
+  uploaded_file_url?: string | null;
 }
 
 /** GET /api/visa-nacional/dashboard/ — same shape as international, CLP. */

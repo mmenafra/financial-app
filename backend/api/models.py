@@ -201,6 +201,13 @@ class VisaInternationalStatement(AbstractBaseModel):
     class Meta:
         ordering = ["-period_end", "-created_at"]
 
+    @property
+    def uploaded_file(self):
+        """Underlying upload on the linked :class:`FileImport` (same blob as ``file_import.file``)."""
+        if not self.file_import_id:
+            return None
+        return self.file_import.file
+
     def __str__(self):
         return f"Visa Intl {self.period_start}–{self.period_end} ({self.total_amount} {self.currency})"
 
