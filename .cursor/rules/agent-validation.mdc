@@ -1,0 +1,30 @@
+---
+description: Run lint, tests, and Docker builds after changes; fix failures before finishing
+alwaysApply: true
+---
+
+# Agent validation workflow
+
+From the repo root, use [Makefile](Makefile) targets (see [AGENTS.md](../../AGENTS.md)). Docker is required for backend `lint` / `test` and for `docker-build`.
+
+## When to run (before treating work as done)
+
+After **substantive** edits (backend Python, frontend app, tests, or config that affects runtime):
+
+1. **`make lint-all`** — backend + frontend lint
+2. **`make test-all`** — backend pytest + frontend CI-style tests
+
+If you changed **Dockerfiles**, **`docker-compose*.yml`**, or **backend/frontend build/install steps** used in images:
+
+3. **`make docker-build`** — ensure images still build
+
+For **large or risky frontend** changes, optionally run **`make fe-build`** to catch production build errors without waiting on a full Docker cycle.
+
+Skip full runs only for tiny doc-only or comment-only edits when they cannot affect lint/tests.
+
+## On failure
+
+- **Do not** stop at the first error: read the output, fix the code (or config/tests), then re-run the failed target(s) until they pass.
+- Prefer **`make fmt`** for backend formatting/ruff autofixes when appropriate, then re-run **`make lint-all`**.
+- If the environment cannot run Docker, say so explicitly; otherwise assume it works and iterate until green.
+- If **`make fe-test-ci`** exits with an abort trap / signal in a restricted runner, re-run it outside the sandbox (full permissions); the suite should pass when the toolchain can run normally.

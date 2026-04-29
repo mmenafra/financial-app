@@ -31,8 +31,11 @@ import type { Category } from '../../models/transaction.model';
 })
 export class CategorySelectComponent implements ControlValueAccessor {
   @Input() categories: Category[] = [];
+  /** When set, applied to the trigger button for <label for="…"> association. */
+  @Input() controlId = '';
 
   private readonly injector = inject(Injector);
+  private readonly el = inject(ElementRef);
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('categorySearchInput');
 
   protected readonly isOpen = signal(false);
@@ -40,10 +43,8 @@ export class CategorySelectComponent implements ControlValueAccessor {
   protected readonly selectedId = signal<string | null>(null);
   protected readonly isDisabled = signal(false);
 
-  private onChange: (value: string | null) => void = () => {};
-  private onTouched: () => void = () => {};
-
-  constructor(private readonly el: ElementRef) {}
+  private onChange: (value: string | null) => void = () => undefined;
+  private onTouched: () => void = () => undefined;
 
   protected readonly filtered = computed(() => {
     const q = this.searchText().toLowerCase().trim();

@@ -3,6 +3,7 @@
   <button
     type="button"
     class="w-full flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm font-semibold text-on-surface shadow-sm text-left transition-colors hover:bg-surface-container/40"
+    [attr.id]="controlId || null"
     [class.opacity-50]="isDisabled()"
     [class.pointer-events-none]="isDisabled()"
     (click)="open()"

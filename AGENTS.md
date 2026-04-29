@@ -21,3 +21,10 @@ From the repo root, prefer [Makefile](Makefile) targets (requires Docker for bac
 | Everything | `make lint-all` / `make test-all` |
 
 Run `make help` for a full list. Agent-specific rules live in [`.cursor/rules/`](.cursor/rules/).
+
+## Cursor auto-run (terminal allowlist)
+
+Cursor matches **prefixes**: a single entry `make` allows every Makefile target (`make lint-all`, `make docker-build`, `make fe-test-ci`, etc.).
+
+- **IDE agent:** `~/.cursor/permissions.json` → `terminalAllowlist` (when set, it **replaces** the in-app terminal allowlist—edit the file to add or remove prefixes). This repo’s machine local file should include `make` plus any other prefixes you want (e.g. `git`, `docker`, `npx`). See [permissions.json](https://cursor.com/docs/reference/permissions).
+- **Cursor CLI:** [`.cursor/cli.json`](.cursor/cli.json) in this repo allows `Shell(make)` for project sessions (merges with your global CLI config).
