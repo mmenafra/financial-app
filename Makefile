@@ -6,7 +6,7 @@ FRONTEND = frontend
 .PHONY: help docker-build docker-up docker-down docker-prod \
 	lint fmt test seed seed-categories lint-all test-all \
 	fe-install fe-dev fe-build fe-lint fe-test fe-test-ci fe-betterer fe-betterer-update \
-	db-clean-all db-clean-user db-clean-transactions \
+	db-clean-all db-clean-user db-clean-transactions db-clean-user-since \
 	createsuperuser
 
 help:
@@ -15,7 +15,7 @@ help:
 	@echo "Backend:       make lint (django check + ruff + flake8 + pylint) | fmt (autoflake + isort + black + ruff format) | test (pytest) | seed"
 	@echo "               make seed-categories EMAIL=<email> (optional RESET=1 to clear user categories first)"
 	@echo "               make createsuperuser (interactive; admin UI at /admin/)"
-	@echo "DB clean:      make db-clean-all | db-clean-user USER=<username> | db-clean-transactions USER=<username>"
+	@echo "DB clean:      make db-clean-all | db-clean-user USER=<u> | db-clean-transactions USER=<u> | db-clean-user-since USER=<u> [FROM_DATE=...] (keeps categories only)"
 	@echo "Frontend:      make fe-install | fe-dev | fe-build"
 	@echo "               make fe-lint (ESLint + Stylelint) | fe-test (Vitest) | fe-test-ci (Vitest, no watch)"
 	@echo "               make fe-betterer | fe-betterer-update"
@@ -81,6 +81,10 @@ db-clean-user:
 db-clean-transactions:
 	@test -n "$(USER)" || (echo "Usage: make db-clean-transactions USER=<username>" && exit 1)
 	$(DC) run --rm $(BACKEND) python manage.py clean_db --transactions "$(USER)"
+
+db-clean-user-since:
+	@test -n "$(USER)" || (echo "Usage: make db-clean-user-since USER=<username> [FROM_DATE=2026-02-01]" && exit 1)
+	$(DC) run --rm $(BACKEND) python manage.py clean_db --user-since "$(USER)" $(if $(FROM_DATE),--from-date "$(FROM_DATE)",)
 
 fe-install:
 	cd $(FRONTEND) && npm ci
