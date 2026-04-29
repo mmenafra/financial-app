@@ -143,3 +143,15 @@
     </main>
   </div>
 </div>
+
+@if (rerunResultModalOpen() && prefilledImportResult(); as rerunRes) {
+  <app-import-modal
+    [initialImportResult]="rerunRes"
+    [categories]="categories()"
+    [accept]="rerunModalPreset().accept"
+    [modalTitle]="rerunModalPreset().modalTitle"
+    [modalDescription]="rerunModalPreset().modalDescription"
+    (closed)="closeRerunModal()"
+    (imported)="reload()"
+  />
+}

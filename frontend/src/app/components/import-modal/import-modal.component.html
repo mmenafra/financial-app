@@ -157,34 +157,37 @@
       <p class="text-sm text-on-surface-variant text-center m-0 max-w-sm">This can take a moment for large files.</p>
     </div>
   } @else {
-    <div class="mt-5 flex flex-col gap-4">
-      <div class="flex flex-col gap-2">
-        <label class="text-xs font-semibold text-on-surface-variant" for="app-import-file">File</label>
-        <input
-          id="app-import-file"
-          type="file"
-          [accept]="accept"
-          class="tx-input file:mr-3 file:rounded-lg file:border-0 file:bg-primary-container file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-on-primary"
-          (change)="onImportFileChange($event)"
-        />
-        @if (importFile()) {
-          <p class="text-sm font-semibold text-on-surface m-0">Selected: {{ importFile()!.name }}</p>
+    @if (submitImportFn) {
+      <div class="mt-5 flex flex-col gap-4">
+        <div class="flex flex-col gap-2">
+          <label class="text-xs font-semibold text-on-surface-variant" for="app-import-file">File</label>
+          <input
+            id="app-import-file"
+            type="file"
+            [accept]="accept"
+            class="tx-input file:mr-3 file:rounded-lg file:border-0 file:bg-primary-container file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-on-primary"
+            (change)="onImportFileChange($event)"
+          />
+          @if (importFile()) {
+            <p class="text-sm font-semibold text-on-surface m-0">Selected: {{ importFile()!.name }}</p>
+          }
+        </div>
+        @if (importError()) {
+          <p class="text-sm font-semibold text-red-600 m-0">{{ importError() }}</p>
         }
+        <div class="flex flex-wrap gap-2 justify-end">
+          <button type="button" class="tx-pill-btn ghost" (click)="close()">Cancel</button>
+          <button
+            type="button"
+            class="tx-pill-btn"
+            (click)="submitImport()"
+            [disabled]="!importFile() || importSubmitting()"
+          >
+            Import
+          </button>
+        </div>
       </div>
-      @if (importError()) {
-        <p class="text-sm font-semibold text-red-600 m-0">{{ importError() }}</p>
-      }
-      <div class="flex flex-wrap gap-2 justify-end">
-        <button type="button" class="tx-pill-btn ghost" (click)="close()">Cancel</button>
-        <button
-          type="button"
-          class="tx-pill-btn"
-          (click)="submitImport()"
-          [disabled]="!importFile() || importSubmitting()"
-        >
-          Import
-        </button>
-      </div>
-    </div>
+    }
   }
 </div>
+

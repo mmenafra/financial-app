@@ -1,5 +1,8 @@
-import type { PaginatedResponse } from './transaction.model';
-import type { Source } from './transaction.model';
+import type {
+  BankStatementImportResult,
+  PaginatedResponse,
+  Source,
+} from './transaction.model';
 
 /** Mirrors `FileImportSerializer` / `FileImport` model. */
 export type ImportRecordStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
@@ -24,6 +27,6 @@ export type FileImportListResponse = PaginatedResponse<FileImportRow>;
 /** POST /api/file-imports/:id/re-run/ */
 export interface FileImportRerunResponse {
   file_import: FileImportRow;
-  import_result: Record<string, unknown>;
+  import_result?: BankStatementImportResult;
   detail?: string;
 }

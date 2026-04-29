@@ -4,6 +4,7 @@ import {
   DestroyRef,
   EventEmitter,
   Input,
+  OnInit,
   Output,
   inject,
   signal,
@@ -31,13 +32,16 @@ import { TransactionService } from '../../services/transaction.service';
   templateUrl: './import-modal.component.html',
   styleUrl: './import-modal.component.scss',
 })
-export class ImportModalComponent {
+export class ImportModalComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(FormBuilder);
   private readonly transactionService = inject(TransactionService);
 
-  /** multipart POST that returns BankStatementImportResult */
-  @Input({ required: true }) submitImportFn!: (file: File) => Observable<BankStatementImportResult>;
+  /** multipart POST that returns BankStatementImportResult; omit when only `initialImportResult` is used */
+  @Input() submitImportFn?: (file: File) => Observable<BankStatementImportResult>;
+
+  /** When set (e.g. from re-run API), skip file upload and show the same summary/review flow as after a successful POST */
+  @Input() initialImportResult: BankStatementImportResult | null = null;
 
   /** e.g. `.dat`, `.pdf` */
   @Input({ required: true }) accept!: string;
@@ -63,6 +67,27 @@ export class ImportModalComponent {
   protected readonly importFinishing = signal(false);
   protected readonly importFinishError = signal<string | null>(null);
 
+  ngOnInit(): void {
+    const res = this.initialImportResult;
+    if (res) {
+      this.applyInitialImportResult(res);
+    }
+  }
+
+  private applyInitialImportResult(res: BankStatementImportResult): void {
+    if (!res) {
+      return;
+    }
+    this.importFile.set(null);
+    this.importResult.set(res);
+    this.importReviewStep.set(false);
+    this.importReviewControls = [];
+    this.importFinishError.set(null);
+    this.importError.set(null);
+    this.importSubmitting.set(false);
+    this.imported.emit();
+  }
+
   close(): void {
     if (this.importSubmitting() || this.importFinishing()) {
       return;
@@ -85,6 +110,10 @@ export class ImportModalComponent {
   }
 
   protected submitImport(): void {
+    const submit = this.submitImportFn;
+    if (!submit) {
+      return;
+    }
     const file = this.importFile();
     if (!file) {
       this.importError.set(this.chooseFilePrompt);
@@ -92,7 +121,7 @@ export class ImportModalComponent {
     }
     this.importSubmitting.set(true);
     this.importError.set(null);
-    this.submitImportFn(file)
+    submit(file)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {

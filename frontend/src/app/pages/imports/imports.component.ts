@@ -1,11 +1,22 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, HostListener, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  HostListener,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+import { ImportModalComponent } from '../../components/import-modal/import-modal.component';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { TopNavComponent } from '../../components/top-nav/top-nav.component';
 import type { FileImportRow } from '../../models/file-import.model';
-import type { Source } from '../../models/transaction.model';
+import type { BankStatementImportResult, Category, Source } from '../../models/transaction.model';
 import { FileImportService } from '../../services/file-import.service';
+import { TransactionService } from '../../services/transaction.service';
+import { presetsForImportSource } from '../../utils/import-modal-source-presets';
 
 const PAGE_SIZE = 20;
 
@@ -19,12 +30,18 @@ const SOURCE_LABELS: Record<Source, string> = {
 @Component({
   selector: 'app-imports',
   standalone: true,
-  imports: [CommonModule, SidebarComponent, TopNavComponent],
+  imports: [
+    CommonModule,
+    ImportModalComponent,
+    SidebarComponent,
+    TopNavComponent,
+  ],
   templateUrl: './imports.component.html',
   styleUrl: './imports.component.scss',
 })
 export class ImportsComponent {
   private readonly fileImportService = inject(FileImportService);
+  private readonly transactionService = inject(TransactionService);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly pageSize = PAGE_SIZE;
   protected readonly currentPage = signal(1);
@@ -35,7 +52,28 @@ export class ImportsComponent {
   protected readonly openMenuId = signal<string | null>(null);
   protected readonly rerunSubmittingId = signal<string | null>(null);
 
+  protected readonly categories = signal<Category[]>([]);
+  protected readonly rerunResultModalOpen = signal(false);
+  /** Set when POST re-run succeeds; drives source-specific modal copy via `rerunModalPreset`. */
+  protected readonly rerunModalSource = signal<Source>('BANK_ACCOUNT');
+  protected readonly prefilledImportResult = signal<BankStatementImportResult | null>(
+    null,
+  );
+
+  protected readonly rerunModalPreset = computed(() =>
+    presetsForImportSource(this.rerunModalSource()),
+  );
+
   constructor() {
+    this.transactionService
+      .getCategories()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (cats) => this.categories.set(cats),
+        error: () => {
+          // Category list enhances re-run modal; imports table still usable without it.
+        },
+      });
     this.reload();
   }
 
@@ -57,6 +95,11 @@ export class ImportsComponent {
           this.isLoading.set(false);
         },
       });
+  }
+
+  protected closeRerunModal(): void {
+    this.rerunResultModalOpen.set(false);
+    this.prefilledImportResult.set(null);
   }
 
   protected formatDate(iso: string): string {
@@ -154,9 +197,16 @@ export class ImportsComponent {
       .rerun(row.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
+        next: (response) => {
           this.rerunSubmittingId.set(null);
           this.loadError.set(null);
+          const payload = response.import_result;
+          if (payload != null && typeof payload === 'object') {
+            this.rerunModalSource.set(row.source);
+            this.prefilledImportResult.set(payload);
+            this.rerunResultModalOpen.set(true);
+            return;
+          }
           this.reload();
         },
         error: () => {
