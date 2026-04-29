@@ -7,7 +7,8 @@ FRONTEND = frontend
 	lint fmt test seed seed-categories lint-all test-all \
 	fe-install fe-dev fe-build fe-lint fe-test fe-test-ci fe-betterer fe-betterer-update \
 	db-clean-all db-clean-user db-clean-transactions db-clean-user-since \
-	createsuperuser
+	db-backup db-restore \
+	createsuperuser dump-gemini-keys
 
 help:
 	@echo "Docker (dev):  make docker-build | docker-up | docker-down"
@@ -15,7 +16,10 @@ help:
 	@echo "Backend:       make lint (django check + ruff + flake8 + pylint) | fmt (autoflake + isort + black + ruff format) | test (pytest) | seed"
 	@echo "               make seed-categories EMAIL=<email> (optional RESET=1 to clear user categories first)"
 	@echo "               make createsuperuser (interactive; admin UI at /admin/)"
+	@echo "               make dump-gemini-keys [DUMP_GEMINI_OPTS=--insecure] (plaintext keys; use --insecure when DEBUG=False)"
 	@echo "DB clean:      make db-clean-all | db-clean-user USER=<u> | db-clean-transactions USER=<u> | db-clean-user-since USER=<u> [FROM_DATE=...] (keeps categories only)"
+	@echo "DB backup:      make db-backup  (gzip SQL under backups/; compose db service must be running)"
+	@echo "DB restore:     make db-restore BACKUP=path/to/file.sql.gz  (also accepts plain .sql)"
 	@echo "Frontend:      make fe-install | fe-dev | fe-build"
 	@echo "               make fe-lint (ESLint + Stylelint) | fe-test (Vitest) | fe-test-ci (Vitest, no watch)"
 	@echo "               make fe-betterer | fe-betterer-update"
@@ -71,6 +75,9 @@ seed-categories:
 createsuperuser:
 	$(DC) run --rm -it $(BACKEND) python manage.py createsuperuser
 
+dump-gemini-keys:
+	$(DC) run --rm $(BACKEND) python manage.py dump_gemini_keys $(DUMP_GEMINI_OPTS)
+
 db-clean-all:
 	$(DC) run --rm $(BACKEND) python manage.py clean_db --all
 
@@ -85,6 +92,23 @@ db-clean-transactions:
 db-clean-user-since:
 	@test -n "$(USER)" || (echo "Usage: make db-clean-user-since USER=<username> [FROM_DATE=2026-02-01]" && exit 1)
 	$(DC) run --rm $(BACKEND) python manage.py clean_db --user-since "$(USER)" $(if $(FROM_DATE),--from-date "$(FROM_DATE)",)
+
+# Full logical backup (PostgreSQL pg_dump SQL with DROP IF EXISTS prelude). Writes backups/finance_app_<timestamp>.sql.gz
+db-backup:
+	@mkdir -p backups
+	@out=backups/finance_app_$$(date +%Y%m%d_%H%M%S).sql.gz; \
+		set -e; \
+		echo "Writing $$out ..."; \
+		$(DC) exec -T db pg_dump -U finance_user -d finance_app --clean --if-exists | gzip > "$$out"; \
+		echo "Done: $$out"
+
+db-restore:
+	@test -n "$(BACKUP)" || (echo 'Usage: make db-restore BACKUP=path/to/backup.sql.gz  (also accepts plain .sql)' && exit 1)
+	@test -f "$(BACKUP)" || (echo "File not found: $(BACKUP)" && exit 1)
+	case "$(BACKUP)" in \
+		*.gz|*.gzip) gzip -dc "$(BACKUP)" ;; \
+		*) cat "$(BACKUP)" ;; \
+	esac | $(DC) exec -T db psql -U finance_user -d finance_app -v ON_ERROR_STOP=1
 
 fe-install:
 	cd $(FRONTEND) && npm ci

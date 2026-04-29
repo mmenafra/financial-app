@@ -30,7 +30,7 @@ SEED_CATEGORIES: list[tuple[str, str, str]] = [
     ("Ropa", "checkroom", "#c084fc"),
     ("Online Subscriptions", "subscriptions", "#60a5fa"),
     ("Seguro Auto", "car_crash", "#fb923c"),
-    ("Permiso de Circulacion", "description", "#a3a3a3"),
+    ("Permiso de Circulacion", "directions_car", "#64748b"),
     ("Perro", "pets", "#d97706"),
     ("Contribuciones", "account_balance", "#64748b"),
     ("Weed", "grass", "#4ade80"),
@@ -43,13 +43,18 @@ SEED_CATEGORIES: list[tuple[str, str, str]] = [
     ("Jardinero", "yard", "#86efac"),
     ("Piscina Mantencion", "pool", "#67e8f9"),
     ("Estacionamientos", "local_parking", "#cbd5e1"),
-    ("Dividendos Deptos", "real_estate_agent", "#fde68a"),
+    ("Dividendo Condell", "real_estate_agent", "#fde68a"),
+    ("Dividendo Estacion Central", "real_estate_agent", "#fde68a"),
     ("Colegio Ninos", "school", "#818cf8"),
+    ("Cindes / Piscologo", "psychology", "#818cf8"),
     ("Isapre Ninos", "health_and_safety", "#34d399"),
     ("Visa Nacional", "credit_card", "#0369a1"),
     ("Visa Internacional", "credit_card", "#7c3aed"),
     ("Ahorro", "savings", "#059669"),
     ("Income", "trending_up", "#10b981"),
+    ("Sueldo", "trending_up", "#10b981"),
+    ("Sueldo Amalia", "trending_up", "#10b981"),
+    ("Devolucion", "trending_up", "#10b981"),
 ]
 
 

@@ -8,3 +8,6 @@ __pycache__/
 
 # User-uploaded import files (Django MEDIA_ROOT)
 backend/media/
+
+# Local DB dumps from make db-backup
+backups/
