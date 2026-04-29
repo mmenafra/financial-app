@@ -2,12 +2,10 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, DestroyRef, HostListener, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
-  AbstractControl,
   FormArray,
   FormBuilder,
   FormGroup,
   ReactiveFormsModule,
-  ValidationErrors,
   Validators,
 } from '@angular/forms';
 import { forkJoin } from 'rxjs';
@@ -16,6 +14,8 @@ import { CategorySelectComponent } from '../../components/category-select/catego
 import { ImportModalComponent } from '../../components/import-modal/import-modal.component';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { TopNavComponent } from '../../components/top-nav/top-nav.component';
+import { TransactionEditModalComponent } from '../../components/transaction-edit-modal/transaction-edit-modal.component';
+import { TransactionMetadataModalComponent } from '../../components/transaction-metadata-modal/transaction-metadata-modal.component';
 import type {
   Category,
   CreateTransactionPayload,
@@ -23,9 +23,13 @@ import type {
   Source,
   Transaction,
   TransactionType,
-  UpdateTransactionPayload,
 } from '../../models/transaction.model';
 import { TransactionService } from '../../services/transaction.service';
+import {
+  httpErrorMessage,
+  positiveNumberValidator,
+  round2,
+} from '../../utils/transaction-edit';
 
 const PAGE_SIZE = 100;
 const CONNECTED_SOURCES = 4;
@@ -47,6 +51,8 @@ const SOURCE_LABELS: Record<Source, string> = {
     ImportModalComponent,
     SidebarComponent,
     TopNavComponent,
+    TransactionEditModalComponent,
+    TransactionMetadataModalComponent,
   ],
   templateUrl: './transactions.component.html',
   styleUrl: './transactions.component.scss',
@@ -100,27 +106,13 @@ export class TransactionsComponent {
   protected readonly importBankStatementSubmit = (file: File) =>
     this.transactionService.importBankStatement(file);
 
-  protected readonly editModalOpen = signal(false);
-  protected readonly editSubmitting = signal(false);
-  protected readonly editError = signal<string | null>(null);
-  protected readonly editingTx = signal<Transaction | null>(null);
+  protected readonly editTarget = signal<Transaction | null>(null);
+  protected readonly metadataTarget = signal<Transaction | null>(null);
 
   protected readonly deleteModalOpen = signal(false);
   protected readonly deleteSubmitting = signal(false);
   protected readonly deleteError = signal<string | null>(null);
   protected readonly pendingDelete = signal<Transaction | null>(null);
-
-  /** Full transaction payload for debugging (row action → modal). */
-  protected readonly metadataTx = signal<Transaction | null>(null);
-
-  protected readonly editTxForm = this.fb.group({
-    description: ['', [Validators.required, Validators.maxLength(255)]],
-    amount: ['', [Validators.required, positiveNumberValidator]],
-    currency: ['CLP', [Validators.required]],
-    direction: ['EXPENSE', [Validators.required]],
-    category: [null as string | null],
-    date: [''],
-  });
 
   protected readonly newTxForm = this.fb.group({
     description: ['', [Validators.required, Validators.maxLength(255)]],
@@ -419,60 +411,16 @@ export class TransactionsComponent {
   protected onEdit(t: Transaction, event: MouseEvent): void {
     event.stopPropagation();
     this.openMenuId.set(null);
-    this.editingTx.set(t);
-    this.editError.set(null);
-    this.editTxForm.reset({
-      description: t.description,
-      amount: t.amount,
-      currency: t.currency,
-      direction: t.direction,
-      category: t.category ?? null,
-      date: t.created_at.slice(0, 10),
-    });
-    this.editModalOpen.set(true);
+    this.editTarget.set(t);
   }
 
-  protected closeEditModal(): void {
-    if (this.editSubmitting()) return;
-    this.editModalOpen.set(false);
-    this.editingTx.set(null);
-    this.editError.set(null);
+  protected onEditDismissed(): void {
+    this.editTarget.set(null);
   }
 
-  protected submitEditTx(): void {
-    this.editTxForm.markAllAsTouched();
-    if (this.editTxForm.invalid) return;
-    const tx = this.editingTx();
-    if (!tx) return;
-    const v = this.editTxForm.value;
-    const direction = (v.direction ?? 'EXPENSE') as Direction;
-    const txType: TransactionType = direction === 'INCOME' ? 'CREDIT' : 'DEBIT';
-    const dateVal = v.date ? new Date(v.date + 'T12:00:00').toISOString() : undefined;
-    const payload: UpdateTransactionPayload = {
-      description: String(v.description ?? '').trim(),
-      amount: round2(Number(v.amount)).toFixed(2),
-      currency: String(v.currency ?? 'CLP'),
-      direction,
-      transaction_type: txType,
-      category: v.category ?? null,
-      ...(dateVal && { created_at: dateVal }),
-    };
-    this.editSubmitting.set(true);
-    this.editError.set(null);
-    this.transactionService
-      .updateTransaction(tx.id, payload)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.editSubmitting.set(false);
-          this.closeEditModal();
-          this.reload();
-        },
-        error: (err: unknown) => {
-          this.editSubmitting.set(false);
-          this.editError.set(this.httpErrorMessage(err) ?? 'Could not update transaction.');
-        },
-      });
+  protected onEditSaved(): void {
+    this.editTarget.set(null);
+    this.reload();
   }
 
   protected onDelete(t: Transaction, event: MouseEvent): void {
@@ -486,15 +434,11 @@ export class TransactionsComponent {
   protected onMetadata(t: Transaction, event: MouseEvent): void {
     event.stopPropagation();
     this.openMenuId.set(null);
-    this.metadataTx.set(t);
+    this.metadataTarget.set(t);
   }
 
-  protected closeMetadataModal(): void {
-    this.metadataTx.set(null);
-  }
-
-  protected transactionDebugJson(t: Transaction): string {
-    return JSON.stringify(t, null, 2);
+  protected onMetadataDismissed(): void {
+    this.metadataTarget.set(null);
   }
 
   protected closeDeleteModal(): void {
@@ -520,7 +464,7 @@ export class TransactionsComponent {
         },
         error: (err: unknown) => {
           this.deleteSubmitting.set(false);
-          this.deleteError.set(this.httpErrorMessage(err) ?? 'Could not delete transaction.');
+          this.deleteError.set(httpErrorMessage(err) ?? 'Could not delete transaction.');
         },
       });
   }
@@ -635,7 +579,7 @@ export class TransactionsComponent {
         },
         error: (err: unknown) => {
           this.splitSubmitting.set(false);
-          this.splitError.set(this.httpErrorMessage(err) ?? 'Could not split transaction.');
+          this.splitError.set(httpErrorMessage(err) ?? 'Could not split transaction.');
         },
       });
   }
@@ -699,7 +643,7 @@ export class TransactionsComponent {
         },
         error: (err: unknown) => {
           this.newTxSubmitting.set(false);
-          this.newTxError.set(this.httpErrorMessage(err) ?? 'Could not create transaction.');
+          this.newTxError.set(httpErrorMessage(err) ?? 'Could not create transaction.');
         },
       });
   }
@@ -718,45 +662,7 @@ export class TransactionsComponent {
     }
     return `${pct}% more than last month`;
   }
-
-  private httpErrorMessage(err: unknown): string | null {
-    if (err && typeof err === 'object' && 'error' in err) {
-      const e = (err as { error?: unknown }).error;
-      if (typeof e === 'string' && e) {
-        return e;
-      }
-      if (e && typeof e === 'object' && 'detail' in e) {
-        const d = (e as { detail?: unknown }).detail;
-        if (typeof d === 'string') {
-          return d;
-        }
-      }
-      if (e && typeof e === 'object' && 'items' in e) {
-        const it = (e as { items?: unknown }).items;
-        if (typeof it === 'string') {
-          return it;
-        }
-        if (Array.isArray(it) && it.length > 0 && typeof it[0] === 'string') {
-          return it[0] as string;
-        }
-      }
-    }
-    return null;
-  }
 }
-
-function positiveNumberValidator(control: AbstractControl): ValidationErrors | null {
-  const raw = String(control.value ?? '').trim();
-  if (!raw) {
-    return null; // let Validators.required handle the empty case
-  }
-  const n = Number(raw);
-  if (Number.isNaN(n) || n <= 0) {
-    return { positiveNumber: true };
-  }
-  return null;
-}
-
 
 function parseAmount(s: string): number | null {
   if (!s) {
@@ -767,8 +673,4 @@ function parseAmount(s: string): number | null {
     return null;
   }
   return n;
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
 }

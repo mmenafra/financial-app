@@ -1,19 +1,13 @@
 // Transactions page. Global tokens live in src/tailwind.css.
 
+@use '../../styles/tx-dialog' as *;
+
 .tx-select {
   @apply rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm font-semibold text-on-surface shadow-sm min-w-[8.5rem];
 }
 
 .tx-filter-btn {
   @apply inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-sm font-bold text-primary shadow-sm transition-colors hover:bg-surface-container;
-}
-
-.tx-pill-btn {
-  @apply rounded-xl px-4 py-2.5 text-sm font-bold bg-primary text-on-primary transition-opacity hover:opacity-90;
-
-  &.ghost {
-    @apply bg-transparent text-primary border border-outline-variant;
-  }
 }
 
 .tx-summary-label {
@@ -106,23 +100,6 @@
 
 .amount-expense {
   @apply text-primary;
-}
-
-.tx-modal-backdrop {
-  @apply fixed inset-0 z-40 bg-black/40;
-}
-
-.tx-modal {
-  @apply fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[min(100%-2rem,28rem)] max-h-[min(100vh-2rem,90vh)] overflow-y-auto rounded-3xl border border-outline-variant/60 bg-surface-container-lowest p-6 shadow-xl;
-
-  &--wide {
-    /* Room for long bank descriptions alongside amount + category controls */
-    @apply w-[min(100%-2rem,56rem)];
-  }
-}
-
-.tx-input {
-  @apply w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm font-semibold text-on-surface shadow-sm;
 }
 
 .tx-split-badge {

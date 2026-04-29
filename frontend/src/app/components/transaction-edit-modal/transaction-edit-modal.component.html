@@ -1,0 +1,95 @@
+@if (transaction(); as tx) {
+  <div
+    class="tx-modal-backdrop"
+    role="button"
+    tabindex="0"
+    aria-label="Close dialog"
+    (click)="onBackdrop()"
+    (keydown.enter)="onBackdrop()"
+    (keydown.space)="$event.preventDefault(); onBackdrop()"
+  ></div>
+  <div class="tx-modal" role="dialog" aria-modal="true" [attr.aria-labelledby]="titleId()">
+    <h2 [id]="titleId()" class="text-xl font-extrabold text-primary m-0 font-headline">Edit Transaction</h2>
+    <form class="mt-4 flex flex-col gap-4" [formGroup]="editTxForm" (ngSubmit)="submitEditTx()">
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-on-surface-variant" [attr.for]="fieldId('desc')">
+          Description <span class="text-red-500">*</span>
+        </label>
+        <input
+          [id]="fieldId('desc')"
+          type="text"
+          class="tx-input"
+          [class.border-red-400]="editTxForm.get('description')!.invalid && editTxForm.get('description')!.touched"
+          formControlName="description"
+          autocomplete="off"
+        />
+        @if (editTxForm.get('description')!.touched && editTxForm.get('description')!.hasError('required')) {
+          <p class="text-xs text-red-600 font-semibold m-0">Description is required.</p>
+        } @else if (editTxForm.get('description')!.touched && editTxForm.get('description')!.hasError('maxlength')) {
+          <p class="text-xs text-red-600 font-semibold m-0">Maximum 255 characters.</p>
+        }
+      </div>
+
+      <div class="flex gap-3">
+        <div class="flex flex-col gap-1 flex-1">
+          <label class="text-xs font-semibold text-on-surface-variant" [attr.for]="fieldId('amount')">
+            Amount <span class="text-red-500">*</span>
+          </label>
+          <input
+            [id]="fieldId('amount')"
+            type="text"
+            inputmode="decimal"
+            class="tx-input"
+            [class.border-red-400]="editTxForm.get('amount')!.invalid && editTxForm.get('amount')!.touched"
+            formControlName="amount"
+            autocomplete="off"
+          />
+          @if (editTxForm.get('amount')!.touched && editTxForm.get('amount')!.hasError('required')) {
+            <p class="text-xs text-red-600 font-semibold m-0">Amount is required.</p>
+          } @else if (editTxForm.get('amount')!.touched && editTxForm.get('amount')!.hasError('positiveNumber')) {
+            <p class="text-xs text-red-600 font-semibold m-0">Enter a valid amount greater than 0.</p>
+          }
+        </div>
+        <div class="flex flex-col gap-1 w-28">
+          <label class="text-xs font-semibold text-on-surface-variant" [attr.for]="fieldId('currency')">Currency</label>
+          <select [id]="fieldId('currency')" class="tx-input" formControlName="currency">
+            <option value="USD">USD</option>
+            <option value="CLP">CLP</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex gap-3">
+        <div class="flex flex-col gap-1 flex-1">
+          <label class="text-xs font-semibold text-on-surface-variant" [attr.for]="fieldId('direction')">Type</label>
+          <select [id]="fieldId('direction')" class="tx-input" formControlName="direction">
+            <option value="EXPENSE">Expense</option>
+            <option value="INCOME">Income</option>
+          </select>
+        </div>
+        <div class="flex flex-col gap-1 flex-1">
+          <label class="text-xs font-semibold text-on-surface-variant" [attr.for]="fieldId('date')">Date</label>
+          <input [id]="fieldId('date')" type="date" class="tx-input" formControlName="date" />
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-on-surface-variant">Category</label>
+        <app-category-select [categories]="categories()" formControlName="category" />
+      </div>
+
+      @if (editError()) {
+        <p class="text-sm font-semibold text-red-600 m-0">{{ editError() }}</p>
+      }
+
+      <div class="flex flex-wrap gap-2 justify-end pt-1">
+        <button type="button" class="tx-pill-btn ghost" (click)="closeModal()" [disabled]="editSubmitting()">
+          Cancel
+        </button>
+        <button type="submit" class="tx-pill-btn" [disabled]="editSubmitting()">
+          {{ editSubmitting() ? 'Saving…' : 'Save changes' }}
+        </button>
+      </div>
+    </form>
+  </div>
+}

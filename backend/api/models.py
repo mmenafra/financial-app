@@ -180,6 +180,31 @@ class FileImport(AbstractBaseModel):
         return f"{self.original_filename} ({self.source})"
 
 
+class VisaInternationalStatement(AbstractBaseModel):
+    """One Visa Internacional (USD) statement per uploaded PDF (`FileImport`)."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="visa_international_statements",
+    )
+    file_import = models.OneToOneField(
+        FileImport,
+        on_delete=models.CASCADE,
+        related_name="visa_international_statement",
+    )
+    period_start = models.DateField()
+    period_end = models.DateField()
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    currency = models.CharField(max_length=3, default="USD")
+
+    class Meta:
+        ordering = ["-period_end", "-created_at"]
+
+    def __str__(self):
+        return f"Visa Intl {self.period_start}–{self.period_end} ({self.total_amount} {self.currency})"
+
+
 class TransactionQuerySet(models.QuerySet):
     def expenses(self):
         return self.filter(direction=Direction.EXPENSE)
@@ -279,6 +304,21 @@ class Transaction(AbstractBaseModel):
         null=True,
         blank=True,
         related_name="transactions",
+    )
+    visa_international_statement = models.ForeignKey(
+        VisaInternationalStatement,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="transactions",
+    )
+    matched_recurring_pattern = models.ForeignKey(
+        "RecurringPattern",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="matched_transactions",
+        db_index=True,
     )
 
     objects = TransactionManager()

@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, mergeMap, of } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 import type {
@@ -8,10 +8,12 @@ import type {
   Category,
   CreateTransactionPayload,
   PaginatedResponse,
+  RecurringPattern,
   SplitItem,
   Transaction,
   TransactionFilters,
   UpdateTransactionPayload,
+  VisaInternationalDashboardResponse,
 } from '../models/transaction.model';
 
 @Injectable({ providedIn: 'root' })
@@ -44,6 +46,33 @@ export class TransactionService {
     );
   }
 
+  /**
+   * Loads every page for the given filters (page_size capped server-side, e.g. 100).
+   * Omits `page` / `pageSize` on `filters` — uses internal paging.
+   */
+  getAllTransactions(
+    filters: Omit<TransactionFilters, 'page' | 'pageSize'>,
+  ): Observable<Transaction[]> {
+    const pageSize = 100;
+    const fetchAccum = (page: number, acc: Transaction[]): Observable<Transaction[]> => {
+      return this.getTransactions({ ...filters, page, pageSize }).pipe(
+        mergeMap((res) => {
+          const combined = acc.concat(res.results);
+          if (!res.next) {
+            return of(combined);
+          }
+          return fetchAccum(page + 1, combined);
+        }),
+      );
+    };
+    return fetchAccum(1, []);
+  }
+
+  /** User recurring patterns (subscriptions rules). */
+  getRecurringPatterns(): Observable<RecurringPattern[]> {
+    return this.http.get<RecurringPattern[]>(`${environment.apiUrl}/api/recurring-patterns/`);
+  }
+
   /** Categories list is unpaginated on the backend (no pagination class on `CategoryViewSet`). */
   getCategories(): Observable<Category[]> {
     return this.http.get<Category[]>(`${environment.apiUrl}/api/categories/`);
@@ -64,6 +93,18 @@ export class TransactionService {
     return this.http.post<BankStatementImportResult>(
       `${environment.apiUrl}/api/transactions/import-visa-international/`,
       body,
+    );
+  }
+
+  /** Visa International page: statement, transactions, and 12 rolling monthly totals. */
+  getVisaInternationalDashboard(
+    year: number,
+    month: number,
+  ): Observable<VisaInternationalDashboardResponse> {
+    const params = new HttpParams().set('year', String(year)).set('month', String(month));
+    return this.http.get<VisaInternationalDashboardResponse>(
+      `${environment.apiUrl}/api/visa-international/dashboard/`,
+      { params },
     );
   }
 

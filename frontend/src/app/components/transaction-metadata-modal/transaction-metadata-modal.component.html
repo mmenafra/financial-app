@@ -1,0 +1,31 @@
+@if (transaction(); as mtx) {
+  <div
+    class="tx-modal-backdrop"
+    role="button"
+    tabindex="0"
+    aria-label="Close dialog"
+    (click)="closeModal()"
+    (keydown.enter)="closeModal()"
+    (keydown.space)="$event.preventDefault(); closeModal()"
+  ></div>
+  <div
+    class="tx-modal tx-modal--wide"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="titleId()"
+  >
+    <h2 [id]="titleId()" class="text-xl font-extrabold text-primary m-0 font-headline">
+      Transaction metadata
+    </h2>
+    <p class="text-sm text-on-surface-variant font-semibold m-0 mt-2">
+      Raw API object for debugging (<span class="font-mono text-on-surface">{{ mtx.id }}</span>).
+    </p>
+    <pre
+      class="mt-4 max-h-[min(24rem,50vh)] overflow-auto rounded-xl border border-outline-variant/50 bg-surface-container/30 p-4 text-xs font-mono text-on-surface m-0 whitespace-pre"
+      tabindex="0"
+    >{{ debugJson(mtx) }}</pre>
+    <div class="flex flex-wrap gap-2 justify-end pt-5">
+      <button type="button" class="tx-pill-btn" (click)="closeModal()">Close</button>
+    </div>
+  </div>
+}

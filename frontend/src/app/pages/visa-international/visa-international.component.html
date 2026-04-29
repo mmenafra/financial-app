@@ -58,13 +58,19 @@
 
             <div class="flex flex-wrap items-end gap-3">
               <p class="vi-forecast-amount m-0 font-headline text-4xl font-extrabold tracking-tight text-primary">
-                {{ formatUsd(forecastAmountUsd) }}
+                {{ formatUsd(periodExpenseTotal()) }}
               </p>
-              <span
-                class="inline-flex items-center rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-800"
-              >
-                +{{ vsLastMonthPct }}% vs. Last Month
-              </span>
+              @if (vsLastMonthPct() !== null) {
+                <span
+                  class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold"
+                  [class.bg-emerald-500/15]="vsLastMonthPct()! >= 0"
+                  [class.text-emerald-800]="vsLastMonthPct()! >= 0"
+                  [class.bg-rose-500/15]="vsLastMonthPct()! < 0"
+                  [class.text-rose-800]="vsLastMonthPct()! < 0"
+                >
+                  {{ formatVsLastMonthLabel(vsLastMonthPct()!) }} vs. Last Month
+                </span>
+              }
             </div>
 
             <div
@@ -73,23 +79,23 @@
               [attr.aria-label]="chartAriaLabel()"
             >
               <div class="vi-chart-bars flex items-end justify-between gap-1 sm:gap-1.5">
-                @for (total of barChartMockSeries; track $index; let i = $index) {
+                @for (bar of chartBars(); track $index; let i = $index) {
                   <div class="vi-chart-col group flex min-w-0 flex-1 flex-col items-center gap-2">
                     <div class="vi-chart-bar-track relative">
                       <div
                         class="vi-chart-tooltip pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-xs font-bold text-primary opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100"
                         role="tooltip"
                       >
-                        {{ formatChartBarValue(total) }}
+                        {{ formatChartBarValue(bar.total) }}
                       </div>
                       <div
                         class="vi-chart-bar rounded-t-xl transition-[height] duration-300"
                         [class.vi-chart-bar--current]="i === highlightMonthIndex()"
-                        [style.height.%]="barHeightPercent(total)"
+                        [style.height.%]="barHeightPercent(bar.total)"
                       ></div>
                     </div>
                     <span class="text-[10px] font-bold uppercase tracking-tighter text-on-surface-variant sm:text-xs">
-                      {{ monthShort[i] }}
+                      {{ bar.label }}
                     </span>
                   </div>
                 }
@@ -128,20 +134,15 @@
               >
                 Subscriptions
               </button>
-              <button
-                type="button"
-                role="tab"
-                class="vi-tab"
-                [attr.aria-selected]="timelineTab() === 'installments'"
-                [class.vi-tab--active]="timelineTab() === 'installments'"
-                (click)="setTimelineTab('installments')"
-              >
-                Installments
-              </button>
             </div>
           </div>
 
           <ul class="vi-timeline m-0 mt-6 list-none p-0">
+            @if (timelineLoading()) {
+              <li class="pb-8 text-center text-sm font-semibold text-on-surface-variant">Loading transactions…</li>
+            } @else if (timelineError()) {
+              <li class="pb-8 text-center text-sm font-semibold text-red-700">{{ timelineError() }}</li>
+            } @else {
             @for (row of filteredTimeline(); track row.id) {
               <li class="vi-timeline-row relative flex gap-4 pb-8 last:pb-0">
                 <div class="vi-timeline-rail flex shrink-0 flex-col items-center">
@@ -171,9 +172,11 @@
 
                   <div class="vi-col-main min-w-0">
                     <p class="m-0 text-base font-extrabold leading-snug text-primary">{{ row.title }}</p>
-                    <p class="m-0 mt-1 text-sm font-medium leading-snug text-on-surface-variant">
-                      {{ row.subtitle }}
-                    </p>
+                    @if (row.subtitle) {
+                      <p class="m-0 mt-1 text-sm font-medium leading-snug text-on-surface-variant">
+                        {{ row.subtitle }}
+                      </p>
+                    }
                   </div>
 
                   <div class="vi-col-category flex items-center">
@@ -244,9 +247,10 @@
                 </div>
               </li>
             }
+            }
           </ul>
 
-          @if (filteredTimeline().length === 0) {
+          @if (!timelineLoading() && !timelineError() && filteredTimeline().length === 0) {
             <p class="mt-6 text-center text-sm font-semibold text-on-surface-variant">No items for this filter.</p>
           }
         </section>
@@ -254,6 +258,19 @@
     </main>
   </div>
 </div>
+
+<app-transaction-edit-modal
+  [transaction]="editTarget()"
+  [categories]="categories()"
+  idPrefix="vi"
+  (saved)="onEditSaved()"
+  (dismissed)="onEditDismissed()"
+/>
+<app-transaction-metadata-modal
+  [transaction]="metadataTarget()"
+  idPrefix="vi"
+  (dismissed)="onMetadataDismissed()"
+/>
 
 @if (importModalOpen()) {
   <app-import-modal

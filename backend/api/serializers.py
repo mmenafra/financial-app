@@ -5,7 +5,14 @@ from django.contrib.auth.password_validation import validate_password
 
 from rest_framework import serializers
 
-from .models import Category, FileImport, RecurringPattern, Transaction, UserProfile
+from .models import (
+    Category,
+    FileImport,
+    RecurringPattern,
+    Transaction,
+    UserProfile,
+    VisaInternationalStatement,
+)
 
 User = get_user_model()
 
@@ -114,6 +121,20 @@ class FileImportSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class VisaInternationalStatementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VisaInternationalStatement
+        fields = (
+            "id",
+            "period_start",
+            "period_end",
+            "total_amount",
+            "currency",
+            "file_import",
+        )
+        read_only_fields = fields
+
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
@@ -171,6 +192,8 @@ class TransactionSerializer(serializers.ModelSerializer):
             "status",
             "parent",
             "file_import",
+            "visa_international_statement",
+            "matched_recurring_pattern",
             "splits",
         )
         read_only_fields = (
@@ -181,6 +204,8 @@ class TransactionSerializer(serializers.ModelSerializer):
             "splits",
             "external_name",
             "file_import",
+            "visa_international_statement",
+            "matched_recurring_pattern",
         )
 
     def validate_category(self, value):

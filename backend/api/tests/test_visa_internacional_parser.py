@@ -106,6 +106,8 @@ II. DETALLE
 
     def test_parse_mar_2026_fixture_five_rows(self):
         out = parse_visa_internacional_statement_text(self.FIXTURE_MAR_2026)
+        self.assertEqual(out["period_from"], "2026-02-24")
+        self.assertEqual(out["period_to"], "2026-03-23")
         txs = out["transactions"]
         self.assertEqual(len(txs), 5)
         self.assertEqual(txs[0]["reference"], "000000001508127908")
@@ -118,6 +120,8 @@ II. DETALLE
 
     def test_parse_uber_multiline(self):
         out = parse_visa_internacional_statement_text(self.FIXTURE_FEB_2026_UBER)
+        self.assertEqual(out["period_from"], "2026-01-24")
+        self.assertEqual(out["period_to"], "2026-02-23")
         self.assertEqual(len(out["transactions"]), 1)
         t = out["transactions"][0]
         self.assertEqual(t["operation_date"], "2026-01-30")
@@ -129,6 +133,8 @@ II. DETALLE
 
     def test_parse_dec_jan_period(self):
         out = parse_visa_internacional_statement_text(self.FIXTURE_DEC_JAN)
+        self.assertEqual(out["period_from"], "2025-12-24")
+        self.assertEqual(out["period_to"], "2026-01-23")
         self.assertEqual(len(out["transactions"]), 2)
         self.assertEqual(out["transactions"][0]["operation_date"], "2025-12-25")
         self.assertEqual(out["transactions"][1]["operation_date"], "2026-01-01")

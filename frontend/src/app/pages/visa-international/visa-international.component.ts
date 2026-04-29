@@ -1,15 +1,30 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  HostListener,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subscription } from 'rxjs';
 
 import { ImportModalComponent } from '../../components/import-modal/import-modal.component';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { TopNavComponent } from '../../components/top-nav/top-nav.component';
-import type { Category } from '../../models/transaction.model';
+import { TransactionEditModalComponent } from '../../components/transaction-edit-modal/transaction-edit-modal.component';
+import { TransactionMetadataModalComponent } from '../../components/transaction-metadata-modal/transaction-metadata-modal.component';
+import type {
+  Category,
+  RecurringPattern,
+  Transaction,
+  VisaInternationalStatement,
+  VisaMonthlyTotal,
+} from '../../models/transaction.model';
 import { TransactionService } from '../../services/transaction.service';
 
-type TimelineKind = 'subscription' | 'installment' | 'other';
-type TimelineTab = 'all' | 'subscriptions' | 'installments';
+type TimelineTab = 'all' | 'subscriptions';
 
 interface TimelineRow {
   id: string;
@@ -20,56 +35,128 @@ interface TimelineRow {
   amount: number;
   /** ISO 4217 currency code. */
   currency: string;
-  kind: TimelineKind;
-  /** Display label for category pill (mock until API). */
+  /** Derived from persisted `matched_recurring_pattern`. */
+  isSubscription: boolean;
   categoryLabel: string;
-  /** Hex color for category pill, e.g. #6366f1 */
   categoryColor: string;
+}
+
+interface ChartBarPoint {
+  total: number;
+  label: string;
 }
 
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
 
-/** Bar chart mock series (USD, Jan–Dec). Replace when API is wired. */
-const BAR_CHART_MOCK_SERIES: readonly number[] = [
-  7120, 6890, 8450, 7980, 9120, 8760, 9340, 8010, 8880, 12450, 9020, 9680,
-];
-
 @Component({
   selector: 'app-visa-international',
   standalone: true,
-  imports: [CommonModule, ImportModalComponent, SidebarComponent, TopNavComponent],
+  imports: [
+    CommonModule,
+    ImportModalComponent,
+    SidebarComponent,
+    TopNavComponent,
+    TransactionEditModalComponent,
+    TransactionMetadataModalComponent,
+  ],
   templateUrl: './visa-international.component.html',
   styleUrl: './visa-international.component.scss',
 })
 export class VisaInternationalComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly transactionService = inject(TransactionService);
+  private viTimelineSub: Subscription | null = null;
 
   constructor() {
     this.transactionService
       .getCategories()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((cats) => this.categories.set(cats));
+
+    this.transactionService
+      .getRecurringPatterns()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((pats) => this.recurringPatterns.set(pats));
+
+    this.destroyRef.onDestroy(() => this.viTimelineSub?.unsubscribe());
+
+    this.loadTimeline();
   }
 
   protected readonly categories = signal<Category[]>([]);
+  protected readonly recurringPatterns = signal<RecurringPattern[]>([]);
+  protected readonly transactions = signal<Transaction[]>([]);
+  protected readonly currentStatement = signal<VisaInternationalStatement | null>(null);
+  protected readonly monthlyTotals = signal<VisaMonthlyTotal[]>([]);
+  protected readonly timelineLoading = signal(false);
+  protected readonly timelineError = signal<string | null>(null);
+
+  protected readonly categoriesById = computed(() => {
+    const m = new Map<string, Category>();
+    for (const c of this.categories()) {
+      m.set(c.id, c);
+    }
+    return m;
+  });
+
   protected readonly importModalOpen = signal(false);
   protected readonly importVisaInternationalSubmit = (file: File) =>
     this.transactionService.importVisaInternational(file);
-
-  protected readonly monthShort = MONTH_SHORT;
 
   protected readonly selectedYear = signal(new Date().getFullYear());
   protected readonly selectedMonth = signal(new Date().getMonth() + 1);
 
   protected readonly timelineTab = signal<TimelineTab>('all');
   protected readonly openMenuId = signal<string | null>(null);
+  protected readonly editTarget = signal<Transaction | null>(null);
+  protected readonly metadataTarget = signal<Transaction | null>(null);
 
-  /** Mock headline liquidity (display only). */
-  protected readonly forecastAmountUsd = 12450.0;
-  protected readonly vsLastMonthPct = 4.2;
+  protected readonly chartBars = computed((): ChartBarPoint[] => {
+    return this.monthlyTotals().map((bucket) => ({
+      total: Number(bucket.total),
+      label: `${MONTH_SHORT[bucket.month - 1]} '${String(bucket.year).slice(-2)}`,
+    }));
+  });
 
-  protected readonly barChartMockSeries = BAR_CHART_MOCK_SERIES;
+  protected readonly barChartSeries = computed(() => this.chartBars().map((b) => b.total));
+
+  /** Compares calendar-month Visa Intl spend (last two chart buckets). Hidden when a billing statement is loaded — totals differ in meaning. */
+  protected readonly vsLastMonthPct = computed((): number | null => {
+    if (this.currentStatement() !== null) {
+      return null;
+    }
+    const totals = this.monthlyTotals();
+    if (totals.length < 2) {
+      return null;
+    }
+    const cur = Number(totals[totals.length - 1]?.total ?? NaN);
+    const prev = Number(totals[totals.length - 2]?.total ?? NaN);
+    if (Number.isNaN(cur) || Number.isNaN(prev)) {
+      return null;
+    }
+    if (prev === 0) {
+      return cur === 0 ? 0 : 100;
+    }
+    return ((cur - prev) / prev) * 100;
+  });
+
+  /**
+   * When a billing statement exists: PDF statement total.
+   * Otherwise: sum of expense rows in the list (legacy months have no statement row; chart bars are still per closing month).
+   */
+  protected readonly periodExpenseTotal = computed(() => {
+    const st = this.currentStatement();
+    if (st) {
+      return Number(st.total_amount);
+    }
+    let sum = 0;
+    for (const t of this.transactions()) {
+      if (t.direction === 'EXPENSE') {
+        sum += Number(t.amount);
+      }
+    }
+    return sum;
+  });
 
   protected readonly monthOptions = [
     { value: 1, label: 'January' },
@@ -91,92 +178,85 @@ export class VisaInternationalComponent {
     return Array.from({ length: 7 }, (_, i) => y - 3 + i);
   })();
 
-  protected readonly mockTimeline: TimelineRow[] = [
-    {
-      id: 'vi-timeline-1',
-      dateLabel: 'OCT 12',
-      title: 'Netflix Premium',
-      subtitle: 'Monthly Streaming Service',
-      amount: 19.99,
-      currency: 'USD',
-      kind: 'subscription',
-      categoryLabel: 'Entertainment',
-      categoryColor: '#7c3aed',
-    },
-    {
-      id: 'vi-timeline-2',
-      dateLabel: 'OCT 14',
-      title: 'Apple MacBook Pro',
-      subtitle: 'Installment 6 of 12',
-      amount: 249,
-      currency: 'USD',
-      kind: 'installment',
-      categoryLabel: 'Electronics',
-      categoryColor: '#0891b2',
-    },
-    {
-      id: 'vi-timeline-3',
-      dateLabel: 'OCT 18',
-      title: 'Spotify Family',
-      subtitle: 'Monthly Streaming Service',
-      amount: 14.99,
-      currency: 'EUR',
-      kind: 'subscription',
-      categoryLabel: 'Entertainment',
-      categoryColor: '#7c3aed',
-    },
-    {
-      id: 'vi-timeline-4',
-      dateLabel: 'OCT 28',
-      title: 'Mortgage Repayment',
-      subtitle: 'Scheduled debit',
-      amount: 1850,
-      currency: 'USD',
-      kind: 'other',
-      categoryLabel: 'Housing',
-      categoryColor: '#0d9488',
-    },
-  ];
-
-  protected readonly barMax = computed(() =>
-    Math.max(1, ...this.barChartMockSeries.map((v) => Number(v))),
-  );
-
-  protected readonly chartAriaLabel = computed(() => {
-    const y = this.selectedYear();
-    return `Monthly liquidity by calendar month for ${y}. Values shown are placeholders until live data is available.`;
-  });
-
-  protected readonly periodRangeLabel = computed(() => {
-    const y = this.selectedYear();
-    const m = this.selectedMonth();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const lastDay = new Date(y, m, 0).getDate();
-    const mon = MONTH_SHORT[m - 1].toUpperCase();
-    return `CURRENT PERIOD: ${mon} 01 - ${mon} ${pad(lastDay)}`;
+  protected readonly timelineRows = computed((): TimelineRow[] => {
+    const cmap = this.categoriesById();
+    const sorted = [...this.transactions()].sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
+    return sorted.map((tx) => this.transactionToRow(tx, cmap));
   });
 
   protected readonly filteredTimeline = computed(() => {
     const tab = this.timelineTab();
-    const rows = this.mockTimeline;
-    if (tab === 'all') {
-      return rows;
-    }
+    const rows = this.timelineRows();
     if (tab === 'subscriptions') {
-      return rows.filter((r) => r.kind === 'subscription');
+      return rows.filter((r) => r.isSubscription);
     }
-    return rows.filter((r) => r.kind === 'installment');
+    return rows;
   });
 
-  protected readonly highlightMonthIndex = computed(() => this.selectedMonth() - 1);
+  protected readonly barMax = computed(() =>
+    Math.max(1, ...this.barChartSeries().map((v) => Number(v))),
+  );
+
+  protected readonly chartAriaLabel = computed(() => {
+    const y = this.selectedYear();
+    const m = this.selectedMonth();
+    return `Twelve-month Visa International expense totals (USD), ending ${MONTH_SHORT[m - 1]} ${y}.`;
+  });
+
+  protected readonly periodRangeLabel = computed(() => {
+    const st = this.currentStatement();
+    if (st) {
+      const p0 = new Date(`${st.period_start}T12:00:00`);
+      const p1 = new Date(`${st.period_end}T12:00:00`);
+      const a = `${MONTH_SHORT[p0.getMonth()]} ${pad2(p0.getDate())}`.toUpperCase();
+      const b = `${MONTH_SHORT[p1.getMonth()]} ${pad2(p1.getDate())}, ${p1.getFullYear()}`.toUpperCase();
+      return `BILLING PERIOD: ${a} – ${b}`;
+    }
+    const y = this.selectedYear();
+    const m = this.selectedMonth();
+    const lastDay = new Date(y, m, 0).getDate();
+    const mon = MONTH_SHORT[m - 1].toUpperCase();
+    return `CURRENT PERIOD: ${mon} 01 - ${mon} ${pad2(lastDay)}, ${y}`;
+  });
+
+  /** Last bar in the series is the dashboard’s selected month. */
+  protected readonly highlightMonthIndex = computed(() =>
+    Math.max(0, this.chartBars().length - 1),
+  );
+
+  private transactionToRow(tx: Transaction, cmap: Map<string, Category>): TimelineRow {
+    const cat = tx.category ? cmap.get(tx.category) : undefined;
+    const d = new Date(tx.created_at);
+    const dateLabel = `${MONTH_SHORT[d.getMonth()]} ${pad2(d.getDate())}`.toUpperCase();
+    const isSubscription = tx.matched_recurring_pattern != null;
+    return {
+      id: tx.id,
+      dateLabel,
+      title: tx.description,
+      subtitle: isSubscription ? 'Subscription (matched rule)' : '',
+      amount: Number(tx.amount),
+      currency: tx.currency,
+      isSubscription,
+      categoryLabel: cat?.name ?? 'Uncategorized',
+      categoryColor: cat?.color ?? '#94a3b8',
+    };
+  }
 
   protected barHeightPercent(value: number): number {
     return (value / this.barMax()) * 100;
   }
 
-  /** Mock bar chart values are USD liquidity (major units). */
+  /** Tooltip label for bar segment (USD). */
   protected formatChartBarValue(value: number): string {
     return this.formatUsd(value);
+  }
+
+  protected formatVsLastMonthLabel(pct: number): string {
+    const sign = pct > 0 ? '+' : '';
+    return `${sign}${pct.toFixed(1)}%`;
   }
 
   protected formatUsd(amount: number, fractionDigits = 2): string {
@@ -213,6 +293,7 @@ export class VisaInternationalComponent {
     const v = Number((event.target as HTMLSelectElement).value);
     if (!Number.isNaN(v)) {
       this.selectedMonth.set(v);
+      this.loadTimeline();
     }
   }
 
@@ -220,6 +301,7 @@ export class VisaInternationalComponent {
     const v = Number((event.target as HTMLSelectElement).value);
     if (!Number.isNaN(v)) {
       this.selectedYear.set(v);
+      this.loadTimeline();
     }
   }
 
@@ -227,7 +309,6 @@ export class VisaInternationalComponent {
     this.timelineTab.set(tab);
   }
 
-  /** Stub until import flow exists for Visa International. */
   protected openImportModal(): void {
     this.importModalOpen.set(true);
   }
@@ -236,11 +317,30 @@ export class VisaInternationalComponent {
     this.importModalOpen.set(false);
   }
 
-  /** Future: refresh Visa International timeline from API after import completes. */
   protected onVisaImportDone(): void {
-    //
+    this.loadTimeline();
+    this.transactionService.getRecurringPatterns().subscribe((pats) => this.recurringPatterns.set(pats));
   }
 
+  private loadTimeline(): void {
+    this.viTimelineSub?.unsubscribe();
+    this.timelineLoading.set(true);
+    this.timelineError.set(null);
+    this.viTimelineSub = this.transactionService
+      .getVisaInternationalDashboard(this.selectedYear(), this.selectedMonth())
+      .subscribe({
+        next: (body) => {
+          this.currentStatement.set(body.statement);
+          this.transactions.set(body.transactions);
+          this.monthlyTotals.set(body.monthly_totals);
+          this.timelineLoading.set(false);
+        },
+        error: () => {
+          this.timelineLoading.set(false);
+          this.timelineError.set('Could not load Visa International dashboard.');
+        },
+      });
+  }
 
   @HostListener('document:click')
   protected closeMenus(): void {
@@ -252,13 +352,39 @@ export class VisaInternationalComponent {
     this.openMenuId.update((cur) => (cur === id ? null : id));
   }
 
-  protected onEditRow(_row: TimelineRow, event: MouseEvent): void {
+  protected onEditRow(row: TimelineRow, event: MouseEvent): void {
     event.stopPropagation();
     this.openMenuId.set(null);
+    const t = this.transactions().find((x) => x.id === row.id);
+    if (t) {
+      this.editTarget.set(t);
+    }
   }
 
-  protected onMetaDataRow(_row: TimelineRow, event: MouseEvent): void {
+  protected onEditDismissed(): void {
+    this.editTarget.set(null);
+  }
+
+  protected onEditSaved(): void {
+    this.editTarget.set(null);
+    this.loadTimeline();
+    this.transactionService.getRecurringPatterns().subscribe((pats) => this.recurringPatterns.set(pats));
+  }
+
+  protected onMetaDataRow(row: TimelineRow, event: MouseEvent): void {
     event.stopPropagation();
     this.openMenuId.set(null);
+    const t = this.transactions().find((x) => x.id === row.id);
+    if (t) {
+      this.metadataTarget.set(t);
+    }
   }
+
+  protected onMetadataDismissed(): void {
+    this.metadataTarget.set(null);
+  }
+}
+
+function pad2(n: number): string {
+  return String(n).padStart(2, '0');
 }

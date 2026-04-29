@@ -1,14 +1,55 @@
 import { provideHttpClient } from '@angular/common/http';
-import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { TestBed } from '@angular/core/testing';
+import { of } from 'rxjs';
 
+import type { VisaInternationalDashboardResponse } from '../../models/transaction.model';
+import { TransactionService } from '../../services/transaction.service';
 import { VisaInternationalComponent } from './visa-international.component';
 
+function emptyVisaDashboard(): VisaInternationalDashboardResponse {
+  const monthly_totals = [];
+  let y = 2026;
+  let m = 4;
+  for (let i = 0; i < 12; i++) {
+    monthly_totals.push({ year: y, month: m, total: '0' });
+    m -= 1;
+    if (m < 1) {
+      m = 12;
+      y -= 1;
+    }
+  }
+  monthly_totals.reverse();
+  return {
+    statement: null,
+    transactions: [],
+    monthly_totals,
+  };
+}
+
 describe('VisaInternationalComponent', () => {
+  const txStub: Partial<TransactionService> = {
+    getCategories: () => of([]),
+    getRecurringPatterns: () => of([]),
+    getVisaInternationalDashboard: () => of(emptyVisaDashboard()),
+    importVisaInternational: () =>
+      of({
+        created: 0,
+        skipped: 0,
+        failed: 0,
+        transactions: [],
+        errors: [],
+      }),
+  };
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [VisaInternationalComponent],
-      providers: [provideHttpClient(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        { provide: TransactionService, useValue: txStub as TransactionService },
+        provideRouter([]),
+      ],
     }).compileComponents();
   });
 

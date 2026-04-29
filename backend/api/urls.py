@@ -18,6 +18,7 @@ from .views import (
     SignUpView,
     TransactionViewSet,
     UserProfileView,
+    VisaInternationalDashboardView,
 )
 
 router = DefaultRouter()
@@ -51,6 +52,11 @@ urlpatterns = [
         "transactions/import-visa-international/",
         ImportVisaInternationalStatementView.as_view(),
         name="import-visa-international",
+    ),
+    path(
+        "visa-international/dashboard/",
+        VisaInternationalDashboardView.as_view(),
+        name="visa-international-dashboard",
     ),
     path("", include(router.urls)),
 ]

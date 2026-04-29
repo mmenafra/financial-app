@@ -1,6 +1,7 @@
 """Shared statement import processing used by API views and file-import re-run."""
 
 import logging
+from datetime import date
 
 from rest_framework import status
 from rest_framework.response import Response
@@ -8,9 +9,19 @@ from rest_framework.response import Response
 from .bank_statement_parser import parse_bsa_bank_statement
 from .bsa_import import import_bsa_row
 from .gemini_categorize import run_bulk_categorization
-from .models import FileImport, ImportStatus, Source, Transaction, UserProfile
+from .models import (
+    FileImport,
+    ImportStatus,
+    Source,
+    Transaction,
+    UserProfile,
+    VisaInternationalStatement,
+)
 from .serializers import TransactionSerializer
-from .visa_internacional_import import import_visa_internacional_row
+from .visa_internacional_import import (
+    import_visa_internacional_row,
+    sum_visa_internacional_parsed_expenses_usd,
+)
 from .visa_internacional_parser import parse_visa_internacional_statement_pdf
 from .visa_nacional_parser import parse_visa_nacional_statement_pdf
 
@@ -200,13 +211,31 @@ def visa_internacional_import_pipeline(request, file_import):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    rows = parsed.get("transactions", [])
+    period_start = date.fromisoformat(parsed["period_from"])
+    period_end = date.fromisoformat(parsed["period_to"])
+    total_amount = sum_visa_internacional_parsed_expenses_usd(rows)
+    visa_statement = VisaInternationalStatement.objects.create(
+        user=request.user,
+        file_import=file_import,
+        period_start=period_start,
+        period_end=period_end,
+        total_amount=total_amount,
+        currency="USD",
+    )
+
     created_count = 0
     skipped_count = 0
     failed_count = 0
     created_instances = []
     errors: list[dict] = []
-    for row in parsed.get("transactions", []):
-        result = import_visa_internacional_row(request.user, row, file_import=file_import)
+    for row in rows:
+        result = import_visa_internacional_row(
+            request.user,
+            row,
+            file_import=file_import,
+            visa_statement=visa_statement,
+        )
         if "error" in result:
             failed_count += 1
             errors.append({"row": row, "error": result["error"]})

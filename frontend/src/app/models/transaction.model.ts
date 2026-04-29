@@ -29,6 +29,10 @@ export interface Transaction {
   parent: string | null;
   /** IDs of child split lines; empty unless this is a bundle (bundles are hidden from list). */
   splits: string[];
+  /** Set when description matched a `RecurringPattern` at import (e.g. Visa International). */
+  matched_recurring_pattern: string | null;
+  file_import: string | null;
+  visa_international_statement: string | null;
 }
 
 export type TransactionType = 'DEBIT' | 'CREDIT' | 'TRANSFER';
@@ -42,6 +46,20 @@ export type Source =
   | 'CREDIT_CARD_INTERNATIONAL';
 
 export type TransactionStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED';
+
+/** Mirrors `RecurringPatternSerializer`. */
+export interface RecurringPattern {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  user: number | null;
+  description_pattern: string;
+  category: string;
+  expected_amount: string | null;
+  frequency: RecurringFrequency;
+}
+
+export type RecurringFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 
 /** Mirrors `CategorySerializer`. */
 export interface Category {
@@ -99,6 +117,28 @@ export interface BankStatementImportResult {
   ai_categorization_attempted?: boolean;
   ai_categorization_failed?: boolean;
   ai_failure_detail?: string | null;
+}
+
+export interface VisaInternationalStatement {
+  id: string;
+  period_start: string;
+  period_end: string;
+  total_amount: string;
+  currency: string;
+  file_import: string;
+}
+
+/** Rolling month bucket from GET /api/visa-international/dashboard/ */
+export interface VisaMonthlyTotal {
+  year: number;
+  month: number;
+  total: string;
+}
+
+export interface VisaInternationalDashboardResponse {
+  statement: VisaInternationalStatement | null;
+  transactions: Transaction[];
+  monthly_totals: VisaMonthlyTotal[];
 }
 
 /** Body for POST /api/transactions/ */

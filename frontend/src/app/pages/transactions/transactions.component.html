@@ -501,133 +501,18 @@
   </div>
 }
 
-@if (editModalOpen() && editingTx(); as tx) {
-  <div
-    class="tx-modal-backdrop"
-    role="button"
-    tabindex="0"
-    aria-label="Close dialog"
-    (click)="closeEditModal()"
-    (keydown.enter)="closeEditModal()"
-    (keydown.space)="$event.preventDefault(); closeEditModal()"
-  ></div>
-  <div class="tx-modal" role="dialog" aria-modal="true" aria-labelledby="tx-edit-title">
-    <h2 id="tx-edit-title" class="text-xl font-extrabold text-primary m-0 font-headline">Edit Transaction</h2>
-    <form class="mt-4 flex flex-col gap-4" [formGroup]="editTxForm" (ngSubmit)="submitEditTx()">
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-semibold text-on-surface-variant" for="etx-desc">
-          Description <span class="text-red-500">*</span>
-        </label>
-        <input
-          id="etx-desc"
-          type="text"
-          class="tx-input"
-          [class.border-red-400]="editTxForm.get('description')!.invalid && editTxForm.get('description')!.touched"
-          formControlName="description"
-          autocomplete="off"
-        />
-        @if (editTxForm.get('description')!.touched && editTxForm.get('description')!.hasError('required')) {
-          <p class="text-xs text-red-600 font-semibold m-0">Description is required.</p>
-        } @else if (editTxForm.get('description')!.touched && editTxForm.get('description')!.hasError('maxlength')) {
-          <p class="text-xs text-red-600 font-semibold m-0">Maximum 255 characters.</p>
-        }
-      </div>
-
-      <div class="flex gap-3">
-        <div class="flex flex-col gap-1 flex-1">
-          <label class="text-xs font-semibold text-on-surface-variant" for="etx-amount">
-            Amount <span class="text-red-500">*</span>
-          </label>
-          <input
-            id="etx-amount"
-            type="text"
-            inputmode="decimal"
-            class="tx-input"
-            [class.border-red-400]="editTxForm.get('amount')!.invalid && editTxForm.get('amount')!.touched"
-            formControlName="amount"
-            autocomplete="off"
-          />
-          @if (editTxForm.get('amount')!.touched && editTxForm.get('amount')!.hasError('required')) {
-            <p class="text-xs text-red-600 font-semibold m-0">Amount is required.</p>
-          } @else if (editTxForm.get('amount')!.touched && editTxForm.get('amount')!.hasError('positiveNumber')) {
-            <p class="text-xs text-red-600 font-semibold m-0">Enter a valid amount greater than 0.</p>
-          }
-        </div>
-        <div class="flex flex-col gap-1 w-28">
-          <label class="text-xs font-semibold text-on-surface-variant" for="etx-currency">Currency</label>
-          <select id="etx-currency" class="tx-input" formControlName="currency">
-            <option value="USD">USD</option>
-            <option value="CLP">CLP</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="flex gap-3">
-        <div class="flex flex-col gap-1 flex-1">
-          <label class="text-xs font-semibold text-on-surface-variant" for="etx-direction">Type</label>
-          <select id="etx-direction" class="tx-input" formControlName="direction">
-            <option value="EXPENSE">Expense</option>
-            <option value="INCOME">Income</option>
-          </select>
-        </div>
-        <div class="flex flex-col gap-1 flex-1">
-          <label class="text-xs font-semibold text-on-surface-variant" for="etx-date">Date</label>
-          <input id="etx-date" type="date" class="tx-input" formControlName="date" />
-        </div>
-      </div>
-
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-semibold text-on-surface-variant">Category</label>
-        <app-category-select [categories]="categories()" formControlName="category" />
-      </div>
-
-      @if (editError()) {
-        <p class="text-sm font-semibold text-red-600 m-0">{{ editError() }}</p>
-      }
-
-      <div class="flex flex-wrap gap-2 justify-end pt-1">
-        <button type="button" class="tx-pill-btn ghost" (click)="closeEditModal()" [disabled]="editSubmitting()">
-          Cancel
-        </button>
-        <button type="submit" class="tx-pill-btn" [disabled]="editSubmitting()">
-          {{ editSubmitting() ? 'Saving…' : 'Save changes' }}
-        </button>
-      </div>
-    </form>
-  </div>
-}
-
-@if (metadataTx(); as mtx) {
-  <div
-    class="tx-modal-backdrop"
-    role="button"
-    tabindex="0"
-    aria-label="Close dialog"
-    (click)="closeMetadataModal()"
-    (keydown.enter)="closeMetadataModal()"
-    (keydown.space)="$event.preventDefault(); closeMetadataModal()"
-  ></div>
-  <div
-    class="tx-modal tx-modal--wide"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="tx-metadata-title"
-  >
-    <h2 id="tx-metadata-title" class="text-xl font-extrabold text-primary m-0 font-headline">
-      Transaction metadata
-    </h2>
-    <p class="text-sm text-on-surface-variant font-semibold m-0 mt-2">
-      Raw API object for debugging (<span class="font-mono text-on-surface">{{ mtx.id }}</span>).
-    </p>
-    <pre
-      class="mt-4 max-h-[min(24rem,50vh)] overflow-auto rounded-xl border border-outline-variant/50 bg-surface-container/30 p-4 text-xs font-mono text-on-surface m-0 whitespace-pre"
-      tabindex="0"
-    >{{ transactionDebugJson(mtx) }}</pre>
-    <div class="flex flex-wrap gap-2 justify-end pt-5">
-      <button type="button" class="tx-pill-btn" (click)="closeMetadataModal()">Close</button>
-    </div>
-  </div>
-}
+<app-transaction-edit-modal
+  [transaction]="editTarget()"
+  [categories]="categories()"
+  idPrefix="tx"
+  (saved)="onEditSaved()"
+  (dismissed)="onEditDismissed()"
+/>
+<app-transaction-metadata-modal
+  [transaction]="metadataTarget()"
+  idPrefix="tx"
+  (dismissed)="onMetadataDismissed()"
+/>
 
 @if (deleteModalOpen() && pendingDelete(); as tx) {
   <div

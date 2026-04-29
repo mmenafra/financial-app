@@ -18,9 +18,26 @@ from .models import (
     Transaction,
     TransactionStatus,
     TransactionType,
+    VisaInternationalStatement,
 )
+from .recurring_match import match_recurring_pattern_for_description
 
 logger = logging.getLogger(__name__)
+
+
+def _persist_visa_created_dates_and_recurring_match(
+    user, tx: Transaction, statement_dt: timezone.datetime
+) -> None:
+    """Back-date import timestamps and set ``matched_recurring_pattern`` when a rule matches."""
+    Transaction.objects.filter(pk=tx.pk).update(
+        created_at=statement_dt,
+        imported_at=statement_dt,
+    )
+    tx.refresh_from_db()
+    matched = match_recurring_pattern_for_description(user, tx.description)
+    if matched is not None:
+        Transaction.objects.filter(pk=tx.pk).update(matched_recurring_pattern=matched)
+        tx.refresh_from_db()
 
 
 def _visa_statement_dt(operation_date_iso: str) -> timezone.datetime:
@@ -49,8 +66,21 @@ def _decimal_from_row_field(val: Any, field_label: str) -> Decimal | None:
         return None
 
 
+def sum_visa_internacional_parsed_expenses_usd(rows: list[dict]) -> Decimal:
+    """Sum of USD amounts for expense rows (positive ``amount_usd``), matching import direction rules."""
+    total = Decimal("0")
+    for row in rows:
+        amount_usd = _decimal_from_row_field(row.get("amount_usd"), "amount_usd")
+        if amount_usd is not None and amount_usd > 0:
+            total += amount_usd
+    return total
+
+
 def import_visa_internacional_row(  # pylint: disable=too-many-return-statements  # noqa: C901
-    user, row: dict, file_import: FileImport | None = None
+    user,
+    row: dict,
+    file_import: FileImport | None = None,
+    visa_statement: VisaInternationalStatement | None = None,
 ) -> dict:
     """
     Import one Visa Internacional parsed row.
@@ -123,16 +153,13 @@ def import_visa_internacional_row(  # pylint: disable=too-many-return-statements
                 "imported_at": statement_dt,
                 "status": TransactionStatus.CONFIRMED,
                 "file_import": file_import,
+                "visa_international_statement": visa_statement,
             },
         )
         if not was_created:
             return {"ok": "skipped", "instance": None}
 
-        Transaction.objects.filter(pk=tx.pk).update(
-            created_at=statement_dt,
-            imported_at=statement_dt,
-        )
-        tx.refresh_from_db()
+        _persist_visa_created_dates_and_recurring_match(user, tx, statement_dt)
         return {"ok": "created", "instance": tx}
     except (KeyError, TypeError, ValueError) as exc:
         return {"error": str(exc)}

@@ -223,7 +223,11 @@ def parse_visa_internacional_statement_text(full_text: str) -> dict[str, Any]:
             "No transactions found in '2. INFORMACIÓN DE TRANSACCIONES' section."
         )
     logger.info("Visa Internacional: parsed %s transactions", len(transactions))
-    return {"transactions": transactions}
+    return {
+        "period_from": p_from.isoformat(),
+        "period_to": p_to.isoformat(),
+        "transactions": transactions,
+    }
 
 
 def parse_visa_internacional_statement_pdf(pdf_bytes: bytes) -> dict[str, Any]:

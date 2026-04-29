@@ -29,7 +29,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.db import transaction as db_transaction
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.utils.encoding import force_bytes, force_str
@@ -51,6 +51,7 @@ from .models import (
     Source,
     Transaction,
     UserProfile,
+    VisaInternationalStatement,
 )
 from .pagination import FileImportPagination, TransactionPagination
 from .serializers import (
@@ -68,6 +69,7 @@ from .serializers import (
     TransactionSerializer,
     TransactionSplitRequestSerializer,
     UserProfileSerializer,
+    VisaInternationalStatementSerializer,
 )
 
 User = get_user_model()
@@ -589,6 +591,162 @@ class ImportVisaInternationalStatementView(APIView):
         file_import.save(update_fields=["status", "updated_at"])
 
         return visa_internacional_import_pipeline(request, file_import)
+
+
+def _visa_international_dashboard_rolling_months(
+    end_year: int, end_month: int, n: int = 12
+) -> list[tuple[int, int]]:
+    """Oldest-first list of (year, month), ending with (end_year, end_month)."""
+    months: list[tuple[int, int]] = []
+    y, m = end_year, end_month
+    for _ in range(n):
+        months.append((y, m))
+        if m == 1:
+            y -= 1
+            m = 12
+        else:
+            m -= 1
+    months.reverse()
+    return months
+
+
+class VisaInternationalDashboardView(APIView):
+    """Statement + transactions + rolling 12-month chart keyed by statement closing month."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="year",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description="Calendar year used with `month` to pick the statement (by `period_end`).",
+            ),
+            OpenApiParameter(
+                name="month",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description="Calendar month (1–12) of `period_end` for the statement.",
+            ),
+        ],
+        responses={
+            200: inline_serializer(
+                name="VisaInternationalDashboardResponse",
+                fields={
+                    "statement": serializers.JSONField(allow_null=True),
+                    "transactions": serializers.ListField(
+                        child=serializers.JSONField()
+                    ),
+                    "monthly_totals": serializers.ListField(
+                        child=inline_serializer(
+                            name="VisaMonthlyTotal",
+                            fields={
+                                "year": serializers.IntegerField(),
+                                "month": serializers.IntegerField(),
+                                "total": serializers.CharField(),
+                            },
+                        ),
+                        help_text=(
+                            "Twelve months ending at (year, month): each `total` is "
+                            "`VisaInternationalStatement.total_amount` for the user's "
+                            "statement whose `period_end` falls in that calendar month, "
+                            "else 0."
+                        ),
+                    ),
+                },
+            ),
+            400: OpenApiResponse(description="Invalid or missing year/month"),
+        },
+    )
+    def get(self, request):
+        year_raw = request.query_params.get("year")
+        month_raw = request.query_params.get("month")
+        if not _query_param_non_empty(year_raw) or not _query_param_non_empty(
+            month_raw
+        ):
+            raise ValidationError(
+                {"detail": "Both year and month query parameters are required."}
+            )
+        try:
+            year = int(year_raw)
+            month = int(month_raw)
+        except (TypeError, ValueError) as err:
+            raise ValidationError(
+                {"year": "Must be valid integers.", "month": "Must be valid integers."}
+            ) from err
+        if month < 1 or month > 12:
+            raise ValidationError({"month": "Must be between 1 and 12."})
+        if year < 1 or year > 9999:
+            raise ValidationError({"year": "Invalid year."})
+
+        user = request.user
+        statement = (
+            VisaInternationalStatement.objects.filter(
+                user=user,
+                period_end__year=year,
+                period_end__month=month,
+            )
+            .order_by("-period_end", "-created_at")
+            .first()
+        )
+
+        if statement:
+            txs = (
+                Transaction.objects.filter(
+                    user=user,
+                    visa_international_statement=statement,
+                    splits__isnull=True,
+                ).order_by("created_at")
+            )
+        else:
+            # Legacy / pre-parent rows: no statement with this closing month — show calendar month.
+            txs = (
+                Transaction.objects.filter(
+                    user=user,
+                    source=Source.CREDIT_CARD_INTERNATIONAL,
+                    splits__isnull=True,
+                    created_at__year=year,
+                    created_at__month=month,
+                ).order_by("created_at")
+            )
+
+        months = _visa_international_dashboard_rolling_months(year, month, 12)
+        period_q = Q()
+        for y, m in months:
+            period_q |= Q(period_end__year=y, period_end__month=m)
+        stmt_by_period: dict[tuple[int, int], VisaInternationalStatement] = {}
+        for s in (
+            VisaInternationalStatement.objects.filter(user=user)
+            .filter(period_q)
+            .order_by("-period_end", "-created_at")
+        ):
+            key = (s.period_end.year, s.period_end.month)
+            if key not in stmt_by_period:
+                stmt_by_period[key] = s
+        monthly_totals = []
+        for y, m in months:
+            stmt_m = stmt_by_period.get((y, m))
+            total = stmt_m.total_amount if stmt_m else Decimal("0")
+            monthly_totals.append({"year": y, "month": m, "total": str(total)})
+
+        stmt_payload = (
+            VisaInternationalStatementSerializer(statement).data
+            if statement
+            else None
+        )
+        tx_payload = TransactionSerializer(
+            txs, many=True, context={"request": request}
+        ).data
+        return Response(
+            {
+                "statement": stmt_payload,
+                "transactions": tx_payload,
+                "monthly_totals": monthly_totals,
+            }
+        )
 
 
 class FileImportViewSet(ModelViewSet):
