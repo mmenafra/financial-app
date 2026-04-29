@@ -205,6 +205,30 @@ class VisaInternationalStatement(AbstractBaseModel):
         return f"Visa Intl {self.period_start}–{self.period_end} ({self.total_amount} {self.currency})"
 
 
+class VisaNacionalStatement(AbstractBaseModel):
+    """One Visa Nacional (CLP) statement per uploaded PDF (`FileImport`)."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="visa_nacional_statements",
+    )
+    file_import = models.OneToOneField(
+        FileImport,
+        on_delete=models.CASCADE,
+        related_name="visa_nacional_statement",
+    )
+    period_end = models.DateField()
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    currency = models.CharField(max_length=3, default="CLP")
+
+    class Meta:
+        ordering = ["-period_end", "-created_at"]
+
+    def __str__(self):
+        return f"Visa Nac cierre {self.period_end} ({self.total_amount} {self.currency})"
+
+
 class TransactionQuerySet(models.QuerySet):
     def expenses(self):
         return self.filter(direction=Direction.EXPENSE)
@@ -307,6 +331,13 @@ class Transaction(AbstractBaseModel):
     )
     visa_international_statement = models.ForeignKey(
         VisaInternationalStatement,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="transactions",
+    )
+    visa_nacional_statement = models.ForeignKey(
+        VisaNacionalStatement,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

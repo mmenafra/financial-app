@@ -10,6 +10,7 @@ from api.models import (
     RecurringPattern,
     Transaction,
     VisaInternationalStatement,
+    VisaNacionalStatement,
 )
 
 User = get_user_model()
@@ -28,7 +29,7 @@ class Command(BaseCommand):
             "--all",
             action="store_true",
             help="Delete ALL rows from Transaction, Category, RecurringPattern, FileImport, "
-            "VisaInternationalStatement, and User tables.",
+            "VisaInternationalStatement, VisaNacionalStatement, and User tables.",
         )
         parser.add_argument(
             "--user",
@@ -92,13 +93,15 @@ class Command(BaseCommand):
         tx_count, _ = Transaction.objects.all().delete()
         rp_count, _ = RecurringPattern.objects.all().delete()
         cat_count, _ = Category.objects.all().delete()
-        visa_count, _ = VisaInternationalStatement.objects.all().delete()
+        visa_intl_count, _ = VisaInternationalStatement.objects.all().delete()
+        visa_nac_count, _ = VisaNacionalStatement.objects.all().delete()
         fi_count, _ = FileImport.objects.all().delete()
         user_count, _ = User.objects.all().delete()
         self.stdout.write(
             self.style.SUCCESS(
                 f"Deleted {tx_count} transactions, {rp_count} recurring patterns, "
-                f"{cat_count} categories, {visa_count} visa international statements, "
+                f"{cat_count} categories, {visa_intl_count} visa international statements, "
+                f"{visa_nac_count} visa nacional statements, "
                 f"{fi_count} file imports, {user_count} users."
             )
         )
@@ -138,7 +141,11 @@ class Command(BaseCommand):
             user=user,
             created_at__gte=cutoff_dt,
         ).delete()
-        visa_count, _ = VisaInternationalStatement.objects.filter(
+        visa_intl_count, _ = VisaInternationalStatement.objects.filter(
+            user=user,
+            period_end__gte=cutoff_date,
+        ).delete()
+        visa_nac_count, _ = VisaNacionalStatement.objects.filter(
             user=user,
             period_end__gte=cutoff_date,
         ).delete()
@@ -151,7 +158,8 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(
                 f"From {cutoff_date.isoformat()} onward for user '{username}': deleted "
-                f"{tx_count} transactions, {visa_count} visa international statements, "
+                f"{tx_count} transactions, {visa_intl_count} visa international statements, "
+                f"{visa_nac_count} visa nacional statements, "
                 f"{fi_count} file imports, {rp_count} recurring patterns (categories unchanged)."
             )
         )

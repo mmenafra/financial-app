@@ -12,6 +12,7 @@ from .models import (
     Transaction,
     UserProfile,
     VisaInternationalStatement,
+    VisaNacionalStatement,
 )
 
 User = get_user_model()
@@ -135,6 +136,19 @@ class VisaInternationalStatementSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class VisaNacionalStatementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VisaNacionalStatement
+        fields = (
+            "id",
+            "period_end",
+            "total_amount",
+            "currency",
+            "file_import",
+        )
+        read_only_fields = fields
+
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
@@ -193,6 +207,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             "parent",
             "file_import",
             "visa_international_statement",
+            "visa_nacional_statement",
             "matched_recurring_pattern",
             "splits",
         )
@@ -205,6 +220,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             "external_name",
             "file_import",
             "visa_international_statement",
+            "visa_nacional_statement",
             "matched_recurring_pattern",
         )
 

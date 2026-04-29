@@ -24,6 +24,16 @@ from .recurring_match import apply_recurring_match_if_missing
 
 logger = logging.getLogger(__name__)
 
+_VISA_SKIP_PAGO_EN_EFECTIVO = "PAGO EN EFECTIVO"
+
+
+def visa_skip_pago_en_efectivo(description: str | None) -> bool:
+    """Whether this Visa Nacional / Internacional description should not be imported."""
+    if description is None:
+        return False
+    normalized = " ".join(str(description).strip().upper().split())
+    return normalized == _VISA_SKIP_PAGO_EN_EFECTIVO
+
 
 def _persist_visa_created_dates_and_recurring_match(
     user, tx: Transaction, statement_dt: timezone.datetime
@@ -67,13 +77,15 @@ def sum_visa_internacional_parsed_expenses_usd(rows: list[dict]) -> Decimal:
     """Sum of USD amounts for expense rows (positive ``amount_usd``), matching import direction rules."""
     total = Decimal("0")
     for row in rows:
+        if visa_skip_pago_en_efectivo(row.get("description")):
+            continue
         amount_usd = _decimal_from_row_field(row.get("amount_usd"), "amount_usd")
         if amount_usd is not None and amount_usd > 0:
             total += amount_usd
     return total
 
 
-def import_visa_internacional_row(  # pylint: disable=too-many-return-statements  # noqa: C901
+def import_visa_internacional_row(  # pylint: disable=too-many-return-statements,too-many-branches  # noqa: C901
     user,
     row: dict,
     file_import: FileImport | None = None,
@@ -95,7 +107,11 @@ def import_visa_internacional_row(  # pylint: disable=too-many-return-statements
         if len(ref) > 255:
             return {"error": "Reference is too long for external_id."}
 
-        desc = (row.get("description") or "")[:255]
+        raw_desc = row.get("description")
+        if visa_skip_pago_en_efectivo(raw_desc):
+            return {"ok": "skipped", "instance": None}
+
+        desc = (raw_desc or "")[:255]
         if not row.get("operation_date"):
             return {"error": "Row is missing operation_date."}
 

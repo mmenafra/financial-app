@@ -119,6 +119,7 @@ function tx(
     matched_recurring_pattern: partial.matched_recurring_pattern ?? null,
     file_import: partial.file_import ?? null,
     visa_international_statement: partial.visa_international_statement ?? null,
+    visa_nacional_statement: partial.visa_nacional_statement ?? null,
   };
 }
 

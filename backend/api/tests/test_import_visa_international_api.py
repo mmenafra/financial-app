@@ -240,3 +240,44 @@ class ImportVisaInternationalAPITests(APITestCase):
 
         tx.refresh_from_db()
         self.assertEqual(tx.matched_recurring_pattern_id, pat.id)
+
+    @patch("api.import_pipeline.parse_visa_internacional_statement_pdf")
+    def test_pago_en_efectivo_skipped_not_imported_and_excluded_from_statement_total(
+        self, mock_parse,
+    ):
+        mock_parse.return_value = {
+            "period_from": "2026-02-24",
+            "period_to": "2026-03-23",
+            "transactions": [
+                {
+                    "reference": "111111111111111111",
+                    "operation_date": "2026-02-26",
+                    "description": "PAGO EN EFECTIVO",
+                    "city": None,
+                    "country": None,
+                    "amount_local": "100.00",
+                    "amount_usd": "50.00",
+                },
+                {
+                    "reference": "000000001498572431",
+                    "operation_date": "2026-02-25",
+                    "description": "NETFLIX.COM 844-5052993",
+                    "city": None,
+                    "country": "CA",
+                    "amount_local": "21.46",
+                    "amount_usd": "16.15",
+                },
+            ],
+        }
+        self.client.force_authenticate(user=self.user)
+        pdf = SimpleUploadedFile(
+            "stmt.pdf",
+            b"%PDF-1.4",
+            content_type="application/pdf",
+        )
+        response = self.client.post(self.url, {"file": pdf}, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["created"], 1)
+        self.assertEqual(response.data["skipped"], 1)
+        stmt = VisaInternationalStatement.objects.get()
+        self.assertEqual(stmt.total_amount, Decimal("16.15"))

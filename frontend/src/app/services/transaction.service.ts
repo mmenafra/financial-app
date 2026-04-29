@@ -14,6 +14,7 @@ import type {
   TransactionFilters,
   UpdateTransactionPayload,
   VisaInternationalDashboardResponse,
+  VisaNacionalDashboardResponse,
 } from '../models/transaction.model';
 
 @Injectable({ providedIn: 'root' })
@@ -96,6 +97,15 @@ export class TransactionService {
     );
   }
 
+  importVisaNacional(file: File): Observable<BankStatementImportResult> {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    return this.http.post<BankStatementImportResult>(
+      `${environment.apiUrl}/api/transactions/import-visa-national/`,
+      body,
+    );
+  }
+
   /** Visa International page: statement, transactions, and 12 rolling monthly totals. */
   getVisaInternationalDashboard(
     year: number,
@@ -104,6 +114,18 @@ export class TransactionService {
     const params = new HttpParams().set('year', String(year)).set('month', String(month));
     return this.http.get<VisaInternationalDashboardResponse>(
       `${environment.apiUrl}/api/visa-international/dashboard/`,
+      { params },
+    );
+  }
+
+  /** Visa Nacional page: statement, transactions, and 12 rolling monthly totals (CLP). */
+  getVisaNacionalDashboard(
+    year: number,
+    month: number,
+  ): Observable<VisaNacionalDashboardResponse> {
+    const params = new HttpParams().set('year', String(year)).set('month', String(month));
+    return this.http.get<VisaNacionalDashboardResponse>(
+      `${environment.apiUrl}/api/visa-nacional/dashboard/`,
       { params },
     );
   }

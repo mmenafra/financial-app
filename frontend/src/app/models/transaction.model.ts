@@ -33,6 +33,7 @@ export interface Transaction {
   matched_recurring_pattern: string | null;
   file_import: string | null;
   visa_international_statement: string | null;
+  visa_nacional_statement: string | null;
 }
 
 export type TransactionType = 'DEBIT' | 'CREDIT' | 'TRANSFER';
@@ -128,6 +129,15 @@ export interface VisaInternationalStatement {
   file_import: string;
 }
 
+/** GET /api/visa-nacional/dashboard/ — same shape as international, CLP. */
+export interface VisaNacionalStatement {
+  id: string;
+  period_end: string;
+  total_amount: string;
+  currency: string;
+  file_import: string;
+}
+
 /** Rolling month bucket from GET /api/visa-international/dashboard/ */
 export interface VisaMonthlyTotal {
   year: number;
@@ -137,6 +147,12 @@ export interface VisaMonthlyTotal {
 
 export interface VisaInternationalDashboardResponse {
   statement: VisaInternationalStatement | null;
+  transactions: Transaction[];
+  monthly_totals: VisaMonthlyTotal[];
+}
+
+export interface VisaNacionalDashboardResponse {
+  statement: VisaNacionalStatement | null;
   transactions: Transaction[];
   monthly_totals: VisaMonthlyTotal[];
 }

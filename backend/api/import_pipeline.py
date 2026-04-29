@@ -2,6 +2,7 @@
 
 import logging
 from datetime import date
+from decimal import Decimal
 
 from rest_framework import status
 from rest_framework.response import Response
@@ -23,7 +24,9 @@ from .visa_internacional_import import (
 )
 from .visa_internacional_parser import parse_visa_internacional_statement_pdf
 from .visa_international_statements import reuse_or_create_statement_for_import
+from .visa_nacional_import import import_visa_nacional_row
 from .visa_nacional_parser import parse_visa_nacional_statement_pdf
+from .visa_nacional_statements import reuse_or_create_nacional_statement_for_import
 
 logger = logging.getLogger(__name__)
 
@@ -152,8 +155,8 @@ def bank_statement_import_pipeline(request, file_import):
     return Response(response_body, status=status.HTTP_201_CREATED)
 
 
-def visa_nacional_import_pipeline(_request, file_import):
-    """Parse Visa Nacional PDF from stored FileImport. Mutates `file_import`."""
+def visa_nacional_import_pipeline(request, file_import):
+    """Parse Visa Nacional PDF from stored FileImport and persist rows. Mutates `file_import`."""
     try:
         file_import.file.open("rb")
         try:
@@ -172,13 +175,54 @@ def visa_nacional_import_pipeline(_request, file_import):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    tx_count = len(parsed.get("transactions", []))
-    logger.info(
-        "Import Visa Nacional success: transactions=%s",
-        tx_count,
+    rows = parsed.get("transactions", [])
+    period_end = date.fromisoformat(parsed["period_end"])
+    total_amount = Decimal(parsed["total_operaciones"])
+    visa_statement = reuse_or_create_nacional_statement_for_import(
+        request.user,
+        file_import,
+        period_end,
+        total_amount,
+        currency="CLP",
     )
-    file_import.rows_imported = tx_count
-    file_import.rows_skipped = 0
+
+    created_count = 0
+    skipped_count = 0
+    failed_count = 0
+    created_instances = []
+    errors: list[dict] = []
+    for row in rows:
+        result = import_visa_nacional_row(
+            request.user,
+            row,
+            file_import=file_import,
+            visa_statement=visa_statement,
+        )
+        if "error" in result:
+            failed_count += 1
+            errors.append({"row": row, "error": result["error"]})
+            continue
+        if result.get("ok") == "skipped":
+            skipped_count += 1
+        elif result.get("ok") == "created" and result.get("instance"):
+            created_count += 1
+            created_instances.append(result["instance"])
+
+    logger.info(
+        "Import Visa Nacional persist: user_id=%s created=%s skipped=%s failed=%s",
+        request.user.pk,
+        created_count,
+        skipped_count,
+        failed_count,
+    )
+
+    ai_categorization_attempted, ai_categorization_failed, ai_failure_detail = (
+        gemini_bulk_metadata_after_bank_import(request.user, created_instances)
+    )
+    created_instances = _refresh_transactions_preserving_order(created_instances)
+
+    file_import.rows_imported = created_count
+    file_import.rows_skipped = skipped_count
     file_import.status = ImportStatus.COMPLETED
     file_import.save(
         update_fields=[
@@ -188,7 +232,20 @@ def visa_nacional_import_pipeline(_request, file_import):
             "updated_at",
         ]
     )
-    return Response(parsed, status=status.HTTP_200_OK)
+    ser = TransactionSerializer(
+        created_instances, many=True, context={"request": request}
+    )
+    response_body = {
+        "created": created_count,
+        "skipped": skipped_count,
+        "failed": failed_count,
+        "transactions": ser.data,
+        "errors": errors,
+        "ai_categorization_attempted": ai_categorization_attempted,
+        "ai_categorization_failed": ai_categorization_failed,
+        "ai_failure_detail": ai_failure_detail,
+    }
+    return Response(response_body, status=status.HTTP_201_CREATED)
 
 
 def visa_internacional_import_pipeline(request, file_import):
