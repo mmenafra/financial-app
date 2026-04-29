@@ -161,3 +161,54 @@ class VisaInternationalDashboardAPITests(APITestCase):
         }
         self.assertEqual(totals["2026-2"], "10.00")
         self.assertEqual(totals["2026-3"], "25.50")
+
+    def test_duplicate_period_statements_prefers_row_with_transactions(self):
+        fi_empty = FileImport.objects.create(
+            user=self.user,
+            source=Source.CREDIT_CARD_INTERNATIONAL,
+            file=ContentFile(b"%PDF", name="dup_empty.pdf"),
+            original_filename="dup_empty.pdf",
+            status=ImportStatus.COMPLETED,
+        )
+        fi_with_tx = FileImport.objects.create(
+            user=self.user,
+            source=Source.CREDIT_CARD_INTERNATIONAL,
+            file=ContentFile(b"%PDF", name="dup_tx.pdf"),
+            original_filename="dup_tx.pdf",
+            status=ImportStatus.COMPLETED,
+        )
+        VisaInternationalStatement.objects.create(
+            user=self.user,
+            file_import=fi_empty,
+            period_start=date(2026, 2, 24),
+            period_end=date(2026, 3, 23),
+            total_amount=Decimal("69.27"),
+        )
+        stmt_with_tx = VisaInternationalStatement.objects.create(
+            user=self.user,
+            file_import=fi_with_tx,
+            period_start=date(2026, 2, 24),
+            period_end=date(2026, 3, 23),
+            total_amount=Decimal("69.27"),
+        )
+        Transaction.objects.create(
+            user=self.user,
+            description="NETFLIX",
+            amount=Decimal("16.15"),
+            currency="USD",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.CREDIT_CARD_INTERNATIONAL,
+            status=TransactionStatus.CONFIRMED,
+            visa_international_statement=stmt_with_tx,
+            external_id="dup-pref-001",
+        )
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.url, {"year": "2026", "month": "3"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNotNone(response.data["statement"])
+        self.assertEqual(
+            response.data["statement"]["id"], str(stmt_with_tx.id)
+        )
+        self.assertEqual(len(response.data["transactions"]), 1)

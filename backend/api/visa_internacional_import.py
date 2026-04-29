@@ -20,7 +20,7 @@ from .models import (
     TransactionType,
     VisaInternationalStatement,
 )
-from .recurring_match import match_recurring_pattern_for_description
+from .recurring_match import apply_recurring_match_if_missing
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +34,7 @@ def _persist_visa_created_dates_and_recurring_match(
         imported_at=statement_dt,
     )
     tx.refresh_from_db()
-    matched = match_recurring_pattern_for_description(user, tx.description)
-    if matched is not None:
-        Transaction.objects.filter(pk=tx.pk).update(matched_recurring_pattern=matched)
-        tx.refresh_from_db()
+    apply_recurring_match_if_missing(user, tx.pk)
 
 
 def _visa_statement_dt(operation_date_iso: str) -> timezone.datetime:
@@ -157,6 +154,7 @@ def import_visa_internacional_row(  # pylint: disable=too-many-return-statements
             },
         )
         if not was_created:
+            apply_recurring_match_if_missing(user, tx.pk)
             return {"ok": "skipped", "instance": None}
 
         _persist_visa_created_dates_and_recurring_match(user, tx, statement_dt)

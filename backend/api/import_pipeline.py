@@ -15,7 +15,6 @@ from .models import (
     Source,
     Transaction,
     UserProfile,
-    VisaInternationalStatement,
 )
 from .serializers import TransactionSerializer
 from .visa_internacional_import import (
@@ -23,6 +22,7 @@ from .visa_internacional_import import (
     sum_visa_internacional_parsed_expenses_usd,
 )
 from .visa_internacional_parser import parse_visa_internacional_statement_pdf
+from .visa_international_statements import reuse_or_create_statement_for_import
 from .visa_nacional_parser import parse_visa_nacional_statement_pdf
 
 logger = logging.getLogger(__name__)
@@ -215,12 +215,12 @@ def visa_internacional_import_pipeline(request, file_import):
     period_start = date.fromisoformat(parsed["period_from"])
     period_end = date.fromisoformat(parsed["period_to"])
     total_amount = sum_visa_internacional_parsed_expenses_usd(rows)
-    visa_statement = VisaInternationalStatement.objects.create(
-        user=request.user,
-        file_import=file_import,
-        period_start=period_start,
-        period_end=period_end,
-        total_amount=total_amount,
+    visa_statement = reuse_or_create_statement_for_import(
+        request.user,
+        file_import,
+        period_start,
+        period_end,
+        total_amount,
         currency="USD",
     )
 

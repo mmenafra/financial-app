@@ -29,7 +29,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.db import transaction as db_transaction
-from django.db.models import Q, Sum
+from django.db.models import Sum
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.utils.encoding import force_bytes, force_str
@@ -71,6 +71,7 @@ from .serializers import (
     UserProfileSerializer,
     VisaInternationalStatementSerializer,
 )
+from .visa_international_statements import select_statement_for_period_end_month
 
 User = get_user_model()
 
@@ -683,15 +684,7 @@ class VisaInternationalDashboardView(APIView):
             raise ValidationError({"year": "Invalid year."})
 
         user = request.user
-        statement = (
-            VisaInternationalStatement.objects.filter(
-                user=user,
-                period_end__year=year,
-                period_end__month=month,
-            )
-            .order_by("-period_end", "-created_at")
-            .first()
-        )
+        statement = select_statement_for_period_end_month(user, year, month)
 
         if statement:
             txs = (
@@ -714,18 +707,10 @@ class VisaInternationalDashboardView(APIView):
             )
 
         months = _visa_international_dashboard_rolling_months(year, month, 12)
-        period_q = Q()
+        stmt_by_period: dict[tuple[int, int], VisaInternationalStatement | None] = {}
         for y, m in months:
-            period_q |= Q(period_end__year=y, period_end__month=m)
-        stmt_by_period: dict[tuple[int, int], VisaInternationalStatement] = {}
-        for s in (
-            VisaInternationalStatement.objects.filter(user=user)
-            .filter(period_q)
-            .order_by("-period_end", "-created_at")
-        ):
-            key = (s.period_end.year, s.period_end.month)
-            if key not in stmt_by_period:
-                stmt_by_period[key] = s
+            stmt_by_period[(y, m)] = select_statement_for_period_end_month(user, y, m)
+
         monthly_totals = []
         for y, m in months:
             stmt_m = stmt_by_period.get((y, m))
