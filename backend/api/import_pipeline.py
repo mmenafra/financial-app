@@ -20,6 +20,7 @@ from .models import (
 from .serializers import TransactionSerializer
 from .visa_internacional_import import (
     import_visa_internacional_row,
+    skipped_item_preview_from_internacional_row,
     sum_visa_internacional_parsed_expenses_usd,
 )
 from .visa_internacional_parser import parse_visa_internacional_statement_pdf
@@ -291,6 +292,7 @@ def visa_internacional_import_pipeline(request, file_import):
     skipped_count = 0
     failed_count = 0
     created_instances = []
+    skipped_items: list[dict] = []
     errors: list[dict] = []
     for row in rows:
         result = import_visa_internacional_row(
@@ -305,6 +307,7 @@ def visa_internacional_import_pipeline(request, file_import):
             continue
         if result.get("ok") == "skipped":
             skipped_count += 1
+            skipped_items.append(skipped_item_preview_from_internacional_row(row))
         elif result.get("ok") == "created" and result.get("instance"):
             created_count += 1
             created_instances.append(result["instance"])
@@ -341,6 +344,7 @@ def visa_internacional_import_pipeline(request, file_import):
         "skipped": skipped_count,
         "failed": failed_count,
         "transactions": ser.data,
+        "skipped_items": skipped_items,
         "errors": errors,
         "ai_categorization_attempted": ai_categorization_attempted,
         "ai_categorization_failed": ai_categorization_failed,

@@ -116,7 +116,7 @@ export interface BankStatementImportRowError {
   error: string;
 }
 
-/** Summary line for rows skipped as duplicates or filtered (e.g. Visa Nacional). */
+/** Summary line for rows skipped as duplicates or filtered (Visa Nacional / Internacional). */
 export interface BankStatementImportSkippedItem {
   description: string;
   amount: string;
@@ -129,7 +129,7 @@ export interface BankStatementImportResult {
   skipped: number;
   failed: number;
   transactions: Transaction[];
-  /** Present for imports that report per-row skip detail (e.g. Visa Nacional). */
+  /** Present for Visa PDF imports that report per-row skip detail. */
   skipped_items?: BankStatementImportSkippedItem[];
   errors: BankStatementImportRowError[];
   /** Gemini bulk categorization was invoked (needs API key + categories + uncategorized rows). */

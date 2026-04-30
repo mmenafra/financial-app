@@ -17,6 +17,7 @@ import type { BankStatementImportResult, Category, Source } from '../../models/t
 import { FileImportService } from '../../services/file-import.service';
 import { TransactionService } from '../../services/transaction.service';
 import { presetsForImportSource } from '../../utils/import-modal-source-presets';
+import { normalizeBankStatementImportResult } from '../../utils/normalize-bank-statement-import-result';
 import { resolveApiFileUrl } from '../../utils/resolve-api-file-url';
 
 const PAGE_SIZE = 20;
@@ -209,7 +210,9 @@ export class ImportsComponent {
           const payload = response.import_result;
           if (payload != null && typeof payload === 'object') {
             this.rerunModalSource.set(row.source);
-            this.prefilledImportResult.set(payload);
+            this.prefilledImportResult.set(
+              normalizeBankStatementImportResult(payload as BankStatementImportResult),
+            );
             this.rerunResultModalOpen.set(true);
             return;
           }

@@ -4,8 +4,9 @@ import {
   DestroyRef,
   EventEmitter,
   Input,
-  OnInit,
+  OnChanges,
   Output,
+  SimpleChanges,
   inject,
   signal,
 } from '@angular/core';
@@ -25,6 +26,7 @@ import type {
   Transaction,
 } from '../../models/transaction.model';
 import { TransactionService } from '../../services/transaction.service';
+import { normalizeBankStatementImportResult } from '../../utils/normalize-bank-statement-import-result';
 
 @Component({
   selector: 'app-import-modal',
@@ -33,7 +35,7 @@ import { TransactionService } from '../../services/transaction.service';
   templateUrl: './import-modal.component.html',
   styleUrl: './import-modal.component.scss',
 })
-export class ImportModalComponent implements OnInit {
+export class ImportModalComponent implements OnChanges {
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(FormBuilder);
   private readonly transactionService = inject(TransactionService);
@@ -68,11 +70,12 @@ export class ImportModalComponent implements OnInit {
   protected readonly importFinishing = signal(false);
   protected readonly importFinishError = signal<string | null>(null);
 
-  ngOnInit(): void {
-    const res = this.initialImportResult;
-    if (res) {
-      this.applyInitialImportResult(res);
+  ngOnChanges(changes: SimpleChanges): void {
+    const initCh = changes['initialImportResult'];
+    if (!initCh?.currentValue || this.submitImportFn) {
+      return;
     }
+    this.applyInitialImportResult(initCh.currentValue as BankStatementImportResult);
   }
 
   private applyInitialImportResult(res: BankStatementImportResult): void {
@@ -80,7 +83,7 @@ export class ImportModalComponent implements OnInit {
       return;
     }
     this.importFile.set(null);
-    this.importResult.set(res);
+    this.importResult.set(normalizeBankStatementImportResult(res));
     this.importReviewStep.set(false);
     this.importReviewControls = [];
     this.importFinishError.set(null);
@@ -127,7 +130,7 @@ export class ImportModalComponent implements OnInit {
       .subscribe({
         next: (res) => {
           this.importSubmitting.set(false);
-          this.importResult.set(res);
+          this.importResult.set(normalizeBankStatementImportResult(res));
           this.importReviewStep.set(false);
           this.importReviewControls = [];
           this.importFinishError.set(null);

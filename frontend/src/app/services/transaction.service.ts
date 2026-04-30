@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, mergeMap, of } from 'rxjs';
+import { Observable, map, mergeMap, of } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 import type {
@@ -17,6 +17,7 @@ import type {
   VisaInternationalDashboardResponse,
   VisaNacionalDashboardResponse,
 } from '../models/transaction.model';
+import { normalizeBankStatementImportResult } from '../utils/normalize-bank-statement-import-result';
 
 @Injectable({ providedIn: 'root' })
 export class TransactionService {
@@ -90,28 +91,34 @@ export class TransactionService {
   importBankStatement(file: File): Observable<BankStatementImportResult> {
     const body = new FormData();
     body.append('file', file, file.name);
-    return this.http.post<BankStatementImportResult>(
-      `${environment.apiUrl}/api/transactions/import-bank-statement/`,
-      body,
-    );
+    return this.http
+      .post<BankStatementImportResult>(
+        `${environment.apiUrl}/api/transactions/import-bank-statement/`,
+        body,
+      )
+      .pipe(map(normalizeBankStatementImportResult));
   }
 
   importVisaInternational(file: File): Observable<BankStatementImportResult> {
     const body = new FormData();
     body.append('file', file, file.name);
-    return this.http.post<BankStatementImportResult>(
-      `${environment.apiUrl}/api/transactions/import-visa-international/`,
-      body,
-    );
+    return this.http
+      .post<BankStatementImportResult>(
+        `${environment.apiUrl}/api/transactions/import-visa-international/`,
+        body,
+      )
+      .pipe(map(normalizeBankStatementImportResult));
   }
 
   importVisaNacional(file: File): Observable<BankStatementImportResult> {
     const body = new FormData();
     body.append('file', file, file.name);
-    return this.http.post<BankStatementImportResult>(
-      `${environment.apiUrl}/api/transactions/import-visa-national/`,
-      body,
-    );
+    return this.http
+      .post<BankStatementImportResult>(
+        `${environment.apiUrl}/api/transactions/import-visa-national/`,
+        body,
+      )
+      .pipe(map(normalizeBankStatementImportResult));
   }
 
   /** Visa International page: statement, transactions, and 12 rolling monthly totals. */

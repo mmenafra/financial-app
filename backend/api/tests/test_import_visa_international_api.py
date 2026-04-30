@@ -82,6 +82,7 @@ class ImportVisaInternationalAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["created"], 1)
         self.assertEqual(response.data["skipped"], 0)
+        self.assertEqual(response.data["skipped_items"], [])
         self.assertEqual(len(response.data["transactions"]), 1)
         tx0 = response.data["transactions"][0]
         self.assertEqual(tx0["external_id"], "000000001498572431")
@@ -278,6 +279,12 @@ class ImportVisaInternationalAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["skipped"], 1)
         self.assertEqual(response.data["created"], 0)
+        self.assertEqual(len(response.data["skipped_items"]), 1)
+        self.assertEqual(
+            response.data["skipped_items"][0]["description"], "NETFLIX.COM 844-5052993"
+        )
+        self.assertEqual(response.data["skipped_items"][0]["amount"], "16.15")
+        self.assertEqual(response.data["skipped_items"][0]["currency"], "USD")
 
         tx.refresh_from_db()
         self.assertEqual(tx.matched_recurring_pattern_id, pat.id)
@@ -320,5 +327,11 @@ class ImportVisaInternationalAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["created"], 1)
         self.assertEqual(response.data["skipped"], 1)
+        self.assertEqual(len(response.data["skipped_items"]), 1)
+        self.assertEqual(
+            response.data["skipped_items"][0]["description"].upper(),
+            "PAGO EN EFECTIVO",
+        )
+        self.assertEqual(response.data["skipped_items"][0]["amount"], "50.00")
         stmt = VisaInternationalStatement.objects.get()
         self.assertEqual(stmt.total_amount, Decimal("16.15"))

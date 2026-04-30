@@ -78,6 +78,28 @@ def sum_visa_internacional_parsed_expenses_usd(rows: list[dict]) -> Decimal:
     return total
 
 
+def skipped_item_preview_from_internacional_row(row: dict) -> dict:
+    """Minimal summary for import API when an Internacional row is skipped (duplicate or filtered)."""
+    raw_desc = row.get("description")
+    desc = (str(raw_desc).strip() if raw_desc is not None else "") or "(no description)"
+    desc = desc[:255]
+    amount_val = _decimal_from_row_field(row.get("amount_usd"), "amount_usd")
+    if amount_val is None:
+        magnitude = Decimal("0")
+        direction = Direction.EXPENSE.value
+    else:
+        magnitude = abs(amount_val)
+        direction = (
+            Direction.INCOME.value if amount_val < 0 else Direction.EXPENSE.value
+        )
+    return {
+        "description": desc,
+        "amount": str(magnitude),
+        "currency": "USD",
+        "direction": direction,
+    }
+
+
 def import_visa_internacional_row(  # pylint: disable=too-many-return-statements,too-many-branches  # noqa: C901
     user,
     row: dict,
