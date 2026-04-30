@@ -152,29 +152,35 @@
 
         <section class="tx-summary rounded-3xl border border-outline-variant/60 bg-surface-container-low px-6 py-6">
           <p class="tx-summary-label m-0">Total spent this month</p>
-          <p class="tx-summary-amount m-0 mt-2">
-            {{ formatMoney(totalSpentThisMonth().toFixed(2), 'USD') }}
-          </p>
-          <p
-            class="tx-trend m-0 mt-2 flex items-center gap-1 text-sm font-semibold"
-            [class.tx-trend-down]="trendSpentLess() === true"
-            [class.tx-trend-up]="trendSpentLess() === false"
-          >
-            @if (trendSpentLess() === true) {
-              <span
-                class="material-symbols-outlined text-[18px]"
-                style="font-variation-settings: 'FILL' 0"
-                >trending_down</span
-              >
-            } @else if (trendSpentLess() === false) {
-              <span
-                class="material-symbols-outlined text-[18px]"
-                style="font-variation-settings: 'FILL' 0"
-                >trending_up</span
-              >
+          @if (totalsByCurrency().length === 0) {
+            <p class="tx-summary-amount m-0 mt-2 text-on-surface-variant">No expenses this period</p>
+          } @else {
+            @for (t of totalsByCurrency(); track t.currency) {
+              <p class="tx-summary-amount m-0 mt-2">{{ formatMoney(t.amount.toFixed(2), t.currency) }}</p>
             }
-            {{ trendText() }}
-          </p>
+          }
+          @if (totalsByCurrency().length <= 1) {
+            <p
+              class="tx-trend m-0 mt-2 flex items-center gap-1 text-sm font-semibold"
+              [class.tx-trend-down]="trendSpentLess() === true"
+              [class.tx-trend-up]="trendSpentLess() === false"
+            >
+              @if (trendSpentLess() === true) {
+                <span
+                  class="material-symbols-outlined text-[18px]"
+                  style="font-variation-settings: 'FILL' 0"
+                  >trending_down</span
+                >
+              } @else if (trendSpentLess() === false) {
+                <span
+                  class="material-symbols-outlined text-[18px]"
+                  style="font-variation-settings: 'FILL' 0"
+                  >trending_up</span
+                >
+              }
+              {{ trendText() }}
+            </p>
+          }
         </section>
 
         <section

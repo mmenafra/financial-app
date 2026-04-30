@@ -21,6 +21,7 @@ import type {
   Category,
   CreateTransactionPayload,
   Direction,
+  PaginatedResponse,
   Source,
   Transaction,
   TransactionType,
@@ -129,7 +130,7 @@ export class TransactionsComponent {
     date: [new Date().toISOString().slice(0, 10)],
   });
 
-  protected readonly totalSpentThisMonth = signal(0);
+  protected readonly totalsByCurrency = signal<{ currency: string; amount: number }[]>([]);
   protected readonly trendVsPrevMonthPct = signal<number | null>(null);
   protected readonly trendSpentLess = signal<boolean | null>(null);
 
@@ -196,25 +197,10 @@ export class TransactionsComponent {
           this.transactions.set(p.results);
           this.totalCount.set(p.count);
 
-          const spentThis = Number(p.total_spent ?? '0');
-          const spentPrev = Number(p.prev_month_spent ?? '0');
-          this.totalSpentThisMonth.set(spentThis);
-
-          if (spentPrev <= 0) {
-            this.trendVsPrevMonthPct.set(null);
-            this.trendSpentLess.set(null);
-          } else if (spentThis < spentPrev) {
-            const pct = ((spentPrev - spentThis) / spentPrev) * 100;
-            this.trendVsPrevMonthPct.set(Math.round(pct * 10) / 10);
-            this.trendSpentLess.set(true);
-          } else if (spentThis > spentPrev) {
-            const pct = ((spentThis - spentPrev) / spentPrev) * 100;
-            this.trendVsPrevMonthPct.set(Math.round(pct * 10) / 10);
-            this.trendSpentLess.set(false);
-          } else {
-            this.trendVsPrevMonthPct.set(0);
-            this.trendSpentLess.set(null);
-          }
+          const { rows, trendPct, trendSpentLess } = this.mapPageSpendTotals(p);
+          this.totalsByCurrency.set(rows);
+          this.trendVsPrevMonthPct.set(trendPct);
+          this.trendSpentLess.set(trendSpentLess);
 
           this.isLoading.set(false);
         },
@@ -366,7 +352,11 @@ export class TransactionsComponent {
   }
 
   protected displayAmount(t: Transaction): string {
-    const formatted = this.formatMoney(t.amount, t.currency);
+    const n = Number(t.amount);
+    const formatted = new Intl.NumberFormat(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(n);
     if (t.direction === 'INCOME') {
       return `+${formatted}`;
     }
@@ -680,6 +670,58 @@ export class TransactionsComponent {
           this.newTxError.set(httpErrorMessage(err) ?? 'Could not create transaction.');
         },
       });
+  }
+
+  private mapPageSpendTotals(page: PaginatedResponse<Transaction>): {
+    rows: { currency: string; amount: number }[];
+    trendPct: number | null;
+    trendSpentLess: boolean | null;
+  } {
+    const totals = page.totals_by_currency;
+    const prev = page.prev_totals_by_currency ?? {};
+
+    let rows: { currency: string; amount: number }[];
+
+    if (totals != null) {
+      if (Object.keys(totals).length > 0) {
+        rows = Object.keys(totals)
+          .sort()
+          .map((currency) => ({
+            currency,
+            amount: Number(totals[currency] ?? '0'),
+          }));
+      } else {
+        rows = [];
+      }
+    } else if (page.total_spent != null) {
+      rows = [{ currency: 'USD', amount: Number(page.total_spent ?? '0') }];
+    } else {
+      rows = [];
+    }
+
+    let trendPct: number | null = null;
+    let trendSpentLess: boolean | null = null;
+
+    if (rows.length === 1) {
+      const { currency } = rows[0];
+      const spentThis = rows[0].amount;
+      const spentPrev = Number(prev[currency] ?? '0');
+      if (spentPrev <= 0) {
+        trendPct = null;
+        trendSpentLess = null;
+      } else if (spentThis < spentPrev) {
+        trendPct = Math.round(((spentPrev - spentThis) / spentPrev) * 100 * 10) / 10;
+        trendSpentLess = true;
+      } else if (spentThis > spentPrev) {
+        trendPct = Math.round(((spentThis - spentPrev) / spentPrev) * 100 * 10) / 10;
+        trendSpentLess = false;
+      } else {
+        trendPct = 0;
+        trendSpentLess = null;
+      }
+    }
+
+    return { rows, trendPct, trendSpentLess };
   }
 
   protected trendText(): string {

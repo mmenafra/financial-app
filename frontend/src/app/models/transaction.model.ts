@@ -92,6 +92,10 @@ export interface PaginatedResponse<T> {
   total_spent?: string;
   /** Sum of EXPENSE amounts for the previous calendar month. */
   prev_month_spent?: string;
+  /** Sum of EXPENSE amounts per currency for the filtered period. */
+  totals_by_currency?: Record<string, string>;
+  /** Sum of EXPENSE amounts per currency for the previous calendar month. */
+  prev_totals_by_currency?: Record<string, string>;
 }
 
 export interface TransactionFilters {

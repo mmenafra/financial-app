@@ -416,3 +416,68 @@ class TransactionAPITests(APITestCase):  # pylint: disable=too-many-public-metho
         }
         r = self.client.post(url, body, format="json")
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_list_totals_by_currency_groups_expenses(self):
+        """List envelope sums EXPENSE per currency; INCOME excluded."""
+        clp = Transaction.objects.create(
+            user=self.user,
+            description="CLP expense",
+            amount=Decimal("100.00"),
+            currency="CLP",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.BANK_ACCOUNT,
+            status=TransactionStatus.CONFIRMED,
+        )
+        usd = Transaction.objects.create(
+            user=self.user,
+            description="USD expense",
+            amount=Decimal("25.00"),
+            currency="USD",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.BANK_ACCOUNT,
+            status=TransactionStatus.CONFIRMED,
+        )
+        salary = Transaction.objects.create(
+            user=self.user,
+            description="Salary CLP",
+            amount=Decimal("1000.00"),
+            currency="CLP",
+            transaction_type=TransactionType.CREDIT,
+            direction=Direction.INCOME,
+            source=Source.BANK_ACCOUNT,
+            status=TransactionStatus.CONFIRMED,
+        )
+        prev_clp = Transaction.objects.create(
+            user=self.user,
+            description="Prev month CLP",
+            amount=Decimal("80.00"),
+            currency="CLP",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.BANK_ACCOUNT,
+            status=TransactionStatus.CONFIRMED,
+        )
+
+        Transaction.objects.filter(pk=clp.pk).update(transaction_date=date(2026, 2, 1))
+        Transaction.objects.filter(pk=usd.pk).update(transaction_date=date(2026, 2, 10))
+        Transaction.objects.filter(pk=salary.pk).update(
+            transaction_date=date(2026, 2, 15)
+        )
+
+        Transaction.objects.filter(pk=prev_clp.pk).update(
+            transaction_date=date(2026, 1, 20)
+        )
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.list_url, {"year": 2026, "month": 2})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        totals = response.data["totals_by_currency"]
+        self.assertEqual(totals["CLP"], "100.00")
+        self.assertEqual(totals["USD"], "25.00")
+
+        prev_totals = response.data["prev_totals_by_currency"]
+        self.assertEqual(prev_totals["CLP"], "80.00")
+        self.assertNotIn("USD", prev_totals)

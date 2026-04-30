@@ -997,6 +997,23 @@ def _apply_transaction_source_filter(qs, source_raw):
     return qs.filter(source=source_raw)
 
 
+def _expense_totals_by_currency(queryset):
+    """Sum EXPENSE amounts per ISO currency code for queryset (pre-filtered).
+
+    Uses the same queryset as the list/table (before pagination).
+    Returns ``{currency: amount_str}, ...``.
+    """
+    rows = (
+        queryset.filter(direction="EXPENSE")
+        .values("currency")
+        .annotate(total=Sum("amount"))
+        .order_by("currency")
+    )
+    return {
+        row["currency"]: str(row["total"] or Decimal("0")) for row in rows
+    }
+
+
 def _filter_transactions_list_queryset(qs, query_params, user):
     """Apply optional GET /transactions/ filters. Raises ValidationError if invalid."""
     year_raw = query_params.get("year")
@@ -1094,17 +1111,19 @@ class TransactionViewSet(ModelViewSet):
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
 
-        # Aggregate total expenses for the current filter period.
+        # Aggregate total expenses for the current filter period (legacy single field).
         total_spent = (
             queryset.filter(direction="EXPENSE")
             .aggregate(total=Sum("amount"))["total"]
             or Decimal("0")
         )
+        totals_by_currency = _expense_totals_by_currency(queryset)
 
         # Aggregate expenses for the previous calendar month (same category/source).
         year_raw = request.query_params.get("year")
         month_raw = request.query_params.get("month")
         prev_spent = Decimal("0")
+        prev_totals_by_currency = {}
         if _query_param_non_empty(year_raw) and _query_param_non_empty(month_raw):
             year = int(year_raw)
             month = int(month_raw)
@@ -1126,23 +1145,23 @@ class TransactionViewSet(ModelViewSet):
                 .aggregate(total=Sum("amount"))["total"]
                 or Decimal("0")
             )
+            prev_totals_by_currency = _expense_totals_by_currency(prev_qs)
 
         page = self.paginate_queryset(queryset)
+        extra = {
+            "total_spent": str(total_spent),
+            "prev_month_spent": str(prev_spent),
+            "totals_by_currency": totals_by_currency,
+            "prev_totals_by_currency": prev_totals_by_currency,
+        }
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             response = self.get_paginated_response(serializer.data)
-            response.data["total_spent"] = str(total_spent)
-            response.data["prev_month_spent"] = str(prev_spent)
+            response.data.update(extra)
             return response
 
         serializer = self.get_serializer(queryset, many=True)
-        return Response(
-            {
-                "results": serializer.data,
-                "total_spent": str(total_spent),
-                "prev_month_spent": str(prev_spent),
-            }
-        )
+        return Response({"results": serializer.data, **extra})
 
     @extend_schema(
         request=TransactionSplitRequestSerializer,
