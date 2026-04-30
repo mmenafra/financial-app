@@ -299,20 +299,10 @@ export class VisaNacionalComponent {
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
       currency: 'CLP',
+      currencyDisplay: 'narrowSymbol',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
-  }
-
-  protected formatMoney(amount: number, currency: string): string {
-    try {
-      return new Intl.NumberFormat(undefined, {
-        style: 'currency',
-        currency,
-      }).format(amount);
-    } catch {
-      return `${amount} ${currency}`;
-    }
   }
 
   protected categoryBadgeStyles(row: TimelineRow): Record<string, string> {

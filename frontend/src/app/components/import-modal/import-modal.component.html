@@ -141,6 +141,26 @@
           </div>
         }
 
+        @if ((res.skipped_items?.length ?? 0) > 0) {
+          <div>
+            <p class="text-sm font-extrabold text-on-surface m-0">
+              Skipped items ({{ res.skipped_items?.length }})
+            </p>
+            <ul
+              class="mt-2 max-h-48 overflow-y-auto rounded-xl border border-outline-variant/50 divide-y divide-outline-variant/40 m-0 p-0 list-none"
+            >
+              @for (item of res.skipped_items ?? []; track $index) {
+                <li class="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                  <span class="font-semibold text-on-surface truncate" [title]="item.description">{{
+                    item.description
+                  }}</span>
+                  <span class="shrink-0 font-bold" [ngClass]="amountClass(item)">{{ displayAmount(item) }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+
         <div class="flex flex-wrap gap-2 justify-end pt-1">
           <button type="button" class="tx-pill-btn" (click)="goToReviewStep()">Next</button>
         </div>

@@ -20,6 +20,7 @@ import { forkJoin, type Observable } from 'rxjs';
 import { CategorySelectComponent } from '../category-select/category-select.component';
 import type {
   BankStatementImportResult,
+  BankStatementImportSkippedItem,
   Category,
   Transaction,
 } from '../../models/transaction.model';
@@ -229,7 +230,7 @@ export class ImportModalComponent implements OnInit {
     }
   }
 
-  protected displayAmount(t: Transaction): string {
+  protected displayAmount(t: Transaction | BankStatementImportSkippedItem): string {
     const formatted = new Intl.NumberFormat(undefined, {
       style: 'currency',
       currency: t.currency ?? 'USD',
@@ -241,7 +242,7 @@ export class ImportModalComponent implements OnInit {
     return `-${formatted}`;
   }
 
-  protected amountClass(t: Transaction): string {
+  protected amountClass(t: Transaction | BankStatementImportSkippedItem): string {
     return t.direction === 'INCOME' ? 'amount-income' : 'amount-expense';
   }
 

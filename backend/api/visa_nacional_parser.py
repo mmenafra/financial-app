@@ -19,7 +19,29 @@ from .pdf_text import extract_text_from_pdf
 logger = logging.getLogger(__name__)
 
 _DATE_POSTING_RE = re.compile(r"(\d{2}/\d{2}/\d{4})\s+(\d{4})\s*$")
-_REFERENCE_RE = re.compile(r"^\d{6,}$")
+# Reference line: digits only, with optional PDF noise (spaces, dots, trailing "(B)").
+_REF_LINE_RE = re.compile(r"^[\d\s.(B)]+$")
+
+
+def _digits_from_ref_line(line: str) -> str | None:
+    """
+    Extract all digits from the Código Referencia line.
+
+    pypdf may leave trailing ``(B)``, spaces, or dot-thousands separators.
+    Returns ``None`` if the line is clearly not a reference (contains ``$`` or
+    letters other than the known ``(B)`` suffix).
+    """
+    s = (line or "").strip()
+    if not s or "$" in s:
+        return None
+    # Strip known noise: "(B)" suffix, spaces, dots, parens.
+    cleaned = re.sub(r"\(B\)", "", s, flags=re.IGNORECASE)
+    cleaned = re.sub(r"[\s.()]+", "", cleaned)
+    if not cleaned.isdigit():
+        return None
+    return cleaned
+
+
 # All $-amount tokens on a line (Chilean formatting)
 _AMOUNT_TOKEN_RE = re.compile(r"\$\s*(-?[\d.,]+)")
 _INSTALLMENT_TAIL_RE = re.compile(r"(\d{2}/\d{2})\s*\$\s*(-?[\d.,]+)\s*$")
@@ -29,8 +51,9 @@ _TWO_FULL_DATES_IN_HEADER_RE = re.compile(
 )
 
 _SECTION_START = "2.PERÍODO ACTUAL"
+# Stop at major sections only. ``3.CARGOS, …`` is a subheading *inside* período actual
+# with further movements (e.g. impuestos, cargo mensual) and must not truncate the block.
 _SECTION_END_PREFIXES = (
-    "3.CARGOS",
     "III.",
     "IV.",
 )
@@ -212,7 +235,9 @@ def _sum_positive_row_amounts_clp(rows: list[dict[str, Any]]) -> Decimal:
 
 def extract_periodo_actual_block(text: str) -> str:
     """
-    Return text from the first ``2.PERÍODO ACTUAL`` until section 3 / III / IV.
+    Return text from the first ``2.PERÍODO ACTUAL`` until ``III.`` / ``IV.`` (detalle end).
+
+    Rows after the in-period ``3.CARGOS, …`` line are included.
     """
     detalle_idx = text.find("II. DETALLE")
     slice_from = text[detalle_idx:] if detalle_idx != -1 else text
@@ -237,7 +262,16 @@ def parse_transactions_from_periodo_text(block: str) -> list[dict[str, Any]]:
     """
     Parse transaction rows from the periodo-actual block (plain text).
 
-    Each transaction: date+posting line, reference line (digits), description line with $.
+    Each transaction spans exactly three lines after filtering empty/header lines:
+      1. ``[lugar] DD/MM/YYYY PPPP`` – operation date + 4-digit posting prefix
+      2. ``DDDDDDDD`` – trailing digits of the Código Referencia
+      3. ``Description … $ amount`` – description with amounts
+
+    The **full Código Referencia** is ``posting_prefix + ref_digits`` (12 digits total).
+    pypdf places the first 4 digits on the date line because the reference column
+    visually overlaps the posting-date column in the PDF layout.
+
+    Row **amount** is the last ``$`` field (**Valor cuota**).
     """
     lines = [ln.strip() for ln in block.splitlines() if ln.strip()]
     transactions: list[dict[str, Any]] = []
@@ -261,17 +295,17 @@ def parse_transactions_from_periodo_text(block: str) -> list[dict[str, Any]]:
         date_idx = i
         op_date_raw, posting_code = m.group(1), m.group(2)
 
-        if date_idx + 1 >= len(lines):
+        if date_idx + 2 >= len(lines):
             break
-        ref_line = lines[date_idx + 1]
-        if not _REFERENCE_RE.match(ref_line):
+
+        ref_digits = _digits_from_ref_line(lines[date_idx + 1])
+        if not ref_digits:
             i = date_idx + 1
             continue
 
-        reference_code = ref_line
+        # Full Código Referencia = posting_code (first 4 digits) + ref_digits (remaining 8).
+        reference_code = posting_code + ref_digits
 
-        if date_idx + 2 >= len(lines):
-            break
         desc_line = lines[date_idx + 2]
         if "$" not in desc_line:
             i = date_idx + 1
@@ -282,6 +316,9 @@ def parse_transactions_from_periodo_text(block: str) -> list[dict[str, Any]]:
             i = date_idx + 1
             continue
 
+        # Statement columns end with **Valor cuota** (last `$` amount). Earlier tokens are totals.
+        valor_cuota = amounts[-1]
+
         # Description: text before first $ token
         first_dollar = desc_line.find("$")
         description = desc_line[:first_dollar].strip()
@@ -291,7 +328,7 @@ def parse_transactions_from_periodo_text(block: str) -> list[dict[str, Any]]:
             "posting_code": posting_code,
             "reference_code": reference_code,
             "description": description,
-            "amount": str(amounts[0]),
+            "amount": str(valor_cuota),
         }
         if len(amounts) > 1:
             entry["total_to_pay"] = str(amounts[1])

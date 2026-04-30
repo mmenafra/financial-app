@@ -24,7 +24,10 @@ from .visa_internacional_import import (
 )
 from .visa_internacional_parser import parse_visa_internacional_statement_pdf
 from .visa_international_statements import reuse_or_create_statement_for_import
-from .visa_nacional_import import import_visa_nacional_row
+from .visa_nacional_import import (
+    import_visa_nacional_row,
+    skipped_item_preview_from_nacional_row,
+)
 from .visa_nacional_parser import parse_visa_nacional_statement_pdf
 from .visa_nacional_statements import reuse_or_create_nacional_statement_for_import
 
@@ -190,6 +193,7 @@ def visa_nacional_import_pipeline(request, file_import):
     skipped_count = 0
     failed_count = 0
     created_instances = []
+    skipped_items: list[dict] = []
     errors: list[dict] = []
     for row in rows:
         result = import_visa_nacional_row(
@@ -204,6 +208,7 @@ def visa_nacional_import_pipeline(request, file_import):
             continue
         if result.get("ok") == "skipped":
             skipped_count += 1
+            skipped_items.append(skipped_item_preview_from_nacional_row(row))
         elif result.get("ok") == "created" and result.get("instance"):
             created_count += 1
             created_instances.append(result["instance"])
@@ -240,6 +245,7 @@ def visa_nacional_import_pipeline(request, file_import):
         "skipped": skipped_count,
         "failed": failed_count,
         "transactions": ser.data,
+        "skipped_items": skipped_items,
         "errors": errors,
         "ai_categorization_attempted": ai_categorization_attempted,
         "ai_categorization_failed": ai_categorization_failed,

@@ -6,6 +6,8 @@ import logging
 from decimal import Decimal
 from typing import Any
 
+from django.db.models import Q
+
 from .bsa_import import bsa_row_json_safe, inferred_category_for_bsa
 from .models import (
     Direction,
@@ -59,6 +61,28 @@ def sum_visa_nacional_parsed_expenses_clp(rows: list[dict]) -> Decimal:
     return total
 
 
+def skipped_item_preview_from_nacional_row(row: dict) -> dict:
+    """Minimal summary for import API when a Nacional row is skipped (duplicate or filtered)."""
+    raw_desc = row.get("description")
+    desc = (str(raw_desc).strip() if raw_desc is not None else "") or "(no description)"
+    desc = desc[:255]
+    amount_val = _decimal_from_row_field(row.get("amount"), "amount")
+    if amount_val is None:
+        magnitude = Decimal("0")
+        direction = Direction.EXPENSE.value
+    else:
+        magnitude = abs(amount_val)
+        direction = (
+            Direction.INCOME.value if amount_val < 0 else Direction.EXPENSE.value
+        )
+    return {
+        "description": desc,
+        "amount": str(magnitude),
+        "currency": "CLP",
+        "direction": direction,
+    }
+
+
 def import_visa_nacional_row(  # pylint: disable=too-many-return-statements,too-many-branches  # noqa: C901
     user,
     row: dict,
@@ -78,16 +102,19 @@ def import_visa_nacional_row(  # pylint: disable=too-many-return-statements,too-
         ref = str(ref_raw).strip() if ref_raw is not None else ""
         if not ref:
             return {"error": "Row is missing reference_code."}
-        if len(ref) > 255:
-            return {"error": "Reference is too long for external_id."}
 
         raw_desc = row.get("description")
         if visa_skip_pago_en_efectivo(raw_desc):
             return {"ok": "skipped", "instance": None}
 
         desc = (raw_desc or "")[:255]
-        if not row.get("operation_date"):
+        op_date_iso = row.get("operation_date")
+        if not op_date_iso:
             return {"error": "Row is missing operation_date."}
+
+        ext_id = f"{ref}:{op_date_iso}"
+        if len(ext_id) > 255:
+            return {"error": "Reference is too long for external_id."}
 
         amount_val = _decimal_from_row_field(row.get("amount"), "amount")
         if amount_val is None:
@@ -124,41 +151,48 @@ def import_visa_nacional_row(  # pylint: disable=too-many-return-statements,too-
         inst_tot_save = None if trivial_one_of_one else inst_tot
         inst_amt_save = None if trivial_one_of_one else inst_amt
 
-        ext_id = ref
         raw_safe = bsa_row_json_safe(row)
 
-        statement_dt = _visa_statement_dt(row["operation_date"])
+        statement_dt = _visa_statement_dt(op_date_iso)
+        cal_date = transaction_date_from_iso(op_date_iso)
 
-        tx, was_created = Transaction.objects.get_or_create(
+        duplicate = (
+            Transaction.objects.filter(user=user, source=Source.CREDIT_CARD_NATIONAL)
+            .filter(Q(external_id=ext_id) | Q(external_id=ref, transaction_date=cal_date))
+            .first()
+        )
+        if duplicate is not None:
+            if duplicate.external_id == ref:
+                duplicate.external_id = ext_id
+                duplicate.save(update_fields=["external_id"])
+            apply_recurring_match_if_missing(user, duplicate.pk)
+            return {"ok": "skipped", "instance": None}
+
+        tx = Transaction.objects.create(
             user=user,
             source=Source.CREDIT_CARD_NATIONAL,
             external_id=ext_id,
-            defaults={
-                "description": desc,
-                "amount": magnitude,
-                "currency": "CLP",
-                "amount_local": None,
-                "exchange_rate": None,
-                "transaction_type": tx_type,
-                "direction": direction,
-                "category": category,
-                "subcategory": None,
-                "original_reference": ref[:255] or None,
-                "is_installment": is_installment,
-                "installment_current": inst_cur_save,
-                "installment_total": inst_tot_save,
-                "installment_amount": inst_amt_save,
-                "raw_data": raw_safe,
-                "imported_at": statement_dt,
-                "transaction_date": transaction_date_from_iso(row["operation_date"]),
-                "status": TransactionStatus.CONFIRMED,
-                "file_import": file_import,
-                "visa_nacional_statement": visa_statement,
-            },
+            description=desc,
+            amount=magnitude,
+            currency="CLP",
+            amount_local=None,
+            exchange_rate=None,
+            transaction_type=tx_type,
+            direction=direction,
+            category=category,
+            subcategory=None,
+            original_reference=ref[:255] or None,
+            is_installment=is_installment,
+            installment_current=inst_cur_save,
+            installment_total=inst_tot_save,
+            installment_amount=inst_amt_save,
+            raw_data=raw_safe,
+            imported_at=statement_dt,
+            transaction_date=cal_date,
+            status=TransactionStatus.CONFIRMED,
+            file_import=file_import,
+            visa_nacional_statement=visa_statement,
         )
-        if not was_created:
-            apply_recurring_match_if_missing(user, tx.pk)
-            return {"ok": "skipped", "instance": None}
 
         apply_recurring_match_if_missing(user, tx.pk)
         return {"ok": "created", "instance": tx}

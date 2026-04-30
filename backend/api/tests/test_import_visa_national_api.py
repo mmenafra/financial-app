@@ -70,8 +70,9 @@ class ImportVisaNationalAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["created"], 1)
         self.assertEqual(response.data["skipped"], 0)
+        self.assertEqual(response.data["skipped_items"], [])
         self.assertEqual(len(response.data["transactions"]), 1)
-        self.assertEqual(response.data["transactions"][0]["external_id"], "08128021")
+        self.assertEqual(response.data["transactions"][0]["external_id"], "08128021:2026-03-06")
         mock_parse.assert_called_once()
 
     @patch("api.import_pipeline.parse_visa_nacional_statement_pdf")
@@ -99,4 +100,86 @@ class ImportVisaNationalAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["created"], 0)
         self.assertEqual(response.data["skipped"], 1)
+        self.assertEqual(len(response.data["skipped_items"]), 1)
+        self.assertIn(
+            "EFECTIVO",
+            response.data["skipped_items"][0]["description"].upper(),
+        )
         self.assertEqual(len(response.data["transactions"]), 0)
+
+    @patch("api.import_pipeline.parse_visa_nacional_statement_pdf")
+    def test_duplicate_reference_populates_skipped_items(self, mock_parse):
+        row = {
+            "operation_date": "2026-03-06",
+            "posting_code": "0903",
+            "reference_code": "08128021",
+            "description": "DUPE TEST",
+            "amount": "100.00",
+        }
+        mock_parse.return_value = {
+            "period_end": "2026-03-24",
+            "total_operaciones": "340633",
+            "transactions": [row],
+        }
+        self.client.force_authenticate(user=self.user)
+        pdf = SimpleUploadedFile(
+            "stmt.pdf",
+            b"%PDF-1.4",
+            content_type="application/pdf",
+        )
+        r1 = self.client.post(self.url, {"file": pdf}, format="multipart")
+        self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(r1.data["created"], 1)
+        self.assertEqual(r1.data["skipped_items"], [])
+        pdf2 = SimpleUploadedFile(
+            "stmt2.pdf",
+            b"%PDF-1.4",
+            content_type="application/pdf",
+        )
+        r2 = self.client.post(self.url, {"file": pdf2}, format="multipart")
+        self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(r2.data["created"], 0)
+        self.assertEqual(r2.data["skipped"], 1)
+        self.assertEqual(len(r2.data["skipped_items"]), 1)
+        self.assertEqual(r2.data["skipped_items"][0]["description"], "DUPE TEST")
+        self.assertEqual(r2.data["skipped_items"][0]["amount"], "100.00")
+        self.assertEqual(r2.data["skipped_items"][0]["currency"], "CLP")
+
+    @patch("api.import_pipeline.parse_visa_nacional_statement_pdf")
+    def test_same_reference_different_operation_date_creates_both(self, mock_parse):
+        """Bank reference codes can repeat across months; id is reference + operation date."""
+        mock_parse.return_value = {
+            "period_end": "2026-04-24",
+            "total_operaciones": "200",
+            "transactions": [
+                {
+                    "operation_date": "2026-03-06",
+                    "posting_code": "0903",
+                    "reference_code": "09999999",
+                    "description": "ROW A",
+                    "amount": "100.00",
+                },
+                {
+                    "operation_date": "2026-04-06",
+                    "posting_code": "0903",
+                    "reference_code": "09999999",
+                    "description": "ROW B",
+                    "amount": "100.00",
+                },
+            ],
+        }
+        self.client.force_authenticate(user=self.user)
+        pdf = SimpleUploadedFile(
+            "stmt.pdf",
+            b"%PDF-1.4",
+            content_type="application/pdf",
+        )
+        response = self.client.post(self.url, {"file": pdf}, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["created"], 2)
+        self.assertEqual(response.data["skipped"], 0)
+        ids = {tx["external_id"] for tx in response.data["transactions"]}
+        self.assertEqual(
+            ids,
+            {"09999999:2026-03-06", "09999999:2026-04-06"},
+        )

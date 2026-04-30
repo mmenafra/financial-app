@@ -45,16 +45,17 @@ SERVICIO DE ACTIVIDAD MENSUAL $ 3.973 $ 3.973 01/01 $ 3.973
 III. INFORMACIÓN DE PAGO
 """
 
-    def test_extract_periodo_stops_before_section_3(self):
+    def test_extract_periodo_includes_rows_after_cargos_subheading(self):
         block = extract_periodo_actual_block(self.FIXTURE_TEXT)
         self.assertIn("MERPAGO", block)
+        self.assertIn("3.CARGOS, COMISIONES, IMPUESTOS Y ABONO", block)
+        self.assertIn("SERVICIO DE ACTIVIDAD MENSUAL", block)
         self.assertNotIn("III.", block)
-        self.assertNotIn("SERVICIO DE ACTIVIDAD MENSUAL", block)
 
     def test_parse_full_text_returns_transactions_only(self):
         out = parse_visa_nacional_statement_text(self.FIXTURE_TEXT)
         self.assertIn("transactions", out)
-        self.assertEqual(len(out["transactions"]), 4)
+        self.assertEqual(len(out["transactions"]), 5)
 
     def test_negative_payment_amount(self):
         out = parse_visa_nacional_statement_text(self.FIXTURE_TEXT)
@@ -69,6 +70,12 @@ III. INFORMACIÓN DE PAGO
         )
         self.assertEqual(falabella["installment"], "03/03")
         self.assertEqual(Decimal(falabella["installment_value"]), Decimal("61310"))
+        self.assertEqual(Decimal(falabella["amount"]), Decimal("61310"))
+
+    def test_non_installment_uses_same_cuota_as_other_columns(self):
+        out = parse_visa_nacional_statement_text(self.FIXTURE_TEXT)
+        merpago = next(t for t in out["transactions"] if "MERPAGO" in t["description"])
+        self.assertEqual(Decimal(merpago["amount"]), Decimal("6713"))
 
     def test_parse_includes_period_end_and_total_from_pdf(self):
         out = parse_visa_nacional_statement_text(self.FIXTURE_TEXT)
@@ -82,7 +89,7 @@ III. INFORMACIÓN DE PAGO
             "2.PERÍODO ACTUAL\n",
         )
         out = parse_visa_nacional_statement_text(text)
-        self.assertEqual(out["period_end"], "2026-03-06")
+        self.assertEqual(out["period_end"], "2026-03-20")
 
     def test_fallback_total_when_neither_monto_nor_total_operaciones_amount(self):
         text = (
@@ -90,7 +97,8 @@ III. INFORMACIÓN DE PAGO
             .replace("1.TOTAL OPERACIONES $ 340.633\n", "1.TOTAL OPERACIONES\n")
         )
         out = parse_visa_nacional_statement_text(text)
-        self.assertEqual(Decimal(out["total_operaciones"]), Decimal("340633"))
+        # Row amounts use Valor cuota (last column); Falabella contributes one cuota not full purchase.
+        self.assertEqual(Decimal(out["total_operaciones"]), Decimal("221986"))
 
     def test_monto_total_facturado_on_following_line(self):
         text = """Monto Total Facturado a Pagar
@@ -109,7 +117,36 @@ TEST $ 10.000 $ 10.000 01/01 $ 10.000
         out = parse_visa_nacional_statement_text(text)
         self.assertEqual(Decimal(out["total_operaciones"]), Decimal("42100"))
 
-    def test_parse_periodo_block_skips_section_3_lines(self):
+    def test_parse_periodo_block_includes_post_cargos_transactions(self):
         block = extract_periodo_actual_block(self.FIXTURE_TEXT)
         txs = parse_transactions_from_periodo_text(block)
-        self.assertEqual(len(txs), 4)
+        self.assertEqual(len(txs), 5)
+        self.assertTrue(
+            any("SERVICIO DE ACTIVIDAD MENSUAL" in t["description"] for t in txs)
+        )
+
+    def test_reference_code_is_posting_code_plus_ref_line_digits(self):
+        """Full Código Referencia = posting_code (from date line) + digits on the next line.
+
+        pypdf places the first 4 digits of the reference in the posting-code position on
+        the date line; the remaining digits are on the following line.
+        PDF noise (spaces, dots, trailing ``(B)``) on the ref line is stripped.
+        """
+        block = """2.PERÍODO ACTUAL
+1.TOTAL OPERACIONES $ 0
+05/03/2026 0503
+69 465 906
+TEST A $ 10.000 $ 10.000 01/01 $ 10.000
+06/03/2026 0603
+83880891(B)
+TEST B $ 20.000 $ 20.000 01/01 $ 20.000
+07/03/2026 0703
+12.345.678
+TEST C $ 30.000 $ 30.000 01/01 $ 30.000
+III.
+"""
+        txs = parse_transactions_from_periodo_text(block)
+        self.assertEqual(len(txs), 3)
+        self.assertEqual(txs[0]["reference_code"], "050369465906")
+        self.assertEqual(txs[1]["reference_code"], "060383880891")
+        self.assertEqual(txs[2]["reference_code"], "070312345678")
