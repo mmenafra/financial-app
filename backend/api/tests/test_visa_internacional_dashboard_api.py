@@ -1,9 +1,11 @@
 from datetime import date
 from decimal import Decimal
+from urllib.parse import urlparse
 
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.urls import reverse
@@ -87,6 +89,14 @@ class VisaInternationalDashboardAPITests(APITestCase):
         self.assertEqual(last["year"], 2026)
         self.assertEqual(last["month"], 3)
         self.assertEqual(last["total"], "16.15")
+
+        # Ensure project urls.py exposes MEDIA_ROOT under MEDIA_URL when DEBUG=True
+        # (browser / new-tab links rely on GET /media/...).
+        if settings.DEBUG:
+            media_path = urlparse(body["statement"]["uploaded_file_url"]).path
+            media_resp = self.client.get(media_path)
+            self.assertEqual(media_resp.status_code, status.HTTP_200_OK)
+            self.assertGreater(len(media_resp.content), 0)
 
     def test_no_statement_month_returns_empty_transactions(self):
         self.client.force_authenticate(user=self.user)

@@ -1,7 +1,6 @@
 # pylint: disable=too-many-lines
 import logging
 import os
-import uuid
 from decimal import Decimal
 
 from drf_spectacular.types import OpenApiTypes
@@ -580,25 +579,6 @@ class ImportVisaInternationalStatementView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        preferred_statement = None
-        raw_sid = request.data.get("visa_international_statement_id")
-        if raw_sid not in (None, ""):
-            try:
-                stmt_uuid = uuid.UUID(str(raw_sid).strip())
-            except ValueError:
-                return Response(
-                    {"detail": "Invalid visa_international_statement_id."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            preferred_statement = VisaInternationalStatement.objects.filter(
-                pk=stmt_uuid, user=request.user
-            ).first()
-            if preferred_statement is None:
-                return Response(
-                    {"detail": "Unknown Visa International statement."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
         logger.info(
             "Import Visa Internacional: user_id=%s filename=%r",
             request.user.pk,
@@ -614,9 +594,7 @@ class ImportVisaInternationalStatementView(APIView):
         file_import.status = ImportStatus.PROCESSING
         file_import.save(update_fields=["status", "updated_at"])
 
-        return visa_internacional_import_pipeline(
-            request, file_import, preferred_statement
-        )
+        return visa_internacional_import_pipeline(request, file_import)
 
 
 def _visa_international_dashboard_rolling_months(

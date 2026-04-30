@@ -54,7 +54,6 @@ class RecurringPatternAdmin(admin.ModelAdmin):
     list_display = (
         "description_pattern",
         "user",
-        "category",
         "frequency",
         "expected_amount",
     )

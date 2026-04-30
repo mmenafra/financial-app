@@ -12,6 +12,7 @@ import { forkJoin } from 'rxjs';
 
 import { CategorySelectComponent } from '../../components/category-select/category-select.component';
 import { ImportModalComponent } from '../../components/import-modal/import-modal.component';
+import { RecurringPatternModalComponent } from '../../components/recurring-pattern-modal/recurring-pattern-modal.component';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { TopNavComponent } from '../../components/top-nav/top-nav.component';
 import { TransactionEditModalComponent } from '../../components/transaction-edit-modal/transaction-edit-modal.component';
@@ -53,6 +54,7 @@ const SOURCE_LABELS: Record<Source, string> = {
     TopNavComponent,
     TransactionEditModalComponent,
     TransactionMetadataModalComponent,
+    RecurringPatternModalComponent,
   ],
   templateUrl: './transactions.component.html',
   styleUrl: './transactions.component.scss',
@@ -108,6 +110,7 @@ export class TransactionsComponent {
 
   protected readonly editTarget = signal<Transaction | null>(null);
   protected readonly metadataTarget = signal<Transaction | null>(null);
+  protected readonly recurringPatternTarget = signal<Transaction | null>(null);
 
   protected readonly deleteModalOpen = signal(false);
   protected readonly deleteSubmitting = signal(false);
@@ -443,6 +446,21 @@ export class TransactionsComponent {
 
   protected onMetadataDismissed(): void {
     this.metadataTarget.set(null);
+  }
+
+  protected onCreateRecurringPattern(t: Transaction, event: MouseEvent): void {
+    event.stopPropagation();
+    this.openMenuId.set(null);
+    this.recurringPatternTarget.set(t);
+  }
+
+  protected onRecurringPatternDismissed(): void {
+    this.recurringPatternTarget.set(null);
+  }
+
+  protected onRecurringPatternCreated(): void {
+    this.recurringPatternTarget.set(null);
+    this.reload();
   }
 
   protected closeDeleteModal(): void {

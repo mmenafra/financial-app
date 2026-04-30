@@ -6,7 +6,6 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from api.models import (
-    Category,
     Direction,
     Frequency,
     RecurringPattern,
@@ -18,6 +17,7 @@ from api.models import (
 from api.recurring_match import (
     apply_recurring_match_if_missing,
     match_recurring_pattern_for_description,
+    recurring_match_haystack,
     refresh_matched_recurring_from_patterns,
 )
 
@@ -36,7 +36,6 @@ class RecurringMatchTests(TestCase):
             email="other-matcher@example.com",
             password="StrongPass123!",
         )
-        self.cat = Category.objects.create(name="Subs", user=self.user)
 
     def test_empty_description_returns_none(self):
         self.assertIsNone(
@@ -57,7 +56,6 @@ class RecurringMatchTests(TestCase):
     def test_substring_match_case_insensitive(self):
         RecurringPattern.objects.create(
             user=self.user,
-            category=self.cat,
             description_pattern="NETFLIX",
             frequency=Frequency.MONTHLY,
         )
@@ -69,10 +67,8 @@ class RecurringMatchTests(TestCase):
         self.assertEqual(found.description_pattern, "NETFLIX")
 
     def test_other_users_patterns_ignored(self):
-        oc = Category.objects.create(name="O", user=self.other)
         RecurringPattern.objects.create(
             user=self.other,
-            category=oc,
             description_pattern="NETFLIX",
             frequency=Frequency.MONTHLY,
         )
@@ -86,13 +82,11 @@ class RecurringMatchTests(TestCase):
     def test_longest_pattern_wins(self):
         RecurringPattern.objects.create(
             user=self.user,
-            category=self.cat,
             description_pattern="NET",
             frequency=Frequency.MONTHLY,
         )
         longer = RecurringPattern.objects.create(
             user=self.user,
-            category=self.cat,
             description_pattern="NETFLIX",
             frequency=Frequency.MONTHLY,
         )
@@ -102,10 +96,69 @@ class RecurringMatchTests(TestCase):
         )
         self.assertEqual(found.pk, longer.pk)
 
+    def test_recurring_match_haystack_prefers_external_name(self):
+        self.assertEqual(
+            recurring_match_haystack("  NETFLIX.COM  ", "User renamed"),
+            "NETFLIX.COM",
+        )
+
+    def test_recurring_match_haystack_falls_back_to_description(self):
+        self.assertEqual(
+            recurring_match_haystack(None, "NETFLIX.COM"),
+            "NETFLIX.COM",
+        )
+        self.assertEqual(recurring_match_haystack("", "NETFLIX.COM"), "NETFLIX.COM")
+        self.assertEqual(recurring_match_haystack("   ", "NETFLIX.COM"), "NETFLIX.COM")
+
+    def test_apply_uses_external_name_when_description_differs(self):
+        pat = RecurringPattern.objects.create(
+            user=self.user,
+            description_pattern="NETFLIX",
+            frequency=Frequency.MONTHLY,
+        )
+        tx = Transaction.objects.create(
+            user=self.user,
+            description="My streaming (renamed)",
+            amount=Decimal("10.00"),
+            currency="USD",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.CREDIT_CARD_INTERNATIONAL,
+            external_id="ext-apply-extname",
+            status=TransactionStatus.CONFIRMED,
+        )
+        Transaction.objects.filter(pk=tx.pk).update(
+            external_name="NETFLIX.COM 844-5052993",
+        )
+        apply_recurring_match_if_missing(self.user, tx.pk)
+        tx.refresh_from_db()
+        self.assertEqual(tx.matched_recurring_pattern_id, pat.pk)
+
+    def test_apply_falls_back_to_description_when_external_name_empty(self):
+        pat = RecurringPattern.objects.create(
+            user=self.user,
+            description_pattern="NETFLIX",
+            frequency=Frequency.MONTHLY,
+        )
+        tx = Transaction.objects.create(
+            user=self.user,
+            description="NETFLIX.COM",
+            amount=Decimal("10.00"),
+            currency="USD",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.CREDIT_CARD_INTERNATIONAL,
+            external_id="ext-apply-legacy",
+            status=TransactionStatus.CONFIRMED,
+        )
+        Transaction.objects.filter(pk=tx.pk).update(external_name="")
+        apply_recurring_match_if_missing(self.user, tx.pk)
+        tx.refresh_from_db()
+        self.assertEqual(tx.matched_recurring_pattern_id, pat.pk)
+
     def test_apply_recurring_sets_when_missing(self):
         pat = RecurringPattern.objects.create(
             user=self.user,
-            category=self.cat,
             description_pattern="NETFLIX",
             frequency=Frequency.MONTHLY,
         )
@@ -127,13 +180,11 @@ class RecurringMatchTests(TestCase):
     def test_apply_recurring_does_not_overwrite_existing(self):
         short = RecurringPattern.objects.create(
             user=self.user,
-            category=self.cat,
             description_pattern="NET",
             frequency=Frequency.MONTHLY,
         )
         RecurringPattern.objects.create(
             user=self.user,
-            category=self.cat,
             description_pattern="NETFLIX",
             frequency=Frequency.MONTHLY,
         )
@@ -156,13 +207,11 @@ class RecurringMatchTests(TestCase):
     def test_refresh_recomputes_best_pattern(self):
         RecurringPattern.objects.create(
             user=self.user,
-            category=self.cat,
             description_pattern="NET",
             frequency=Frequency.MONTHLY,
         )
         longer = RecurringPattern.objects.create(
             user=self.user,
-            category=self.cat,
             description_pattern="NETFLIX",
             frequency=Frequency.MONTHLY,
         )
@@ -184,7 +233,6 @@ class RecurringMatchTests(TestCase):
 
         longest = RecurringPattern.objects.create(
             user=self.user,
-            category=self.cat,
             description_pattern="NETFLIX.COM",
             frequency=Frequency.MONTHLY,
         )

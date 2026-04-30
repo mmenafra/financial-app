@@ -187,7 +187,6 @@ class CleanDbUserSinceTests(TestCase):
         cat = Category.objects.create(name="Keep me", user=self.user)
         RecurringPattern.objects.create(
             user=self.user,
-            category=cat,
             description_pattern="NETFLIX",
             frequency=Frequency.MONTHLY,
         )

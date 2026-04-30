@@ -11,6 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription } from 'rxjs';
 
 import { ImportModalComponent } from '../../components/import-modal/import-modal.component';
+import { RecurringPatternModalComponent } from '../../components/recurring-pattern-modal/recurring-pattern-modal.component';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { TopNavComponent } from '../../components/top-nav/top-nav.component';
 import { TransactionEditModalComponent } from '../../components/transaction-edit-modal/transaction-edit-modal.component';
@@ -23,6 +24,7 @@ import type {
   VisaMonthlyTotal,
 } from '../../models/transaction.model';
 import { TransactionService } from '../../services/transaction.service';
+import { resolveApiFileUrl } from '../../utils/resolve-api-file-url';
 
 type TimelineTab = 'all' | 'subscriptions';
 
@@ -58,6 +60,7 @@ const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
     TopNavComponent,
     TransactionEditModalComponent,
     TransactionMetadataModalComponent,
+    RecurringPatternModalComponent,
   ],
   templateUrl: './visa-international.component.html',
   styleUrl: './visa-international.component.scss',
@@ -87,6 +90,10 @@ export class VisaInternationalComponent {
   protected readonly recurringPatterns = signal<RecurringPattern[]>([]);
   protected readonly transactions = signal<Transaction[]>([]);
   protected readonly currentStatement = signal<VisaInternationalStatement | null>(null);
+  /** Resolves `/media/...` against the API base when the SPA is on another origin. */
+  protected readonly statementPdfHref = computed(() =>
+    resolveApiFileUrl(this.currentStatement()?.uploaded_file_url ?? null),
+  );
   protected readonly monthlyTotals = signal<VisaMonthlyTotal[]>([]);
   protected readonly timelineLoading = signal(false);
   protected readonly timelineError = signal<string | null>(null);
@@ -101,9 +108,7 @@ export class VisaInternationalComponent {
 
   protected readonly importModalOpen = signal(false);
   protected readonly importVisaInternationalSubmit = (file: File) =>
-    this.transactionService.importVisaInternational(file, {
-      visaInternationalStatementId: this.currentStatement()?.id,
-    });
+    this.transactionService.importVisaInternational(file);
 
   protected readonly selectedYear = signal(new Date().getFullYear());
   protected readonly selectedMonth = signal(new Date().getMonth() + 1);
@@ -112,6 +117,7 @@ export class VisaInternationalComponent {
   protected readonly openMenuId = signal<string | null>(null);
   protected readonly editTarget = signal<Transaction | null>(null);
   protected readonly metadataTarget = signal<Transaction | null>(null);
+  protected readonly recurringPatternTarget = signal<Transaction | null>(null);
 
   protected readonly chartBars = computed((): ChartBarPoint[] => {
     return this.monthlyTotals().map((bucket) => ({
@@ -240,7 +246,7 @@ export class VisaInternationalComponent {
       id: tx.id,
       dateLabel,
       title: tx.description,
-      subtitle: isSubscription ? 'Subscription (matched rule)' : '',
+      subtitle: isSubscription ? 'Online Subscription' : '',
       amount: Number(tx.amount),
       currency: tx.currency,
       isSubscription,
@@ -382,6 +388,25 @@ export class VisaInternationalComponent {
     if (t) {
       this.metadataTarget.set(t);
     }
+  }
+
+  protected onCreateRecurringFromRow(row: TimelineRow, event: MouseEvent): void {
+    event.stopPropagation();
+    this.openMenuId.set(null);
+    const t = this.transactions().find((x) => x.id === row.id);
+    if (t) {
+      this.recurringPatternTarget.set(t);
+    }
+  }
+
+  protected onRecurringPatternDismissed(): void {
+    this.recurringPatternTarget.set(null);
+  }
+
+  protected onRecurringPatternCreated(): void {
+    this.recurringPatternTarget.set(null);
+    this.loadTimeline();
+    this.transactionService.getRecurringPatterns().subscribe((pats) => this.recurringPatterns.set(pats));
   }
 
   protected onMetadataDismissed(): void {

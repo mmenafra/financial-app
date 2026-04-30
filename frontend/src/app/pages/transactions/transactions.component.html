@@ -265,6 +265,19 @@
                               >
                               Edit
                             </button>
+                            <button
+                              type="button"
+                              class="tx-dropdown-item"
+                              role="menuitem"
+                              (click)="onCreateRecurringPattern(t, $event)"
+                            >
+                              <span
+                                class="material-symbols-outlined text-[16px]"
+                                style="font-variation-settings: 'FILL' 0"
+                                >repeat</span
+                              >
+                              Subscription
+                            </button>
                             @if (!t.parent) {
                               <button
                                 type="button"
@@ -511,6 +524,12 @@
   idPrefix="tx"
   (saved)="onEditSaved()"
   (dismissed)="onEditDismissed()"
+/>
+<app-recurring-pattern-modal
+  [transaction]="recurringPatternTarget()"
+  idPrefix="tx"
+  (created)="onRecurringPatternCreated()"
+  (dismissed)="onRecurringPatternDismissed()"
 />
 <app-transaction-metadata-modal
   [transaction]="metadataTarget()"

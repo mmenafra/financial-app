@@ -9,7 +9,10 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
 from .models import RecurringPattern, Transaction
-from .recurring_match import refresh_matched_recurring_from_patterns
+from .recurring_match import (
+    q_substring_matches_recurring_haystack,
+    refresh_matched_recurring_from_patterns,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,12 +54,12 @@ def _recurring_pattern_refresh_matching_transactions(
     q = Q(matched_recurring_pattern_id=instance.pk)
     curr_s = (curr or "").strip()
     if curr_s:
-        q |= Q(description__icontains=curr_s)
+        q |= q_substring_matches_recurring_haystack(curr_s)
 
     prev_s = prev.strip() if isinstance(prev, str) else ""
 
     if prev_s and (created or prev_s != curr_s):
-        q |= Q(description__icontains=prev_s)
+        q |= q_substring_matches_recurring_haystack(prev_s)
 
     tx_ids = (
         Transaction.objects.filter(user=user)

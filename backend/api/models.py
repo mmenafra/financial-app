@@ -393,11 +393,6 @@ class RecurringPattern(AbstractBaseModel):
         blank=True,
     )
     description_pattern = models.CharField(max_length=255)
-    category = models.ForeignKey(
-        Category,
-        on_delete=models.CASCADE,
-        related_name="recurring_patterns",
-    )
     expected_amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,

@@ -1,4 +1,3 @@
-import uuid
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -10,7 +9,6 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from api.models import (
-    Category,
     Frequency,
     RecurringPattern,
     Source,
@@ -139,10 +137,8 @@ class ImportVisaInternationalAPITests(APITestCase):
         self.assertEqual(VisaInternationalStatement.objects.get().pk, stmt_id)
 
     @patch("api.import_pipeline.parse_visa_internacional_statement_pdf")
-    def test_reimport_preferred_id_drifting_period_updates_same_statement_row(
-        self, mock_parse,
-    ):
-        """Reuse by id when parsed period differs (would bypass exact period match)."""
+    def test_reimport_drifting_period_creates_second_statement_row(self, mock_parse):
+        """Different parsed period_from (same period_to) inserts another statement."""
         first_parse = {
             "period_from": "2026-02-24",
             "period_to": "2026-03-23",
@@ -171,53 +167,19 @@ class ImportVisaInternationalAPITests(APITestCase):
         r1 = self.client.post(self.url, {"file": pdf1}, format="multipart")
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
 
-        stmt = VisaInternationalStatement.objects.get()
-
         pdf2 = SimpleUploadedFile(
             "stmt2.pdf", b"%PDF-1.4", content_type="application/pdf"
         )
         mock_parse.return_value = drift_parse
-        r2 = self.client.post(
-            self.url,
-            {
-                "file": pdf2,
-                "visa_international_statement_id": str(stmt.pk),
-            },
-            format="multipart",
-        )
+        r2 = self.client.post(self.url, {"file": pdf2}, format="multipart")
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(VisaInternationalStatement.objects.count(), 1)
-        stmt.refresh_from_db()
-        self.assertEqual(stmt.pk, VisaInternationalStatement.objects.get().pk)
-        self.assertEqual(stmt.period_start.isoformat(), drift_parse["period_from"])
-        self.assertEqual(stmt.period_end.isoformat(), drift_parse["period_to"])
+        self.assertEqual(VisaInternationalStatement.objects.count(), 2)
 
-    def test_invalid_preferred_statement_uuid_returns_400(self):
-        self.client.force_authenticate(user=self.user)
-        pdf = SimpleUploadedFile(
-            "stmt.pdf", b"%PDF-1.4", content_type="application/pdf"
-        )
-        response = self.client.post(
-            self.url,
-            {"file": pdf, "visa_international_statement_id": "not-a-uuid"},
-            format="multipart",
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_unknown_preferred_statement_id_returns_400(self):
-        self.client.force_authenticate(user=self.user)
-        pdf = SimpleUploadedFile(
-            "stmt.pdf", b"%PDF-1.4", content_type="application/pdf"
-        )
-        response = self.client.post(
-            self.url,
-            {
-                "file": pdf,
-                "visa_international_statement_id": str(uuid.uuid4()),
-            },
-            format="multipart",
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        stmts_by_start = {
+            s.period_start.isoformat(): s for s in VisaInternationalStatement.objects.all()
+        }
+        self.assertIn(first_parse["period_from"], stmts_by_start)
+        self.assertIn(drift_parse["period_from"], stmts_by_start)
 
     @patch("api.import_pipeline.parse_visa_internacional_statement_pdf")
     def test_import_sets_matched_recurring_pattern(self, mock_parse):
@@ -236,10 +198,8 @@ class ImportVisaInternationalAPITests(APITestCase):
                 }
             ],
         }
-        cat = Category.objects.create(name="Streaming", user=self.user)
         pat = RecurringPattern.objects.create(
             user=self.user,
-            category=cat,
             description_pattern="NETFLIX",
             frequency=Frequency.MONTHLY,
         )
@@ -288,7 +248,6 @@ class ImportVisaInternationalAPITests(APITestCase):
         )
         self.assertIsNone(tx.matched_recurring_pattern_id)
 
-        cat = Category.objects.create(name="Streaming", user=self.user)
         # Avoid post_save backfill until the duplicate-import path runs below.
         disconnected = post_save.disconnect(
             receiver=_recurring_pattern_refresh_matching_transactions,
@@ -301,7 +260,6 @@ class ImportVisaInternationalAPITests(APITestCase):
         try:
             pat = RecurringPattern.objects.create(
                 user=self.user,
-                category=cat,
                 description_pattern="NETFLIX",
                 frequency=Frequency.MONTHLY,
             )

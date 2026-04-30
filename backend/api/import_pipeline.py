@@ -248,7 +248,7 @@ def visa_nacional_import_pipeline(request, file_import):
     return Response(response_body, status=status.HTTP_201_CREATED)
 
 
-def visa_internacional_import_pipeline(request, file_import, preferred_statement=None):
+def visa_internacional_import_pipeline(request, file_import):
     """Parse Visa Internacional PDF from stored FileImport and persist rows. Mutates `file_import`."""
     try:
         file_import.file.open("rb")
@@ -279,7 +279,6 @@ def visa_internacional_import_pipeline(request, file_import, preferred_statement
         period_end,
         total_amount,
         currency="USD",
-        preferred_statement=preferred_statement,
     )
 
     created_count = 0

@@ -3,7 +3,7 @@ DC_PROD = $(DC) -f docker-compose.prod.yml
 BACKEND = backend
 FRONTEND = frontend
 
-.PHONY: help docker-build docker-up docker-down docker-prod \
+.PHONY: help docker-build docker-up docker-down docker-prod migrate \
 	lint fmt test seed seed-categories lint-all test-all \
 	fe-install fe-dev fe-build fe-lint fe-test fe-test-ci fe-betterer fe-betterer-update \
 	db-clean-all db-clean-user db-clean-transactions db-clean-user-since \
@@ -11,7 +11,7 @@ FRONTEND = frontend
 	createsuperuser dump-gemini-keys
 
 help:
-	@echo "Docker (dev):  make docker-build | docker-up | docker-down"
+	@echo "Docker (dev):  make docker-build | docker-up | docker-down | make migrate (apply DB migrations)"
 	@echo "Docker (prod): make docker-prod  (Django+Postgres+nginx frontend)"
 	@echo "Backend:       make lint (django check + ruff + flake8 + pylint) | fmt (autoflake + isort + black + ruff format) | test (pytest) | seed"
 	@echo "               make seed-categories EMAIL=<email> (optional RESET=1 to clear user categories first)"
@@ -33,6 +33,9 @@ docker-up:
 
 docker-down:
 	$(DC) down
+
+migrate:
+	$(DC) run --rm $(BACKEND) python manage.py migrate
 
 docker-prod:
 	$(DC_PROD) up --build

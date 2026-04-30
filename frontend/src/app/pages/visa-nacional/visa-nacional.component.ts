@@ -11,6 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription } from 'rxjs';
 
 import { ImportModalComponent } from '../../components/import-modal/import-modal.component';
+import { RecurringPatternModalComponent } from '../../components/recurring-pattern-modal/recurring-pattern-modal.component';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { TopNavComponent } from '../../components/top-nav/top-nav.component';
 import { TransactionEditModalComponent } from '../../components/transaction-edit-modal/transaction-edit-modal.component';
@@ -70,6 +71,7 @@ function isMultiInstallment(
     TopNavComponent,
     TransactionEditModalComponent,
     TransactionMetadataModalComponent,
+    RecurringPatternModalComponent,
   ],
   templateUrl: './visa-nacional.component.html',
   styleUrl: './visa-nacional.component.scss',
@@ -122,6 +124,7 @@ export class VisaNacionalComponent {
   protected readonly openMenuId = signal<string | null>(null);
   protected readonly editTarget = signal<Transaction | null>(null);
   protected readonly metadataTarget = signal<Transaction | null>(null);
+  protected readonly recurringPatternTarget = signal<Transaction | null>(null);
 
   protected readonly chartBars = computed((): ChartBarPoint[] => {
     return this.monthlyTotals().map((bucket) => ({
@@ -252,7 +255,7 @@ export class VisaNacionalComponent {
     );
     const parts: string[] = [];
     if (isSubscription) {
-      parts.push('Subscription (matched rule)');
+      parts.push('Online Subscription');
     }
     if (isInstallment) {
       parts.push(
@@ -405,6 +408,25 @@ export class VisaNacionalComponent {
     if (t) {
       this.metadataTarget.set(t);
     }
+  }
+
+  protected onCreateRecurringFromRow(row: TimelineRow, event: MouseEvent): void {
+    event.stopPropagation();
+    this.openMenuId.set(null);
+    const t = this.transactions().find((x) => x.id === row.id);
+    if (t) {
+      this.recurringPatternTarget.set(t);
+    }
+  }
+
+  protected onRecurringPatternDismissed(): void {
+    this.recurringPatternTarget.set(null);
+  }
+
+  protected onRecurringPatternCreated(): void {
+    this.recurringPatternTarget.set(null);
+    this.loadTimeline();
+    this.transactionService.getRecurringPatterns().subscribe((pats) => this.recurringPatterns.set(pats));
   }
 
   protected onMetadataDismissed(): void {

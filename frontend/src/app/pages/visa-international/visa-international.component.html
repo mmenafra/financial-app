@@ -54,19 +54,15 @@
           >
             <div>
               <h2 class="m-0 text-lg font-extrabold text-primary">{{ periodRangeLabel() }}</h2>
-              @if (currentStatement()?.uploaded_file_url) {
+              @if (statementPdfHref(); as pdfHref) {
                 <p class="m-0 mt-2">
                   <a
                     class="text-sm font-semibold text-secondary underline underline-offset-2 hover:opacity-90"
-                    [href]="currentStatement()!.uploaded_file_url!"
+                    [href]="pdfHref"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Download statement PDF{{
-                      currentStatement()!.original_filename
-                        ? ' (' + currentStatement()!.original_filename + ')'
-                        : ''
-                    }}
+                    Download statement PDF
                   </a>
                 </p>
               }
@@ -248,6 +244,19 @@
                           type="button"
                           class="tx-dropdown-item"
                           role="menuitem"
+                          (click)="onCreateRecurringFromRow(row, $event)"
+                        >
+                          <span
+                            class="material-symbols-outlined text-[16px]"
+                            style="font-variation-settings: 'FILL' 0"
+                            >repeat</span
+                          >
+                          Subscription
+                        </button>
+                        <button
+                          type="button"
+                          class="tx-dropdown-item"
+                          role="menuitem"
                           (click)="onMetaDataRow(row, $event)"
                         >
                           <span
@@ -281,6 +290,12 @@
   idPrefix="vi"
   (saved)="onEditSaved()"
   (dismissed)="onEditDismissed()"
+/>
+<app-recurring-pattern-modal
+  [transaction]="recurringPatternTarget()"
+  idPrefix="vi"
+  (created)="onRecurringPatternCreated()"
+  (dismissed)="onRecurringPatternDismissed()"
 />
 <app-transaction-metadata-modal
   [transaction]="metadataTarget()"

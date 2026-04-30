@@ -31,7 +31,7 @@ export interface Transaction {
   parent: string | null;
   /** IDs of child split lines; empty unless this is a bundle (bundles are hidden from list). */
   splits: string[];
-  /** Set when description matched a `RecurringPattern` at import (e.g. Visa International). */
+  /** Set when stable name (`external_name` when non-empty, else `description`) matched a `RecurringPattern`. */
   matched_recurring_pattern: string | null;
   file_import: string | null;
   visa_international_statement: string | null;
@@ -57,12 +57,18 @@ export interface RecurringPattern {
   updated_at: string;
   user: number | null;
   description_pattern: string;
-  category: string;
   expected_amount: string | null;
   frequency: RecurringFrequency;
 }
 
 export type RecurringFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+
+/** Body for POST /api/recurring-patterns/ */
+export interface CreateRecurringPatternPayload {
+  description_pattern: string;
+  expected_amount?: string | null;
+  frequency: RecurringFrequency;
+}
 
 /** Mirrors `CategorySerializer`. */
 export interface Category {

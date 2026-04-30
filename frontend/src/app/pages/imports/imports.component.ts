@@ -17,6 +17,7 @@ import type { BankStatementImportResult, Category, Source } from '../../models/t
 import { FileImportService } from '../../services/file-import.service';
 import { TransactionService } from '../../services/transaction.service';
 import { presetsForImportSource } from '../../utils/import-modal-source-presets';
+import { resolveApiFileUrl } from '../../utils/resolve-api-file-url';
 
 const PAGE_SIZE = 20;
 
@@ -100,6 +101,11 @@ export class ImportsComponent {
   protected closeRerunModal(): void {
     this.rerunResultModalOpen.set(false);
     this.prefilledImportResult.set(null);
+  }
+
+  /** Link target for uploaded PDF/files (same origin as API when using root-relative URLs). */
+  protected fileDownloadHref(raw: FileImportRow['file']): string | null {
+    return resolveApiFileUrl(raw ?? null);
   }
 
   protected formatDate(iso: string): string {

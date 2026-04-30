@@ -125,7 +125,6 @@ class ModelTests(TestCase):
         pattern = RecurringPattern.objects.create(
             user=self.user,
             description_pattern="NETFLIX",
-            category=self.category,
             expected_amount=Decimal("9.99"),
             frequency=Frequency.MONTHLY,
         )

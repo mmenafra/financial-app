@@ -70,9 +70,30 @@ II. DETALLE
         self.assertIsNotNone(out)
         assert out is not None
         self.assertEqual(out["country"], "UY")
-        self.assertIn("PUNTA DEL EST", out["description"])
+        self.assertEqual(out["description"], "DISCO N? 5")
+        self.assertEqual(out["city"], "PUNTA DEL EST")
         self.assertEqual(out["amount_local"], "1020.45")
         self.assertEqual(out["amount_usd"], "28.02")
+
+    def test_parse_line_body_fused_estuy(self):
+        out = parse_transaction_line_body(
+            "STARBUCKS COFFEE PUNTA DEL ESTUY 350,00 9,50"
+        )
+        self.assertIsNotNone(out)
+        assert out is not None
+        self.assertEqual(out["country"], "UY")
+        self.assertEqual(out["description"], "STARBUCKS COFFEE")
+        self.assertEqual(out["city"], "PUNTA DEL EST")
+
+    def test_parse_line_body_montevideo(self):
+        out = parse_transaction_line_body(
+            "EL NOVILLO ALEGRE MONTEVIDEO UY 1.020,45 28,02"
+        )
+        self.assertIsNotNone(out)
+        assert out is not None
+        self.assertEqual(out["country"], "UY")
+        self.assertEqual(out["description"], "EL NOVILLO ALEGRE")
+        self.assertEqual(out["city"], "MONTEVIDEO")
 
     def test_parse_line_body_us_country(self):
         out = parse_transaction_line_body("Google 650-2530000 US 8,40 8,40")

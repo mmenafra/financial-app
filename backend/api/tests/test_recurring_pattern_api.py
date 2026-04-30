@@ -4,7 +4,7 @@ from rest_framework.test import APITestCase
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from api.models import Category, Frequency, RecurringPattern
+from api.models import Frequency, RecurringPattern
 
 User = get_user_model()
 
@@ -21,14 +21,9 @@ class RecurringPatternAPITests(APITestCase):
             email="other@example.com",
             password="StrongPass123!",
         )
-        self.category = Category.objects.create(name="Subscriptions", user=self.user)
-        self.other_category = Category.objects.create(
-            name="Other", user=self.other_user
-        )
         self.list_url = reverse("recurring-pattern-list")
         self.payload = {
             "description_pattern": "NETFLIX",
-            "category": str(self.category.id),
             "expected_amount": "9.99",
             "frequency": Frequency.MONTHLY,
         }
@@ -64,14 +59,12 @@ class RecurringPatternAPITests(APITestCase):
         own = RecurringPattern.objects.create(
             user=self.user,
             description_pattern="OWN",
-            category=self.category,
             expected_amount="1.00",
             frequency=Frequency.MONTHLY,
         )
         RecurringPattern.objects.create(
             user=self.other_user,
             description_pattern="OTHER",
-            category=self.other_category,
             expected_amount="2.00",
             frequency=Frequency.MONTHLY,
         )
@@ -82,11 +75,3 @@ class RecurringPatternAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["id"], str(own.id))
-
-    def test_cannot_create_recurring_pattern_with_other_users_category(self):
-        self.client.force_authenticate(user=self.user)
-        payload = dict(self.payload)
-        payload["category"] = str(self.other_category.id)
-
-        response = self.client.post(self.list_url, payload, format="json")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

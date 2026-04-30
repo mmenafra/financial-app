@@ -42,8 +42,19 @@
                       <td class="whitespace-nowrap text-on-surface-variant font-medium">
                         {{ formatDate(row.created_at) }}
                       </td>
-                      <td class="font-semibold text-on-surface max-w-[14rem] truncate" [title]="row.original_filename">
-                        {{ row.original_filename }}
+                      <td class="max-w-[14rem] truncate" [title]="row.original_filename">
+                        @if (fileDownloadHref(row.file); as href) {
+                          <a
+                            class="font-semibold text-secondary underline underline-offset-2 hover:opacity-90"
+                            [href]="href"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {{ row.original_filename }}
+                          </a>
+                        } @else {
+                          <span class="font-semibold text-on-surface">{{ row.original_filename }}</span>
+                        }
                       </td>
                       <td class="text-on-surface-variant font-medium">{{ sourceLabel(row.source) }}</td>
                       <td [class]="statusClass(row.status)">{{ row.status }}</td>

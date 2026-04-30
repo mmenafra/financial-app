@@ -22,6 +22,16 @@ _DATE_FULL_RE = re.compile(r"\b(\d{2}/\d{2}/\d{4})\b")
 _TX_START_RE = re.compile(r"^(\d{18})\s+(\d{2}/\d{2})(?:\s+|$)(.*)$")
 # Trailing amount: thousands with dots + comma, or simple comma decimals
 _TRAILING_AMT = re.compile(r"(-?(?:\d{1,3}(?:\.\d{3})+,\d{2}|\d+,\d{2}))\s*$")
+_LINE_COUNTRY_TOKEN_RE = re.compile(r"^[A-Z]{2}$")
+# OCR sometimes glues UY (Uruguay) to the previous token (e.g. ESTUY). Restrict fused splits to
+# unlikely merchant endings by requiring an uppercase ASCII stem of length >= 3 (avoids BU+UY).
+_FUSED_COUNTRY_SUFFIXES = frozenset({"UY"})
+# Merchant lines often append settlement location before country; strip longest match first.
+_LOCATION_SUFFIXES: tuple[str, ...] = (
+    "PUNTA DEL ESTE",
+    "PUNTA DEL EST",
+    "MONTEVIDEO",
+)
 
 
 def _parse_full_date(s: str) -> date:
@@ -34,6 +44,7 @@ def extract_billing_period(text: str) -> tuple[date, date]:
     slice_start = pos if pos != -1 else 0
     chunk = text[slice_start : slice_start + 4000]
     found = _DATE_FULL_RE.findall(chunk)
+    logger.info("Found dates: %s", found)
     if len(found) < 2:
         raise ValueError("Could not find billing period (two full dates) in PDF text.")
     a, b = _parse_full_date(found[0]), _parse_full_date(found[1])
@@ -77,6 +88,85 @@ def _pop_trailing_amount(s: str) -> tuple[str, str] | None:
     return s[: m.start()].rstrip(), m.group(1)
 
 
+def _try_split_fused_country_last_word(word: str) -> tuple[str, str | None]:
+    """
+    If ``word`` ends with a fused country suffix (e.g. ESTUY → EST + UY), return stem and code.
+
+    Keeps false positives low: suffix whitelist and stem must be ASCII uppercase with length >= 3.
+    """
+    if len(word) < 5:
+        return word, None
+    cc = word[-2:]
+    if cc not in _FUSED_COUNTRY_SUFFIXES:
+        return word, None
+    stem = word[:-2]
+    if not stem.isascii() or not stem.isupper():
+        return word, None
+    if len(stem) < 3:
+        return word, None
+    return stem, cc
+
+
+def _extract_country_and_merchant_line(  # pylint: disable=too-many-return-statements
+    rest: str,
+) -> tuple[str, str | None]:
+    """Split trailing ISO-like country token from operation text (handles fused ESTUY-style OCR)."""
+    rest = rest.strip()
+    if not rest:
+        return "", None
+    parts = rest.rsplit(None, 1)
+    if len(parts) == 1:
+        word = parts[0]
+        if _LINE_COUNTRY_TOKEN_RE.fullmatch(word):
+            return "", word
+        stem, cc = _try_split_fused_country_last_word(word)
+        if cc:
+            return stem, cc
+        return rest, None
+    prefix, last = parts[0].strip(), parts[1].strip()
+    if _LINE_COUNTRY_TOKEN_RE.fullmatch(last):
+        return prefix, last
+    stem, cc = _try_split_fused_country_last_word(last)
+    if cc:
+        return f"{prefix} {stem}".strip(), cc
+    return rest, None
+
+
+def _strip_trailing_locations(merchant_line: str) -> tuple[str, str | None]:
+    """
+    Remove trailing settlement city phrases (before country was stripped).
+
+    Returns ``(description, city_or_none)``. If stripping would erase all text, returns the original
+    line with ``city`` ``None``.
+    """
+    original = merchant_line.strip()
+    if not original:
+        return original, None
+    chunks: list[str] = []
+    work = original
+    while True:
+        matched = False
+        upper_work = work.upper()
+        for phrase in _LOCATION_SUFFIXES:
+            p = phrase.upper()
+            if not upper_work.endswith(p):
+                continue
+            idx = len(work) - len(p)
+            if idx > 0 and work[idx - 1] != " ":
+                continue
+            chunks.insert(0, work[idx:])
+            work = work[:idx].rstrip()
+            matched = True
+            break
+        if not matched:
+            break
+    city = " ".join(chunks) if chunks else None
+    final_desc = work.strip()
+    if not final_desc:
+        return original, None
+    return final_desc, city
+
+
 def parse_transaction_line_body(body: str) -> dict[str, Any] | None:
     """
     Parse the text after 18-digit ref and DD/MM (rest of line(s), no ref/date prefix).
@@ -95,19 +185,20 @@ def parse_transaction_line_body(body: str) -> dict[str, Any] | None:
     rest, a1 = t1[0], t1[1]
     if not rest:
         return None
-    # Country = last word if exactly two A–Z; else no country (e.g. PAGO EN EFECTIVO)
-    head = rest
-    rsplit = head.rsplit(" ", 1)
-    if len(rsplit) == 2 and re.fullmatch(r"[A-Z]{2}", rsplit[1]):
-        country, description = rsplit[1], rsplit[0].strip()
-    else:
-        country, description = None, head.strip()
+    merchant_line, country = _extract_country_and_merchant_line(rest)
+    description, city = _strip_trailing_locations(merchant_line)
     for amt in (a1, a2):
         parse_chilean_decimal(amt)  # validate
+
+    logger.info("Description: %s", description)
+    logger.info("Country: %s", country)
+    logger.info("City: %s", city)
+    logger.info("Amount local: %s", a1)
+    logger.info("Amount usd: %s", a2)
     return {
         "description": description,
         "country": country,
-        "city": None,
+        "city": city,
         "amount_local": str(parse_chilean_decimal(a1)),
         "amount_usd": str(parse_chilean_decimal(a2)),
     }

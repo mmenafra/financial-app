@@ -61,9 +61,7 @@ class Command(BaseCommand):
         transactions = self._create_transactions(
             user, categories, options["transactions"]
         )
-        patterns = self._create_recurring_patterns(
-            user, categories, options["patterns"]
-        )
+        patterns = self._create_recurring_patterns(user, options["patterns"])
 
         self.stdout.write(
             self.style.SUCCESS(
@@ -165,7 +163,7 @@ class Command(BaseCommand):
 
         return created
 
-    def _create_recurring_patterns(self, user, categories, total):
+    def _create_recurring_patterns(self, user, total):
         labels = ["Netflix", "Rent", "Gym", "Spotify", "Internet", "Phone plan"]
         frequencies = list(Frequency.values)
         created = 0
@@ -174,7 +172,6 @@ class Command(BaseCommand):
             RecurringPattern.objects.create(
                 user=user,
                 description_pattern=labels[index % len(labels)],
-                category=random.choice(categories),
                 expected_amount=Decimal(str(round(random.uniform(8, 100), 2))),
                 frequency=random.choice(frequencies),
             )

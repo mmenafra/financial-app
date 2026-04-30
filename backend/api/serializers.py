@@ -101,13 +101,6 @@ class ImportVisaInternationalStatementSerializer(serializers.Serializer):
     """Multipart upload: PDF Visa Internacional (USD) statement."""
 
     file = serializers.FileField()
-    visa_international_statement_id = serializers.CharField(
-        required=False,
-        allow_blank=True,
-        allow_null=True,
-        max_length=36,
-        help_text="Optional UUID of existing statement to reuse (Visa International dashboard).",
-    )
 
 
 class FileImportSerializer(serializers.ModelSerializer):
@@ -298,16 +291,7 @@ class RecurringPatternSerializer(serializers.ModelSerializer):
             "updated_at",
             "user",
             "description_pattern",
-            "category",
             "expected_amount",
             "frequency",
         )
         read_only_fields = ("id", "created_at", "updated_at", "user")
-
-    def validate_category(self, value):
-        request = self.context.get("request")
-        if value and request and value.user_id != request.user.id:
-            raise serializers.ValidationError(
-                "Category must belong to the authenticated user."
-            )
-        return value

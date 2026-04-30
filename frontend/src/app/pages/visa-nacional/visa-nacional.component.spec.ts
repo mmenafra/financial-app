@@ -28,9 +28,20 @@ function emptyVisaNacionalDashboard(): VisaNacionalDashboardResponse {
 }
 
 describe('VisaNacionalComponent', () => {
+  const mockPattern = {
+    id: '00000000-0000-0000-0000-000000000001',
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+    user: 1,
+    description_pattern: 'TEST',
+    expected_amount: null,
+    frequency: 'MONTHLY' as const,
+  };
+
   const txStub: Partial<TransactionService> = {
     getCategories: () => of([]),
     getRecurringPatterns: () => of([]),
+    createRecurringPattern: () => of(mockPattern),
     getVisaNacionalDashboard: () => of(emptyVisaNacionalDashboard()),
     importVisaNacional: () =>
       of({
