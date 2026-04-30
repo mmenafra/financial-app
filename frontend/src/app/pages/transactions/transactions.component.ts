@@ -25,6 +25,7 @@ import type {
   Transaction,
   TransactionType,
 } from '../../models/transaction.model';
+import { ToastService } from '../../services/toast.service';
 import { TransactionService } from '../../services/transaction.service';
 import {
   httpErrorMessage,
@@ -61,6 +62,7 @@ const SOURCE_LABELS: Record<Source, string> = {
 })
 export class TransactionsComponent {
   private readonly transactionService = inject(TransactionService);
+  private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(FormBuilder);
 
@@ -163,6 +165,10 @@ export class TransactionsComponent {
     this.reload();
   }
 
+  protected onImportReviewCompleted(): void {
+    this.toast.success('Import complete');
+  }
+
   protected reload(): void {
     this.isLoading.set(true);
     this.loadError.set(null);
@@ -213,7 +219,9 @@ export class TransactionsComponent {
           this.isLoading.set(false);
         },
         error: () => {
-          this.loadError.set('Could not load transactions. Try again.');
+          const msg = 'Could not load transactions. Try again.';
+          this.loadError.set(msg);
+          this.toast.error(msg);
           this.isLoading.set(false);
         },
       });
@@ -427,6 +435,7 @@ export class TransactionsComponent {
 
   protected onEditSaved(): void {
     this.editTarget.set(null);
+    this.toast.success('Changes saved');
     this.reload();
   }
 
@@ -460,6 +469,7 @@ export class TransactionsComponent {
 
   protected onRecurringPatternCreated(): void {
     this.recurringPatternTarget.set(null);
+    this.toast.success('Recurring pattern saved');
     this.reload();
   }
 
@@ -482,6 +492,7 @@ export class TransactionsComponent {
         next: () => {
           this.deleteSubmitting.set(false);
           this.closeDeleteModal();
+          this.toast.success('Transaction deleted');
           this.reload();
         },
         error: (err: unknown) => {
@@ -597,6 +608,7 @@ export class TransactionsComponent {
         next: () => {
           this.splitSubmitting.set(false);
           this.closeSplitModal();
+          this.toast.success('Transaction split');
           this.reload();
         },
         error: (err: unknown) => {
@@ -660,6 +672,7 @@ export class TransactionsComponent {
         next: () => {
           this.newTxSubmitting.set(false);
           this.closeNewTxModal();
+          this.toast.success('Transaction created');
           this.reload();
         },
         error: (err: unknown) => {

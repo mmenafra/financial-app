@@ -15,6 +15,7 @@ import { TopNavComponent } from '../../components/top-nav/top-nav.component';
 import type { FileImportRow } from '../../models/file-import.model';
 import type { BankStatementImportResult, Category, Source } from '../../models/transaction.model';
 import { FileImportService } from '../../services/file-import.service';
+import { ToastService } from '../../services/toast.service';
 import { TransactionService } from '../../services/transaction.service';
 import { presetsForImportSource } from '../../utils/import-modal-source-presets';
 import { normalizeBankStatementImportResult } from '../../utils/normalize-bank-statement-import-result';
@@ -44,6 +45,7 @@ const SOURCE_LABELS: Record<Source, string> = {
 export class ImportsComponent {
   private readonly fileImportService = inject(FileImportService);
   private readonly transactionService = inject(TransactionService);
+  private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly pageSize = PAGE_SIZE;
   protected readonly currentPage = signal(1);
@@ -102,6 +104,10 @@ export class ImportsComponent {
   protected closeRerunModal(): void {
     this.rerunResultModalOpen.set(false);
     this.prefilledImportResult.set(null);
+  }
+
+  protected onRerunImportReviewCompleted(): void {
+    this.toast.success('Import complete');
   }
 
   /** Link target for uploaded PDF/files (same origin as API when using root-relative URLs). */
@@ -220,7 +226,9 @@ export class ImportsComponent {
         },
         error: () => {
           this.rerunSubmittingId.set(null);
-          this.loadError.set('Re-run failed. Try again.');
+          const msg = 'Re-run failed. Try again.';
+          this.loadError.set(msg);
+          this.toast.error(msg);
         },
       });
   }

@@ -24,6 +24,7 @@ import type {
   VisaMonthlyTotal,
 } from '../../models/transaction.model';
 import { TransactionService } from '../../services/transaction.service';
+import { ToastService } from '../../services/toast.service';
 import { resolveApiFileUrl } from '../../utils/resolve-api-file-url';
 
 type TimelineTab = 'all' | 'subscriptions';
@@ -68,6 +69,7 @@ const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 export class VisaInternationalComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly transactionService = inject(TransactionService);
+  private readonly toast = inject(ToastService);
   private viTimelineSub: Subscription | null = null;
 
   constructor() {
@@ -128,11 +130,8 @@ export class VisaInternationalComponent {
 
   protected readonly barChartSeries = computed(() => this.chartBars().map((b) => b.total));
 
-  /** Compares calendar-month Visa Intl spend (last two chart buckets). Hidden when a billing statement is loaded — totals differ in meaning. */
+  /** Compares the last two monthly-totals chart buckets (statement totals when available, else 0). */
   protected readonly vsLastMonthPct = computed((): number | null => {
-    if (this.currentStatement() !== null) {
-      return null;
-    }
     const totals = this.monthlyTotals();
     if (totals.length < 2) {
       return null;
@@ -332,6 +331,10 @@ export class VisaInternationalComponent {
     this.transactionService.getRecurringPatterns().subscribe((pats) => this.recurringPatterns.set(pats));
   }
 
+  protected onVisaImportReviewCompleted(): void {
+    this.toast.success('Statement imported');
+  }
+
   private loadTimeline(): void {
     this.viTimelineSub?.unsubscribe();
     this.timelineLoading.set(true);
@@ -347,7 +350,9 @@ export class VisaInternationalComponent {
         },
         error: () => {
           this.timelineLoading.set(false);
-          this.timelineError.set('Could not load Visa International dashboard.');
+          const msg = 'Could not load Visa International dashboard.';
+          this.timelineError.set(msg);
+          this.toast.error(msg);
         },
       });
   }
@@ -377,6 +382,7 @@ export class VisaInternationalComponent {
 
   protected onEditSaved(): void {
     this.editTarget.set(null);
+    this.toast.success('Changes saved');
     this.loadTimeline();
     this.transactionService.getRecurringPatterns().subscribe((pats) => this.recurringPatterns.set(pats));
   }
@@ -405,6 +411,7 @@ export class VisaInternationalComponent {
 
   protected onRecurringPatternCreated(): void {
     this.recurringPatternTarget.set(null);
+    this.toast.success('Recurring pattern saved');
     this.loadTimeline();
     this.transactionService.getRecurringPatterns().subscribe((pats) => this.recurringPatterns.set(pats));
   }

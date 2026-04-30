@@ -1,0 +1,23 @@
+@if (toasts().length) {
+  <div
+    class="pointer-events-none fixed bottom-4 right-4 z-50 flex max-w-sm flex-col gap-2"
+    aria-live="polite"
+  >
+    @for (t of toasts(); track t.id) {
+      <div
+        class="pointer-events-auto flex items-center gap-2 rounded-lg bg-[rgb(121_247_227_/_0.8)] px-4 py-3 text-sm font-medium text-slate-900 shadow-lg transition-opacity backdrop-blur-sm"
+        role="status"
+      >
+        <span class="min-w-0 flex-1">{{ t.message }}</span>
+        <button
+          type="button"
+          class="ml-1 shrink-0 rounded p-0.5 opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-slate-900/30"
+          [attr.aria-label]="'Dismiss notification'"
+          (click)="dismiss(t.id)"
+        >
+          <span class="leading-none" aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    }
+  </div>
+}

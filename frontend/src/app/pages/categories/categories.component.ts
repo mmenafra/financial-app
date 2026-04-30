@@ -7,6 +7,7 @@ import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { TopNavComponent } from '../../components/top-nav/top-nav.component';
 import type { Category } from '../../models/transaction.model';
 import { CategoryService, type CategoryWrite } from '../../services/category.service';
+import { ToastService } from '../../services/toast.service';
 
 const DEFAULT_FORM_COLOR = '#6366f1';
 
@@ -19,6 +20,7 @@ const DEFAULT_FORM_COLOR = '#6366f1';
 })
 export class CategoriesComponent {
   private readonly categoryService = inject(CategoryService);
+  private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -147,6 +149,7 @@ export class CategoriesComponent {
       next: () => {
         this.formSubmitting.set(false);
         this.closeFormModal();
+        this.toast.success('Category saved');
         this.reload();
       },
       error: (err: unknown) => {
@@ -184,6 +187,7 @@ export class CategoriesComponent {
         next: () => {
           this.deleteSubmitting.set(false);
           this.closeDeleteModal();
+          this.toast.success('Category deleted');
           this.reload();
         },
         error: (err: unknown) => {

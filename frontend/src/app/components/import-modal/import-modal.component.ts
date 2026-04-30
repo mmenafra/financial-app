@@ -60,6 +60,8 @@ export class ImportModalComponent implements OnChanges {
   @Output() readonly closed = new EventEmitter<void>();
   /** After successful import POST and after finish review (reload in parent) */
   @Output() readonly imported = new EventEmitter<void>();
+  /** When the user completes the review step and the modal closes (not on upload-only success). */
+  @Output() readonly importReviewCompleted = new EventEmitter<void>();
 
   protected readonly importFile = signal<File | null>(null);
   protected readonly importSubmitting = signal(false);
@@ -184,6 +186,7 @@ export class ImportModalComponent implements OnChanges {
       this.importReviewStep.set(false);
       this.importReviewControls = [];
       this.importFinishError.set(null);
+      this.importReviewCompleted.emit();
       this.imported.emit();
       this.closed.emit();
       return;
@@ -201,6 +204,7 @@ export class ImportModalComponent implements OnChanges {
           this.importReviewStep.set(false);
           this.importReviewControls = [];
           this.importFinishError.set(null);
+          this.importReviewCompleted.emit();
           this.imported.emit();
           this.closed.emit();
         },

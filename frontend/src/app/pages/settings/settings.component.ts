@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { TopNavComponent } from '../../components/top-nav/top-nav.component';
 import { UserProfileService } from '../../services/user-profile.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-settings',
@@ -16,13 +17,13 @@ import { UserProfileService } from '../../services/user-profile.service';
 })
 export class SettingsComponent {
   private readonly userProfileService = inject(UserProfileService);
+  private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly hasGeminiKey = signal(false);
   protected readonly isLoading = signal(false);
   protected readonly loadError = signal<string | null>(null);
   protected readonly saveError = signal<string | null>(null);
-  protected readonly saveSuccess = signal(false);
   protected readonly isSaving = signal(false);
   protected readonly isRemoving = signal(false);
 
@@ -53,7 +54,6 @@ export class SettingsComponent {
 
   protected saveKey(): void {
     this.saveError.set(null);
-    this.saveSuccess.set(false);
     this.isSaving.set(true);
     this.userProfileService
       .saveGeminiApiKey(this.newApiKey.trim())
@@ -63,7 +63,7 @@ export class SettingsComponent {
           this.hasGeminiKey.set(p.has_gemini_key);
           this.newApiKey = '';
           this.isSaving.set(false);
-          this.saveSuccess.set(true);
+          this.toast.success('Settings saved');
         },
         error: (err: unknown) => {
           this.isSaving.set(false);
@@ -74,7 +74,6 @@ export class SettingsComponent {
 
   protected removeKey(): void {
     this.saveError.set(null);
-    this.saveSuccess.set(false);
     this.isRemoving.set(true);
     this.userProfileService
       .saveGeminiApiKey('')
@@ -84,7 +83,7 @@ export class SettingsComponent {
           this.hasGeminiKey.set(p.has_gemini_key);
           this.newApiKey = '';
           this.isRemoving.set(false);
-          this.saveSuccess.set(true);
+          this.toast.success('Settings saved');
         },
         error: (err: unknown) => {
           this.isRemoving.set(false);

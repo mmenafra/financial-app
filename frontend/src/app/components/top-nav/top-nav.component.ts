@@ -2,6 +2,7 @@ import { Component, ElementRef, HostListener, inject, signal, viewChild } from '
 import { Router } from '@angular/router';
 
 import { AuthService } from '../../services/auth.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-top-nav',
@@ -13,6 +14,7 @@ import { AuthService } from '../../services/auth.service';
 export class TopNavComponent {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
   private readonly userMenuRoot = viewChild.required<ElementRef<HTMLElement>>('userMenuRoot');
   private readonly settingsMenuRoot = viewChild.required<ElementRef<HTMLElement>>('settingsMenuRoot');
 
@@ -64,6 +66,7 @@ export class TopNavComponent {
     this.menuOpen.set(false);
     this.settingsMenuOpen.set(false);
     this.auth.signOut();
+    this.toast.info('Signed out');
     void this.router.navigate(['']);
   }
 }

@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { BehaviorSubject, catchError, filter, switchMap, take, throwError } from 'rxjs';
 
 import { AuthService } from '../services/auth.service';
+import { ToastService } from '../services/toast.service';
 
 let isRefreshing = false;
 const refreshDone$ = new BehaviorSubject<string | null>(null);
@@ -16,6 +17,7 @@ function isAuthUrl(url: string): boolean {
 export const tokenRefreshInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
   const router = inject(Router);
+  const toast = inject(ToastService);
 
   return next(req).pipe(
     catchError((err: unknown) => {
@@ -51,6 +53,7 @@ export const tokenRefreshInterceptor: HttpInterceptorFn = (req, next) => {
           isRefreshing = false;
           refreshDone$.next(null);
           auth.clearTokens();
+          toast.error('Session expired. Please sign in again.');
           router.navigate(['']);
           return throwError(() => refreshErr);
         }),
