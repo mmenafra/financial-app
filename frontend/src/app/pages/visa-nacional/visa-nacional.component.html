@@ -53,6 +53,18 @@
           >
             <div>
               <h2 class="m-0 text-lg font-extrabold text-primary">{{ periodRangeLabel() }}</h2>
+              @if (statementPdfHref(); as pdfHref) {
+                <p class="m-0 mt-2">
+                  <a
+                    class="text-sm font-semibold text-secondary underline underline-offset-2 hover:opacity-90"
+                    [href]="pdfHref"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Download statement PDF
+                  </a>
+                </p>
+              }
             </div>
 
             <div class="flex flex-wrap items-end gap-3">

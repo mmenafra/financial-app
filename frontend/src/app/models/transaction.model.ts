@@ -148,6 +148,10 @@ export interface VisaNacionalStatement {
   total_amount: string;
   currency: string;
   file_import: string;
+  /** From linked FileImport.original_filename */
+  original_filename?: string | null;
+  /** Absolute URL to uploaded PDF under MEDIA_URL */
+  uploaded_file_url?: string | null;
 }
 
 /** Rolling month bucket from GET /api/visa-international/dashboard/ */

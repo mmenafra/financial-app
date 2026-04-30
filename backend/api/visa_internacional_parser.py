@@ -190,11 +190,6 @@ def parse_transaction_line_body(body: str) -> dict[str, Any] | None:
     for amt in (a1, a2):
         parse_chilean_decimal(amt)  # validate
 
-    logger.info("Description: %s", description)
-    logger.info("Country: %s", country)
-    logger.info("City: %s", city)
-    logger.info("Amount local: %s", a1)
-    logger.info("Amount usd: %s", a2)
     return {
         "description": description,
         "country": country,

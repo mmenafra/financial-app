@@ -24,6 +24,7 @@ import type {
   VisaNacionalStatement,
 } from '../../models/transaction.model';
 import { TransactionService } from '../../services/transaction.service';
+import { resolveApiFileUrl } from '../../utils/resolve-api-file-url';
 
 type TimelineTab = 'all' | 'subscriptions' | 'installments';
 
@@ -101,6 +102,10 @@ export class VisaNacionalComponent {
   protected readonly recurringPatterns = signal<RecurringPattern[]>([]);
   protected readonly transactions = signal<Transaction[]>([]);
   protected readonly currentStatement = signal<VisaNacionalStatement | null>(null);
+  /** Resolves `/media/...` against the API base when the SPA is on another origin. */
+  protected readonly statementPdfHref = computed(() =>
+    resolveApiFileUrl(this.currentStatement()?.uploaded_file_url ?? null),
+  );
   protected readonly monthlyTotals = signal<VisaMonthlyTotal[]>([]);
   protected readonly timelineLoading = signal(false);
   protected readonly timelineError = signal<string | null>(null);
@@ -230,7 +235,7 @@ export class VisaNacionalComponent {
     if (st) {
       const p1 = new Date(`${st.period_end}T12:00:00`);
       const b = `${MONTH_SHORT[p1.getMonth()]} ${pad2(p1.getDate())}, ${p1.getFullYear()}`.toUpperCase();
-      return `STATEMENT CLOSING: ${b}`;
+      return `CURRENT PERIOD: ${b}`;
     }
     const y = this.selectedYear();
     const m = this.selectedMonth();

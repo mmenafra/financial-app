@@ -847,7 +847,11 @@ class VisaNacionalDashboardView(APIView):
             monthly_totals.append({"year": y, "month": m, "total": str(total)})
 
         stmt_payload = (
-            VisaNacionalStatementSerializer(statement).data if statement else None
+            VisaNacionalStatementSerializer(
+                statement, context={"request": request}
+            ).data
+            if statement
+            else None
         )
         tx_payload = TransactionSerializer(
             txs, many=True, context={"request": request}
