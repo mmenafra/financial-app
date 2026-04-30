@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 
 from rest_framework import status
@@ -7,7 +7,6 @@ from rest_framework.test import APITestCase
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.urls import reverse
-from django.utils import timezone
 
 from api.models import (
     Direction,
@@ -68,9 +67,7 @@ class VisaInternationalDashboardAPITests(APITestCase):
             visa_international_statement=stmt,
             external_id="000000001498572431",
         )
-        Transaction.objects.filter(pk=tx.pk).update(
-            created_at=timezone.make_aware(datetime(2026, 3, 15, 12, 0, 0))
-        )
+        Transaction.objects.filter(pk=tx.pk).update(transaction_date=date(2026, 3, 15))
 
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.url, {"year": "2026", "month": "3"})
@@ -112,9 +109,7 @@ class VisaInternationalDashboardAPITests(APITestCase):
             visa_international_statement=None,
             external_id="legacy-dash-001",
         )
-        Transaction.objects.filter(pk=tx.pk).update(
-            created_at=timezone.make_aware(datetime(2020, 1, 15, 12, 0, 0))
-        )
+        Transaction.objects.filter(pk=tx.pk).update(transaction_date=date(2020, 1, 15))
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.url, {"year": "2020", "month": "1"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -204,7 +204,7 @@
                   @for (t of transactions(); track t.id) {
                     <tr>
                       <td class="whitespace-nowrap text-on-surface-variant font-medium">
-                        {{ formatDate(t.created_at) }}
+                        {{ formatTransactionCalendarDate(t) }}
                       </td>
                       <td>
                         <div class="flex items-center gap-2 min-w-[12rem]">
@@ -542,7 +542,7 @@
           <span [class]="tx.direction === 'INCOME' ? 'amount-income' : 'amount-expense'" class="font-bold">
             {{ displayAmount(tx) }}
           </span>
-          on {{ formatDate(tx.created_at) }}
+          on {{ formatTransactionCalendarDate(tx) }}
         </p>
         <p class="text-sm text-on-surface-variant m-0 mt-2">This action cannot be undone.</p>
       </div>

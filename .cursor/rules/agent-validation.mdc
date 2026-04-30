@@ -1,5 +1,5 @@
 ---
-description: Run lint, tests, and Docker builds after changes; fix failures before finishing
+description: One lint-all and one test-all per substantive change batch; fix failures properly (no ignore hacks); docker-build when Dockerfile/compose/install steps change
 alwaysApply: true
 ---
 
@@ -9,22 +9,29 @@ From the repo root, use [Makefile](Makefile) targets (see [AGENTS.md](../../AGEN
 
 ## When to run (before treating work as done)
 
-After **substantive** edits (backend Python, frontend app, tests, or config that affects runtime):
+After **substantive** edits (backend Python, frontend app, tests, or config that affects runtime), do **one validation pass**:
 
-1. **`make lint-all`** — backend + frontend lint
-2. **`make test-all`** — backend pytest + frontend CI-style tests
+1. **`make lint-all`** — run **once** when edits for the task are substantially done (not after every small intermediate change).
+2. **`make test-all`** — run **once** after lint passes on that pass.
+
+**Do not** run `make lint-all` / `make test-all` repeatedly without a failing run to fix—batch edits, then validate. If lint or tests fail, fix and re-run only what’s needed until green.
 
 If you changed **Dockerfiles**, **`docker-compose*.yml`**, or **backend/frontend build/install steps** used in images:
 
-3. **`make docker-build`** — ensure images still build
+3. **`make docker-build`** — ensure images still build (typically once when those changes are complete).
 
-For **large or risky frontend** changes, optionally run **`make fe-build`** to catch production build errors without waiting on a full Docker cycle.
+For **large or risky frontend** changes, optionally run **`make fe-build`** once to catch production build errors without waiting on a full Docker cycle.
 
 Skip full runs only for tiny doc-only or comment-only edits when they cannot affect lint/tests.
 
+## Lint failures
+
+- Fix the underlying issue (refactor, types, formatting via **`make fmt`** when appropriate).
+- **Do not** satisfy lint by adding **`# noqa`**, unjustified **`# type: ignore`**, Ruff/per-file ignores, ESLint **`eslint-disable`**, or widening ignore lists **just to silence** diagnostics. Narrow, justified suppressions aligned with existing project patterns are acceptable only when unavoidable and worth a short inline reason.
+
 ## On failure
 
-- **Do not** stop at the first error: read the output, fix the code (or config/tests), then re-run the failed target(s) until they pass.
-- Prefer **`make fmt`** for backend formatting/ruff autofixes when appropriate, then re-run **`make lint-all`**.
+- **Do not** stop at the first error: read the output, fix the code (or config/tests), then re-run the failed target(s) until they pass (without re-running a full **`lint-all`** if only **`test-all`** failed and lint stayed clean unless you suspect lint drift).
+- Prefer **`make fmt`** for backend formatting/ruff autofixes when appropriate, then re-run **`make lint-all`** once to confirm.
 - If the environment cannot run Docker, say so explicitly; otherwise assume it works and iterate until green.
 - If **`make fe-test-ci`** exits with an abort trap / signal in a restricted runner, re-run it outside the sandbox (full permissions); the suite should pass when the toolchain can run normally.

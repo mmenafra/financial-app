@@ -232,6 +232,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             "installment_group_id",
             "raw_data",
             "imported_at",
+            "transaction_date",
             "status",
             "parent",
             "file_import",

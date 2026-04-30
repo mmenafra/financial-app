@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 from decimal import Decimal
 
 from rest_framework import status
@@ -6,7 +6,6 @@ from rest_framework.test import APITestCase
 
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-from django.utils import timezone
 
 from api.models import (
     Category,
@@ -66,12 +65,17 @@ class TransactionAPITests(APITestCase):  # pylint: disable=too-many-public-metho
 
         patch_response = self.client.patch(
             detail_url,
-            {"description": "Uber Black", "amount": "22.00"},
+            {
+                "description": "Uber Black",
+                "amount": "22.00",
+                "transaction_date": "2024-08-10",
+            },
             format="json",
         )
         self.assertEqual(patch_response.status_code, status.HTTP_200_OK)
         self.assertEqual(patch_response.data["description"], "Uber Black")
         self.assertEqual(Decimal(patch_response.data["amount"]), Decimal("22.00"))
+        self.assertEqual(patch_response.data["transaction_date"], "2024-08-10")
 
         delete_response = self.client.delete(detail_url)
         self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
@@ -138,12 +142,8 @@ class TransactionAPITests(APITestCase):  # pylint: disable=too-many-public-metho
     def test_list_filter_by_year(self):
         a = self._create_tx(self.user, description="A")
         b = self._create_tx(self.user, description="B")
-        Transaction.objects.filter(pk=a.pk).update(
-            created_at=timezone.make_aware(datetime(2024, 6, 1, 12, 0, 0))
-        )
-        Transaction.objects.filter(pk=b.pk).update(
-            created_at=timezone.make_aware(datetime(2026, 1, 15, 8, 0, 0))
-        )
+        Transaction.objects.filter(pk=a.pk).update(transaction_date=date(2024, 6, 1))
+        Transaction.objects.filter(pk=b.pk).update(transaction_date=date(2026, 1, 15))
 
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.list_url, {"year": 2026})
@@ -155,12 +155,8 @@ class TransactionAPITests(APITestCase):  # pylint: disable=too-many-public-metho
     def test_list_filter_by_year_and_month(self):
         m3 = self._create_tx(self.user, description="March")
         m4 = self._create_tx(self.user, description="April")
-        Transaction.objects.filter(pk=m3.pk).update(
-            created_at=timezone.make_aware(datetime(2025, 3, 10, 0, 0, 0))
-        )
-        Transaction.objects.filter(pk=m4.pk).update(
-            created_at=timezone.make_aware(datetime(2025, 4, 5, 0, 0, 0))
-        )
+        Transaction.objects.filter(pk=m3.pk).update(transaction_date=date(2025, 3, 10))
+        Transaction.objects.filter(pk=m4.pk).update(transaction_date=date(2025, 4, 5))
 
         self.client.force_authenticate(user=self.user)
         response = self.client.get(
@@ -239,15 +235,11 @@ class TransactionAPITests(APITestCase):  # pylint: disable=too-many-public-metho
         match = self._create_tx(
             self.user, source=Source.MERCADOPAGO, description="ok"
         )
-        Transaction.objects.filter(pk=match.pk).update(
-            created_at=timezone.make_aware(datetime(2025, 7, 1, 0, 0, 0))
-        )
+        Transaction.objects.filter(pk=match.pk).update(transaction_date=date(2025, 7, 1))
         other = self._create_tx(
             self.user, source=Source.MERCADOPAGO, description="other year"
         )
-        Transaction.objects.filter(pk=other.pk).update(
-            created_at=timezone.make_aware(datetime(2024, 7, 1, 0, 0, 0))
-        )
+        Transaction.objects.filter(pk=other.pk).update(transaction_date=date(2024, 7, 1))
 
         self.client.force_authenticate(user=self.user)
         response = self.client.get(
@@ -298,9 +290,7 @@ class TransactionAPITests(APITestCase):  # pylint: disable=too-many-public-metho
 
     def test_retrieve_ignores_list_query_params(self):
         t = self._create_tx(self.user)
-        Transaction.objects.filter(pk=t.pk).update(
-            created_at=timezone.make_aware(datetime(2026, 3, 1, 0, 0, 0))
-        )
+        Transaction.objects.filter(pk=t.pk).update(transaction_date=date(2026, 3, 1))
         self.client.force_authenticate(user=self.user)
         detail_url = reverse("transaction-detail", args=[t.id])
         response = self.client.get(detail_url, {"year": 1990})
@@ -385,15 +375,14 @@ class TransactionAPITests(APITestCase):  # pylint: disable=too-many-public-metho
         listed = {row["id"] for row in list_r.data["results"]}
         self.assertNotIn(str(bundle.id), listed)
 
-    def test_split_children_keep_bundle_created_at_for_month_filter(self):
-        """List filters by created_at; children must match the bundle's period."""
+    def test_split_children_inherit_bundle_transaction_date_for_month_filter(self):
+        """List filters by transaction_date; children must match the bundle's period."""
         bundle = self._create_tx(
             self.user, description="Bill", source=Source.MERCADOPAGO
         )
         bundle.amount = Decimal("100.00")
         bundle.save()
-        past = timezone.make_aware(datetime(2026, 1, 15, 12, 0, 0))
-        Transaction.objects.filter(pk=bundle.pk).update(created_at=past)
+        Transaction.objects.filter(pk=bundle.pk).update(transaction_date=date(2026, 1, 15))
         bundle.refresh_from_db()
 
         self.client.force_authenticate(user=self.user)

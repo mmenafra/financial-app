@@ -70,7 +70,7 @@ def inferred_category_for_bsa(user, description: str):
     scanned = 0
     for tx in (
         Transaction.objects.filter(user=user, category__isnull=False)
-        .order_by("-created_at")
+        .order_by("-transaction_date", "-created_at")
         .iterator(chunk_size=200)
     ):
         if scanned >= _MAX_INFERENCE_SCAN:
@@ -145,17 +145,13 @@ def import_bsa_row(  # pylint: disable=too-many-return-statements  # noqa: C901
                 "is_installment": False,
                 "raw_data": bsa_row_json_safe(row),
                 "imported_at": statement_dt,
+                "transaction_date": date.fromisoformat(row["date"]),
                 "status": TransactionStatus.CONFIRMED,
                 "file_import": file_import,
             },
         )
         if not was_created:
             return {"ok": "skipped", "instance": None}
-        Transaction.objects.filter(pk=tx.pk).update(
-            created_at=statement_dt,
-            imported_at=statement_dt,
-        )
-        tx.refresh_from_db()
         return {"ok": "created", "instance": tx}
     except (KeyError, TypeError, ValueError) as exc:
         return {"error": str(exc)}

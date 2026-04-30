@@ -35,20 +35,13 @@ def visa_skip_pago_en_efectivo(description: str | None) -> bool:
     return normalized == _VISA_SKIP_PAGO_EN_EFECTIVO
 
 
-def _persist_visa_created_dates_and_recurring_match(
-    user, tx: Transaction, statement_dt: timezone.datetime
-) -> None:
-    """Back-date import timestamps and set ``matched_recurring_pattern`` when a rule matches."""
-    Transaction.objects.filter(pk=tx.pk).update(
-        created_at=statement_dt,
-        imported_at=statement_dt,
-    )
-    tx.refresh_from_db()
-    apply_recurring_match_if_missing(user, tx.pk)
+def transaction_date_from_iso(iso_date: str) -> date:
+    """Calendar date from ISO ``YYYY-MM-DD`` (statement row date)."""
+    return date.fromisoformat(iso_date)
 
 
 def _visa_statement_dt(operation_date_iso: str) -> timezone.datetime:
-    d = date.fromisoformat(operation_date_iso)
+    d = transaction_date_from_iso(operation_date_iso)
     dt = datetime.combine(d, time.min)
     if timezone.is_aware(dt):
         return dt
@@ -164,6 +157,7 @@ def import_visa_internacional_row(  # pylint: disable=too-many-return-statements
                 "is_installment": False,
                 "raw_data": raw_safe,
                 "imported_at": statement_dt,
+                "transaction_date": transaction_date_from_iso(row["operation_date"]),
                 "status": TransactionStatus.CONFIRMED,
                 "file_import": file_import,
                 "visa_international_statement": visa_statement,
@@ -173,7 +167,7 @@ def import_visa_internacional_row(  # pylint: disable=too-many-return-statements
             apply_recurring_match_if_missing(user, tx.pk)
             return {"ok": "skipped", "instance": None}
 
-        _persist_visa_created_dates_and_recurring_match(user, tx, statement_dt)
+        apply_recurring_match_if_missing(user, tx.pk)
         return {"ok": "created", "instance": tx}
     except (KeyError, TypeError, ValueError) as exc:
         return {"error": str(exc)}

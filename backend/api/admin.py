@@ -20,10 +20,18 @@ class TransactionAdmin(admin.ModelAdmin):
         "source",
         "direction",
         "status",
+        "transaction_date",
         "created_at",
     )
     search_fields = ("description", "external_id", "original_reference")
-    list_filter = ("source", "direction", "status", "is_installment", "created_at")
+    list_filter = (
+        "source",
+        "direction",
+        "status",
+        "is_installment",
+        "transaction_date",
+        "created_at",
+    )
 
 
 @admin.register(FileImport)

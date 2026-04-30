@@ -47,7 +47,9 @@ def _norm_for_label_match(s: str) -> str:
     )
 
 
-def parse_monto_total_facturado_a_pagar_clp(full_text: str) -> Decimal | None:
+def parse_monto_total_facturado_a_pagar_clp(  # noqa: C901  # pylint: disable=too-many-branches
+    full_text: str,
+) -> Decimal | None:
     """
     Statement bill total from **Monto Total Facturado a Pagar** (Scotiabank Visa Nacional).
 

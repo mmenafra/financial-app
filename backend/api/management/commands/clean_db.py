@@ -2,6 +2,7 @@ from datetime import date, datetime
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
+from django.db import connection
 from django.utils import timezone
 
 from api.models import (
@@ -34,7 +35,8 @@ class Command(BaseCommand):
         parser.add_argument(
             "--user",
             metavar="USERNAME",
-            help="Delete all finance data (transactions, categories, recurring patterns) for this user.",
+            help="Delete all finance data for this user: transactions, Visa Intl/Nacional "
+            "statements, file imports, categories, and recurring patterns (user account unchanged).",
         )
         parser.add_argument(
             "--transactions",
@@ -90,7 +92,7 @@ class Command(BaseCommand):
             self._clean_user_since(options["user_since"], cutoff)
 
     def _clean_all(self):
-        tx_count, _ = Transaction.objects.all().delete()
+        tx_count = self._purge_transactions_raw()
         rp_count, _ = RecurringPattern.objects.all().delete()
         cat_count, _ = Category.objects.all().delete()
         visa_intl_count, _ = VisaInternationalStatement.objects.all().delete()
@@ -112,21 +114,64 @@ class Command(BaseCommand):
         except User.DoesNotExist as exc:
             raise CommandError(f"User '{username}' not found.") from exc
 
+    def _purge_transactions_raw(
+        self,
+        *,
+        user_id=None,
+        created_at_gte=None,
+    ) -> int:
+        """DELETE transactions via SQL so this command works if the DB schema lags migrations.
+
+        Avoids ORM ``.delete()`` which SELECTs all model columns (e.g. ``transaction_date``).
+        Split rows (``parent_id`` set) are removed in a loop so self-FKs are satisfied
+        regardless of database row order.
+        """
+        conds = []
+        params = []
+        if user_id is not None:
+            conds.append("user_id = %s")
+            params.append(user_id)
+        if created_at_gte is not None:
+            conds.append("created_at >= %s")
+            params.append(created_at_gte)
+        extra = (" AND " + " AND ".join(conds)) if conds else ""
+        where = (" WHERE " + " AND ".join(conds)) if conds else ""
+
+        table = connection.ops.quote_name(Transaction._meta.db_table)
+        total = 0
+        with connection.cursor() as cursor:
+            while True:
+                cursor.execute(
+                    f"DELETE FROM {table} WHERE parent_id IS NOT NULL{extra}",
+                    params,
+                )
+                n = cursor.rowcount
+                total += n
+                if n == 0:
+                    break
+            cursor.execute(f"DELETE FROM {table}{where}", params)
+            total += cursor.rowcount
+        return total
+
     def _clean_user(self, username):
         user = self._get_user(username)
-        tx_count, _ = Transaction.objects.filter(user=user).delete()
+        tx_count = self._purge_transactions_raw(user_id=user.pk)
+        visa_intl_count, _ = VisaInternationalStatement.objects.filter(user=user).delete()
+        visa_nac_count, _ = VisaNacionalStatement.objects.filter(user=user).delete()
+        fi_count, _ = FileImport.objects.filter(user=user).delete()
         cat_count, _ = Category.objects.filter(user=user).delete()
         rp_count, _ = RecurringPattern.objects.filter(user=user).delete()
         self.stdout.write(
             self.style.SUCCESS(
-                f"Deleted {tx_count} transactions, {cat_count} categories, "
-                f"{rp_count} recurring patterns for user '{username}'."
+                f"Deleted {tx_count} transactions, {visa_intl_count} visa international statements, "
+                f"{visa_nac_count} visa nacional statements, {fi_count} file imports, "
+                f"{cat_count} categories, {rp_count} recurring patterns for user '{username}'."
             )
         )
 
     def _clean_transactions(self, username):
         user = self._get_user(username)
-        tx_count, _ = Transaction.objects.filter(user=user).delete()
+        tx_count = self._purge_transactions_raw(user_id=user.pk)
         self.stdout.write(
             self.style.SUCCESS(
                 f"Deleted {tx_count} transactions for user '{username}'."
@@ -137,10 +182,10 @@ class Command(BaseCommand):
         user = self._get_user(username)
         cutoff_dt = timezone.make_aware(datetime.combine(cutoff_date, datetime.min.time()))
 
-        tx_count, _ = Transaction.objects.filter(
-            user=user,
-            created_at__gte=cutoff_dt,
-        ).delete()
+        tx_count = self._purge_transactions_raw(
+            user_id=user.pk,
+            created_at_gte=cutoff_dt,
+        )
         visa_intl_count, _ = VisaInternationalStatement.objects.filter(
             user=user,
             period_end__gte=cutoff_date,

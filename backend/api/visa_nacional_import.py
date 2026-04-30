@@ -19,8 +19,8 @@ from .models import (
 from .recurring_match import apply_recurring_match_if_missing
 from .visa_internacional_import import (
     _decimal_from_row_field,
-    _persist_visa_created_dates_and_recurring_match,
     _visa_statement_dt,
+    transaction_date_from_iso,
     visa_skip_pago_en_efectivo,
 )
 
@@ -150,6 +150,7 @@ def import_visa_nacional_row(  # pylint: disable=too-many-return-statements,too-
                 "installment_amount": inst_amt_save,
                 "raw_data": raw_safe,
                 "imported_at": statement_dt,
+                "transaction_date": transaction_date_from_iso(row["operation_date"]),
                 "status": TransactionStatus.CONFIRMED,
                 "file_import": file_import,
                 "visa_nacional_statement": visa_statement,
@@ -159,7 +160,7 @@ def import_visa_nacional_row(  # pylint: disable=too-many-return-statements,too-
             apply_recurring_match_if_missing(user, tx.pk)
             return {"ok": "skipped", "instance": None}
 
-        _persist_visa_created_dates_and_recurring_match(user, tx, statement_dt)
+        apply_recurring_match_if_missing(user, tx.pk)
         return {"ok": "created", "instance": tx}
     except (KeyError, TypeError, ValueError) as exc:
         return {"error": str(exc)}

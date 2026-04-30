@@ -72,10 +72,10 @@ class ImportBankStatementAPITests(APITestCase):
         self.assertEqual(Decimal(t1["amount"]), Decimal("854000.00"))
         self.assertEqual(t1["source"], Source.BANK_ACCOUNT)
         self.assertEqual(t1["original_reference"], "00000000")
-        self.assertIn("2026-04-01", t1["created_at"])
+        self.assertEqual(t1["transaction_date"], "2026-04-01")
         self.assertEqual(t2["direction"], "INCOME")
         self.assertEqual(Decimal(t2["amount"]), Decimal("747040.00"))
-        self.assertIn("2026-04-02", t2["created_at"])
+        self.assertEqual(t2["transaction_date"], "2026-04-02")
         self.assertFalse(response.data["ai_categorization_attempted"])
         self.assertFalse(response.data["ai_categorization_failed"])
 

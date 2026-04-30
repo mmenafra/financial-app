@@ -113,6 +113,10 @@ function tx(
     installment_group_id: partial.installment_group_id ?? null,
     raw_data: partial.raw_data ?? null,
     imported_at: partial.imported_at ?? createdAt,
+    transaction_date:
+      partial.transaction_date !== undefined && partial.transaction_date !== null
+        ? partial.transaction_date
+        : createdAt.slice(0, 10),
     status: (partial.status as TransactionStatus | undefined) ?? 'CONFIRMED',
     parent: partial.parent ?? null,
     splits: partial.splits ?? [],
@@ -311,11 +315,12 @@ function filterByYearMonth(rows: Transaction[], year?: number, month?: number): 
     return rows;
   }
   return rows.filter((r) => {
-    const d = new Date(r.created_at);
-    if (year != null && d.getUTCFullYear() !== year) {
+    const key = r.transaction_date ?? r.created_at.slice(0, 10);
+    const [y, m] = key.split('-').map(Number);
+    if (year != null && y !== year) {
       return false;
     }
-    if (month != null && d.getUTCMonth() + 1 !== month) {
+    if (month != null && m !== month) {
       return false;
     }
     return true;
@@ -390,9 +395,11 @@ export const mockTransactionsInterceptor: HttpInterceptorFn = (req, next) => {
 
   if (isTransactionsCreate(req.url, req.method)) {
     const body = req.body as Record<string, unknown>;
-    const now = typeof body['created_at'] === 'string' && body['created_at']
-      ? body['created_at']
-      : new Date().toISOString();
+    const dateStr =
+      typeof body['transaction_date'] === 'string' && body['transaction_date']
+        ? String(body['transaction_date'])
+        : undefined;
+    const now = dateStr ? `${dateStr}T12:00:00.000Z` : new Date().toISOString();
     const suffix = String(Date.now()).slice(-12).padStart(12, '0');
     const created: Transaction = tx(suffix, now, {
       description: String(body['description'] ?? 'New transaction'),

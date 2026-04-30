@@ -24,6 +24,8 @@ export interface Transaction {
   installment_group_id: string | null;
   raw_data: Record<string, unknown> | null;
   imported_at: string | null;
+  /** Calendar posting date (YYYY-MM-DD); canonical for list filters and display. */
+  transaction_date: string | null;
   status: TransactionStatus;
   /** Set when this row is a split line; the bundle is not listed. */
   parent: string | null;
@@ -170,7 +172,7 @@ export interface CreateTransactionPayload {
   transaction_type: TransactionType;
   source: Source;
   category?: string | null;
-  created_at?: string;
+  transaction_date?: string;
 }
 
 /** Body for PATCH /api/transactions/:id/ */
@@ -181,5 +183,5 @@ export interface UpdateTransactionPayload {
   direction?: Direction;
   transaction_type?: TransactionType;
   category?: string | null;
-  created_at?: string;
+  transaction_date?: string;
 }

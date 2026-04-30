@@ -1,6 +1,6 @@
 """Tests for clean_db management command."""
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -21,9 +21,66 @@ from api.models import (
     TransactionStatus,
     TransactionType,
     VisaInternationalStatement,
+    VisaNacionalStatement,
 )
 
 User = get_user_model()
+
+
+class CleanDbUserFullTests(TestCase):
+    """``--user`` wipes the same finance tables as ``--all`` except the User row."""
+
+    def test_user_deletes_transactions_imports_and_visa_statements(self):
+        user = User.objects.create_user(
+            username="full-clean-user",
+            email="fullclean@example.com",
+            password="StrongPass123!",
+        )
+        fi_intl = FileImport.objects.create(
+            user=user,
+            source=Source.CREDIT_CARD_INTERNATIONAL,
+            file=ContentFile(b"a", name="intl.pdf"),
+            original_filename="intl.pdf",
+            status=ImportStatus.COMPLETED,
+        )
+        VisaInternationalStatement.objects.create(
+            user=user,
+            file_import=fi_intl,
+            period_start=date(2026, 1, 1),
+            period_end=date(2026, 1, 31),
+            total_amount=Decimal("100.00"),
+        )
+        fi_nac = FileImport.objects.create(
+            user=user,
+            source=Source.CREDIT_CARD_NATIONAL,
+            file=ContentFile(b"b", name="nac.pdf"),
+            original_filename="nac.pdf",
+            status=ImportStatus.COMPLETED,
+        )
+        VisaNacionalStatement.objects.create(
+            user=user,
+            file_import=fi_nac,
+            period_end=date(2026, 2, 28),
+            total_amount=Decimal("50000.00"),
+        )
+        Transaction.objects.create(
+            user=user,
+            description="Row",
+            amount=Decimal("1.00"),
+            currency="USD",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.CREDIT_CARD_INTERNATIONAL,
+            status=TransactionStatus.CONFIRMED,
+        )
+
+        call_command("clean_db", "--user", user.username)
+
+        self.assertTrue(User.objects.filter(pk=user.pk).exists())
+        self.assertFalse(Transaction.objects.filter(user=user).exists())
+        self.assertFalse(FileImport.objects.filter(user=user).exists())
+        self.assertFalse(VisaInternationalStatement.objects.filter(user=user).exists())
+        self.assertFalse(VisaNacionalStatement.objects.filter(user=user).exists())
 
 
 class CleanDbUserSinceTests(TestCase):

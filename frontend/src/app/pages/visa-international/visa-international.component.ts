@@ -184,6 +184,7 @@ export class VisaInternationalComponent {
     const cmap = this.categoriesById();
     const sorted = [...this.transactions()].sort(
       (a, b) =>
+        calendarDateKey(a).localeCompare(calendarDateKey(b)) ||
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
     return sorted.map((tx) => this.transactionToRow(tx, cmap));
@@ -231,8 +232,9 @@ export class VisaInternationalComponent {
 
   private transactionToRow(tx: Transaction, cmap: Map<string, Category>): TimelineRow {
     const cat = tx.category ? cmap.get(tx.category) : undefined;
-    const d = new Date(tx.created_at);
-    const dateLabel = `${MONTH_SHORT[d.getMonth()]} ${pad2(d.getDate())}`.toUpperCase();
+    const key = calendarDateKey(tx);
+    const [, m, d] = key.split('-').map(Number);
+    const dateLabel = `${MONTH_SHORT[m - 1]} ${pad2(d)}`.toUpperCase();
     const isSubscription = tx.matched_recurring_pattern != null;
     return {
       id: tx.id,
@@ -385,6 +387,10 @@ export class VisaInternationalComponent {
   protected onMetadataDismissed(): void {
     this.metadataTarget.set(null);
   }
+}
+
+function calendarDateKey(t: Transaction): string {
+  return t.transaction_date ?? t.created_at.slice(0, 10);
 }
 
 function pad2(n: number): string {

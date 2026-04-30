@@ -717,7 +717,7 @@ class VisaInternationalDashboardView(APIView):
                     user=user,
                     visa_international_statement=statement,
                     splits__isnull=True,
-                ).order_by("created_at")
+                ).order_by("transaction_date", "created_at")
             )
         else:
             # Legacy / pre-parent rows: no statement with this closing month — show calendar month.
@@ -726,9 +726,9 @@ class VisaInternationalDashboardView(APIView):
                     user=user,
                     source=Source.CREDIT_CARD_INTERNATIONAL,
                     splits__isnull=True,
-                    created_at__year=year,
-                    created_at__month=month,
-                ).order_by("created_at")
+                    transaction_date__year=year,
+                    transaction_date__month=month,
+                ).order_by("transaction_date", "created_at")
             )
 
         months = _visa_international_dashboard_rolling_months(year, month, 12)
@@ -842,7 +842,7 @@ class VisaNacionalDashboardView(APIView):
                     user=user,
                     visa_nacional_statement=statement,
                     splits__isnull=True,
-                ).order_by("created_at")
+                ).order_by("transaction_date", "created_at")
             )
         else:
             txs = (
@@ -850,9 +850,9 @@ class VisaNacionalDashboardView(APIView):
                     user=user,
                     source=Source.CREDIT_CARD_NATIONAL,
                     splits__isnull=True,
-                    created_at__year=year,
-                    created_at__month=month,
-                ).order_by("created_at")
+                    transaction_date__year=year,
+                    transaction_date__month=month,
+                ).order_by("transaction_date", "created_at")
             )
 
         months = _visa_international_dashboard_rolling_months(year, month, 12)
@@ -973,7 +973,7 @@ def _apply_transaction_year_filter(qs, year_raw):
         ) from err
     if year < 1 or year > 9999:
         raise ValidationError({"year": "Invalid year."})
-    return qs.filter(created_at__year=year)
+    return qs.filter(transaction_date__year=year)
 
 
 def _apply_transaction_month_filter(qs, month_raw):
@@ -987,7 +987,7 @@ def _apply_transaction_month_filter(qs, month_raw):
         ) from err
     if month < 1 or month > 12:
         raise ValidationError({"month": "Must be between 1 and 12."})
-    return qs.filter(created_at__month=month)
+    return qs.filter(transaction_date__month=month)
 
 
 def _apply_transaction_category_filter(qs, category_id, user):
@@ -1041,7 +1041,7 @@ def _filter_transactions_list_queryset(qs, query_params, user):
                 location=OpenApiParameter.QUERY,
                 required=False,
                 description=(
-                    "Filter by calendar year of `created_at` (UTC). "
+                    "Filter by calendar year of `transaction_date`. "
                     "Use together with `month` to restrict to a single month."
                 ),
                 examples=[OpenApiExample("Current year", value=2026)],
@@ -1052,7 +1052,7 @@ def _filter_transactions_list_queryset(qs, query_params, user):
                 location=OpenApiParameter.QUERY,
                 required=False,
                 description=(
-                    "Filter by calendar month (1–12) of `created_at` (UTC). "
+                    "Filter by calendar month (1–12) of `transaction_date`. "
                     "Requires `year` to be set."
                 ),
                 examples=[OpenApiExample("April", value=4)],
@@ -1130,7 +1130,9 @@ class TransactionViewSet(ModelViewSet):
             prev_month = 12 if month == 1 else month - 1
             prev_qs = Transaction.objects.filter(
                 user=request.user, splits__isnull=True
-            ).filter(created_at__year=prev_year, created_at__month=prev_month)
+            ).filter(
+                transaction_date__year=prev_year, transaction_date__month=prev_month
+            )
             prev_qs = _apply_transaction_category_filter(
                 prev_qs, request.query_params.get("category"), request.user
             )
@@ -1227,15 +1229,12 @@ class TransactionViewSet(ModelViewSet):
                 installment_group_id=None,
                 raw_data=None,
                 imported_at=bundle.imported_at,
+                transaction_date=bundle.transaction_date,
                 status=bundle.status,
                 parent=bundle,
                 file_import=bundle.file_import,
             )
             child.save()
-            Transaction.objects.filter(pk=child.pk).update(
-                created_at=bundle.created_at
-            )
-            child.refresh_from_db()
             created.append(child)
 
         out = TransactionSerializer(

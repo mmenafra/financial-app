@@ -337,6 +337,10 @@ export class TransactionsComponent {
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  protected formatTransactionCalendarDate(t: Transaction): string {
+    const iso = t.transaction_date ?? t.created_at.slice(0, 10);
+    return this.formatDate(iso);
+  }
   protected formatMoney(amount: string, currency: string): string {
     const n = Number(amount);
     try {
@@ -619,7 +623,6 @@ export class TransactionsComponent {
     const v = this.newTxForm.value;
     const direction = (v.direction ?? 'EXPENSE') as Direction;
     const txType: TransactionType = direction === 'INCOME' ? 'CREDIT' : 'DEBIT';
-    const dateVal = v.date ? new Date(v.date + 'T12:00:00').toISOString() : undefined;
     const payload: CreateTransactionPayload = {
       description: String(v.description ?? '').trim(),
       amount: round2(Number(v.amount)).toFixed(2),
@@ -628,7 +631,7 @@ export class TransactionsComponent {
       transaction_type: txType,
       source: (v.source ?? 'BANK_ACCOUNT') as Source,
       category: v.category ?? null,
-      ...(dateVal && { created_at: dateVal }),
+      ...(v.date ? { transaction_date: v.date } : {}),
     };
     this.newTxSubmitting.set(true);
     this.newTxError.set(null);

@@ -90,6 +90,7 @@ class ImportVisaInternationalAPITests(APITestCase):
         self.assertEqual(tx0["description"], "NETFLIX.COM 844-5052993")
         self.assertEqual(tx0["amount"], "16.15")
         self.assertEqual(tx0["currency"], "USD")
+        self.assertEqual(tx0["transaction_date"], "2026-02-25")
         stmt = VisaInternationalStatement.objects.get()
         self.assertEqual(stmt.period_start.isoformat(), "2026-02-24")
         self.assertEqual(stmt.period_end.isoformat(), "2026-03-23")

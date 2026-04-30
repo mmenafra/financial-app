@@ -9,6 +9,7 @@ from django.db import models
 from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 
 def _fernet_for_api_keys() -> Fernet:
@@ -317,6 +318,7 @@ class Transaction(AbstractBaseModel):
     installment_group_id = models.UUIDField(null=True, blank=True)
     raw_data = models.JSONField(null=True, blank=True)
     imported_at = models.DateTimeField(null=True, blank=True)
+    transaction_date = models.DateField(null=True, blank=True, db_index=True)
     status = models.CharField(
         max_length=10,
         choices=TransactionStatus.choices,
@@ -362,7 +364,7 @@ class Transaction(AbstractBaseModel):
     objects = TransactionManager()
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["-transaction_date", "-created_at"]
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "source", "external_id"],
@@ -374,6 +376,8 @@ class Transaction(AbstractBaseModel):
     def save(self, *args, **kwargs):
         if self._state.adding and self.external_name is None:
             self.external_name = self.description
+        if self._state.adding and self.transaction_date is None:
+            self.transaction_date = timezone.now().date()
         super().save(*args, **kwargs)
 
     def __str__(self):

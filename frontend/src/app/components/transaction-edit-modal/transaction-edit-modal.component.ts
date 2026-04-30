@@ -80,7 +80,7 @@ export class TransactionEditModalComponent {
           currency: t.currency,
           direction: t.direction,
           category: t.category ?? null,
-          date: t.created_at.slice(0, 10),
+          date: t.transaction_date ?? t.created_at.slice(0, 10),
         });
       }
       if (!t) {
@@ -112,7 +112,7 @@ export class TransactionEditModalComponent {
     const v = this.editTxForm.value;
     const direction = (v.direction ?? 'EXPENSE') as Direction;
     const txType: TransactionType = direction === 'INCOME' ? 'CREDIT' : 'DEBIT';
-    const dateVal = v.date ? new Date(v.date + 'T12:00:00').toISOString() : undefined;
+    const dateVal = v.date?.trim() || undefined;
     const payload: UpdateTransactionPayload = {
       description: String(v.description ?? '').trim(),
       amount: round2(Number(v.amount)).toFixed(2),
@@ -120,7 +120,7 @@ export class TransactionEditModalComponent {
       direction,
       transaction_type: txType,
       category: v.category ?? null,
-      ...(dateVal && { created_at: dateVal }),
+      ...(dateVal ? { transaction_date: dateVal } : {}),
     };
     this.editSubmitting.set(true);
     this.editError.set(null);
