@@ -8,6 +8,7 @@ from django.test import TestCase
 from api.models import (
     Direction,
     Frequency,
+    RecurringMatchType,
     RecurringPattern,
     Source,
     Transaction,
@@ -64,7 +65,48 @@ class RecurringMatchTests(TestCase):
             "NETFLIX.COM 844-5052993",
         )
         self.assertIsNotNone(found)
-        self.assertEqual(found.description_pattern, "NETFLIX")
+        self.assertEqual(found.description_pattern, "netflix")
+
+    def test_exact_match_full_string_only(self):
+        RecurringPattern.objects.create(
+            user=self.user,
+            description_pattern="NETFLIX.COM",
+            frequency=Frequency.MONTHLY,
+            match_type=RecurringMatchType.EXACT,
+        )
+        found = match_recurring_pattern_for_description(
+            self.user,
+            "NETFLIX.COM",
+        )
+        self.assertIsNotNone(found)
+        self.assertEqual(found.description_pattern, "netflix.com")
+
+    def test_exact_match_case_insensitive(self):
+        RecurringPattern.objects.create(
+            user=self.user,
+            description_pattern="netflix.com",
+            frequency=Frequency.MONTHLY,
+            match_type=RecurringMatchType.EXACT,
+        )
+        found = match_recurring_pattern_for_description(
+            self.user,
+            "NETFLIX.COM",
+        )
+        self.assertIsNotNone(found)
+
+    def test_exact_match_does_not_match_substring(self):
+        RecurringPattern.objects.create(
+            user=self.user,
+            description_pattern="NETFLIX.COM",
+            frequency=Frequency.MONTHLY,
+            match_type=RecurringMatchType.EXACT,
+        )
+        self.assertIsNone(
+            match_recurring_pattern_for_description(
+                self.user,
+                "NETFLIX.COM 844-5052993",
+            ),
+        )
 
     def test_other_users_patterns_ignored(self):
         RecurringPattern.objects.create(

@@ -36,6 +36,7 @@ describe('VisaInternationalComponent', () => {
     description_pattern: 'TEST',
     expected_amount: null,
     frequency: 'MONTHLY' as const,
+    match_type: 'PARTIAL' as const,
   };
 
   const txStub: Partial<TransactionService> = {

@@ -34,6 +34,7 @@
             form.get('description_pattern')!.invalid && form.get('description_pattern')!.touched
           "
           formControlName="description_pattern"
+          (blur)="trimMatchTextField()"
           autocomplete="off"
           placeholder="Substring that appears on the bank line"
         />
@@ -48,6 +49,22 @@
         ) {
           <p class="text-xs text-red-600 font-semibold m-0">Maximum 255 characters.</p>
         }
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-on-surface-variant" [attr.for]="fieldId('match')">
+          Match type
+        </label>
+        <select [id]="fieldId('match')" class="tx-input" formControlName="match_type">
+          @for (opt of matchTypeOptions; track opt.value) {
+            <option [value]="opt.value">{{ opt.label }}</option>
+          }
+        </select>
+        <p class="text-xs text-on-surface-variant font-semibold m-0">
+          <span class="text-on-surface">Partial</span>: text can appear anywhere on the line.
+          <span class="text-on-surface">Exact</span>: the whole imported name must match (case
+          ignored).
+        </p>
       </div>
 
       <div class="flex gap-3">

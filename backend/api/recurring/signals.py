@@ -16,8 +16,8 @@ from .match import (
 
 logger = logging.getLogger(__name__)
 
-# Carries ``description_pattern`` across pre_save → post_save (not a model field).
-_PREVIOUS_DESCRIPTION_PATTERN = "_recurring_previous_description_pattern"
+# Carries DB state across pre_save → post_save (not model fields).
+_PREVIOUS_RECURRING_SNAPSHOT = "_recurring_previous_pattern_snapshot"
 
 
 @receiver(pre_save, sender=RecurringPattern)
@@ -25,14 +25,13 @@ def _recurring_pattern_store_previous_description(
     instance: RecurringPattern,
     **_kwargs,
 ) -> None:
-    prev: str | None = None
+    prev: tuple[str, str] | None = None
     if RecurringPattern.objects.filter(pk=instance.pk).exists():
-        prev = (
-            RecurringPattern.objects.only("description_pattern")
-            .get(pk=instance.pk)
-            .description_pattern
+        row = RecurringPattern.objects.only("description_pattern", "match_type").get(
+            pk=instance.pk
         )
-    instance.__dict__[_PREVIOUS_DESCRIPTION_PATTERN] = prev
+        prev = (row.description_pattern, row.match_type)
+    instance.__dict__[_PREVIOUS_RECURRING_SNAPSHOT] = prev
 
 
 @receiver(post_save, sender=RecurringPattern)
@@ -41,13 +40,15 @@ def _recurring_pattern_refresh_matching_transactions(
     created: bool,
     **_kwargs,
 ) -> None:
-    prev = instance.__dict__.pop(_PREVIOUS_DESCRIPTION_PATTERN, None)
+    prev = instance.__dict__.pop(_PREVIOUS_RECURRING_SNAPSHOT, None)
     user = instance.user
     if user is None:
         return
     curr = instance.description_pattern
-    if not created and prev == curr:
-        return
+    if not created and prev is not None:
+        prev_pat, prev_mt = prev
+        if prev_pat == curr and prev_mt == instance.match_type:
+            return
 
     q = Q(matched_recurring_pattern_id=instance.pk)
     curr_s = (curr or "").strip()

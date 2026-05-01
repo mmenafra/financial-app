@@ -91,7 +91,7 @@ class SubscriptionsAPITests(APITestCase):  # pylint: disable=too-many-public-met
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         row = response.data[0]
-        self.assertEqual(row["name"], "NETFLIX%")
+        self.assertEqual(row["name"], "netflix%")
         self.assertEqual(row["currency"], "CLP")
         self.assertEqual(Decimal(row["amount"]), Decimal("14990.00"))
         self.assertEqual(row["frequency"], Frequency.MONTHLY)
@@ -261,4 +261,4 @@ class SubscriptionsAPITests(APITestCase):  # pylint: disable=too-many-public-met
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.url)
         self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["name"], "MINE%")
+        self.assertEqual(response.data[0]["name"], "mine%")

@@ -50,6 +50,10 @@ export type Source =
 
 export type TransactionStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED';
 
+export type RecurringFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+
+export type RecurringMatchType = 'PARTIAL' | 'EXACT';
+
 /** Mirrors `RecurringPatternSerializer`. */
 export interface RecurringPattern {
   id: string;
@@ -59,9 +63,8 @@ export interface RecurringPattern {
   description_pattern: string;
   expected_amount: string | null;
   frequency: RecurringFrequency;
+  match_type: RecurringMatchType;
 }
-
-export type RecurringFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 
 /** One row from GET /api/subscriptions/ (latest Visa Nacional/Intl statements). */
 export interface Subscription {
@@ -78,6 +81,7 @@ export interface CreateRecurringPatternPayload {
   description_pattern: string;
   expected_amount?: string | null;
   frequency: RecurringFrequency;
+  match_type?: RecurringMatchType;
 }
 
 /** Mirrors `CategorySerializer`. */

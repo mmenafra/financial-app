@@ -3,11 +3,13 @@ import logging
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 
 from ..imports.pipeline import copy_file_import_upload, dispatch_import_pipeline
@@ -96,7 +98,22 @@ class RecurringPatternViewSet(ModelViewSet):
         return RecurringPattern.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        try:
+            with transaction.atomic():
+                serializer.save(user=self.request.user)
+        except IntegrityError as exc:
+            raise ValidationError(
+                detail="A recurring pattern with this match text and type already exists.",
+            ) from exc
+
+    def perform_update(self, serializer):
+        try:
+            with transaction.atomic():
+                serializer.save()
+        except IntegrityError as exc:
+            raise ValidationError(
+                detail="A recurring pattern with this match text and type already exists.",
+            ) from exc
 
 
 class SubscriptionListView(APIView):

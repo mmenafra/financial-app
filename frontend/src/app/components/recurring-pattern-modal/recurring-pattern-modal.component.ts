@@ -12,7 +12,11 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
-import type { RecurringFrequency, Transaction } from '../../models/transaction.model';
+import type {
+  RecurringFrequency,
+  RecurringMatchType,
+  Transaction,
+} from '../../models/transaction.model';
 import { TransactionService } from '../../services/transaction.service';
 import { httpErrorMessage, positiveNumberValidator } from '../../utils/transaction-edit';
 
@@ -21,6 +25,11 @@ const FREQUENCIES: { value: RecurringFrequency; label: string }[] = [
   { value: 'WEEKLY', label: 'Weekly' },
   { value: 'MONTHLY', label: 'Monthly' },
   { value: 'YEARLY', label: 'Yearly' },
+];
+
+const MATCH_TYPES: { value: RecurringMatchType; label: string }[] = [
+  { value: 'PARTIAL', label: 'Partial (contains)' },
+  { value: 'EXACT', label: 'Exact (full name)' },
 ];
 
 function defaultPatternFromTransaction(tx: Transaction): string {
@@ -58,11 +67,13 @@ export class RecurringPatternModalComponent {
   protected readonly fieldId = (suffix: string) => `${this.idPrefix()}-recurring-${suffix}`;
 
   protected readonly frequencyOptions = FREQUENCIES;
+  protected readonly matchTypeOptions = MATCH_TYPES;
 
   protected readonly form = this.fb.group({
     description_pattern: ['', [Validators.required, Validators.maxLength(255)]],
     expected_amount: ['', [positiveNumberValidator]],
     frequency: ['MONTHLY' as RecurringFrequency, [Validators.required]],
+    match_type: ['PARTIAL' as RecurringMatchType, [Validators.required]],
   });
 
   constructor() {
@@ -75,6 +86,7 @@ export class RecurringPatternModalComponent {
           description_pattern: defaultPatternFromTransaction(t),
           expected_amount: t.amount ?? '',
           frequency: 'MONTHLY',
+          match_type: 'PARTIAL',
         });
       }
       if (!t) {
@@ -88,6 +100,18 @@ export class RecurringPatternModalComponent {
       return;
     }
     this.dismissed.emit();
+  }
+
+  protected trimMatchTextField(): void {
+    const c = this.form.get('description_pattern');
+    if (!c) {
+      return;
+    }
+    const v = String(c.value ?? '')
+      .trim()
+      .toLowerCase();
+    c.setValue(v, { emitEvent: false });
+    c.updateValueAndValidity({ emitEvent: true });
   }
 
   protected onBackdrop(): void {
@@ -106,8 +130,11 @@ export class RecurringPatternModalComponent {
     const v = this.form.value;
     const amtRaw = String(v.expected_amount ?? '').trim();
     const payload = {
-      description_pattern: String(v.description_pattern ?? '').trim(),
+      description_pattern: String(v.description_pattern ?? '')
+        .trim()
+        .toLowerCase(),
       frequency: v.frequency as RecurringFrequency,
+      match_type: v.match_type as RecurringMatchType,
       ...(amtRaw ? { expected_amount: amtRaw } : { expected_amount: null }),
     };
     this.submitting.set(true);

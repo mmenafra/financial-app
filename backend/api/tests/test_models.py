@@ -128,4 +128,4 @@ class ModelTests(TestCase):
             expected_amount=Decimal("9.99"),
             frequency=Frequency.MONTHLY,
         )
-        self.assertIn("NETFLIX", str(pattern))
+        self.assertIn("netflix", str(pattern))

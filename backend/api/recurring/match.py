@@ -7,7 +7,7 @@ from typing import Any
 from django.contrib.auth.models import AbstractUser
 from django.db.models import Q
 
-from ..models import RecurringPattern, Transaction
+from ..models import RecurringMatchType, RecurringPattern, Transaction
 
 
 def recurring_match_haystack(
@@ -15,7 +15,8 @@ def recurring_match_haystack(
     description: str | None,
 ) -> str:
     """
-    Stable text used for substring matching against ``RecurringPattern.description_pattern``.
+    Stable text used for substring or exact matching against stored
+    ``RecurringPattern.description_pattern`` (stored normalized: strip + lowercase).
 
     Prefer non-empty ``external_name`` (set at import / create, not updated when the user
     edits ``description``). Fall back to ``description`` for legacy rows without
@@ -51,7 +52,8 @@ def match_recurring_pattern_for_description(
 
     ``text`` is typically :func:`recurring_match_haystack` for a transaction.
 
-    Rule: case-insensitive substring match (`pattern in text`).
+    Rule: per-pattern ``match_type`` — ``PARTIAL`` is case-insensitive substring
+    (`pattern in text`); ``EXACT`` is case-insensitive full-string equality.
     Tie-break: longest `description_pattern` wins; then smallest pk for stability.
     """
     if not text or not text.strip():
@@ -62,12 +64,19 @@ def match_recurring_pattern_for_description(
         RecurringPattern.objects.filter(user=user).only(
             "id",
             "description_pattern",
+            "match_type",
         ),
     )
     matches: list[RecurringPattern] = []
     for pat in patterns:
         needle = (pat.description_pattern or "").strip().lower()
-        if needle and needle in desc_lower:
+        if not needle:
+            continue
+        if pat.match_type == RecurringMatchType.EXACT:
+            hit = needle == desc_lower
+        else:
+            hit = needle in desc_lower
+        if hit:
             matches.append(pat)
     if not matches:
         return None

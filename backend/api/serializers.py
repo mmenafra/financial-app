@@ -13,6 +13,7 @@ from .models import (
     UserProfile,
     VisaInternationalStatement,
     VisaNacionalStatement,
+    normalize_recurring_description_pattern,
 )
 
 User = get_user_model()
@@ -315,5 +316,12 @@ class RecurringPatternSerializer(serializers.ModelSerializer):
             "description_pattern",
             "expected_amount",
             "frequency",
+            "match_type",
         )
         read_only_fields = ("id", "created_at", "updated_at", "user")
+
+    def validate_description_pattern(self, value: str) -> str:
+        normalized = normalize_recurring_description_pattern(value)
+        if not normalized:
+            raise serializers.ValidationError("This field may not be blank.")
+        return normalized

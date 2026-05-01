@@ -13,6 +13,14 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 
+def normalize_recurring_description_pattern(value: str | None) -> str:
+    """Strip + lowercase for stored match text (aligns with case-insensitive matching)."""
+
+    if value is None:
+        return ""
+    return str(value).strip().lower()
+
+
 def _fernet_for_api_keys() -> Fernet:
     """Symmetric key derived from Django SECRET_KEY (server-side-at-rest encryption)."""
 
@@ -146,6 +154,11 @@ class Frequency(models.TextChoices):
     WEEKLY = "WEEKLY", "Weekly"
     MONTHLY = "MONTHLY", "Monthly"
     YEARLY = "YEARLY", "Yearly"
+
+
+class RecurringMatchType(models.TextChoices):
+    PARTIAL = "PARTIAL", "Partial"
+    EXACT = "EXACT", "Exact"
 
 
 class ImportStatus(models.TextChoices):
@@ -403,9 +416,27 @@ class RecurringPattern(AbstractBaseModel):
         blank=True,
     )
     frequency = models.CharField(max_length=10, choices=Frequency.choices)
+    match_type = models.CharField(
+        max_length=10,
+        choices=RecurringMatchType.choices,
+        default=RecurringMatchType.PARTIAL,
+    )
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "match_type", "description_pattern"],
+                condition=Q(user__isnull=False),
+                name="api_recurringpattern_user_matchtype_pattern_uniq",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        self.description_pattern = normalize_recurring_description_pattern(
+            self.description_pattern
+        )
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.description_pattern} [{self.frequency}]"
