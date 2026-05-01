@@ -10,11 +10,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import {
-  FormBuilder,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { CategorySelectComponent } from '../category-select/category-select.component';
 import type {
@@ -25,11 +21,7 @@ import type {
   UpdateTransactionPayload,
 } from '../../models/transaction.model';
 import { TransactionService } from '../../services/transaction.service';
-import {
-  httpErrorMessage,
-  positiveNumberValidator,
-  round2,
-} from '../../utils/transaction-edit';
+import { httpErrorMessage, positiveNumberValidator, round2 } from '../../utils/transaction-edit';
 
 @Component({
   selector: 'app-transaction-edit-modal',

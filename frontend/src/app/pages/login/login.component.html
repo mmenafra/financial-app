@@ -54,9 +54,7 @@
   </section>
 
   <!-- ── Right: Auth panel ──────────────────────────────────────────── -->
-  <section
-    class="flex-1 flex items-center justify-center p-6 md:p-12 lg:p-24 bg-surface"
-  >
+  <section class="flex-1 flex items-center justify-center p-6 md:p-12 lg:p-24 bg-surface">
     <div class="w-full max-w-[440px] space-y-10">
       <!-- Mobile logo -->
       <div class="flex md:hidden items-center gap-2">
@@ -87,7 +85,8 @@
               >Username</label
             >
             <div class="relative">
-              <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl"
+              <span
+                class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl"
                 >person</span
               >
               <input
@@ -121,7 +120,8 @@
               >
             </div>
             <div class="relative">
-              <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl"
+              <span
+                class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl"
                 >lock</span
               >
               <input
@@ -165,10 +165,7 @@
 
           <!-- Error message -->
           @if (errorMessage()) {
-            <div
-              class="flex items-center gap-3 p-4 bg-error-container rounded-2xl"
-              role="alert"
-            >
+            <div class="flex items-center gap-3 p-4 bg-error-container rounded-2xl" role="alert">
               <span class="material-symbols-outlined text-on-error-container text-xl">error</span>
               <p class="text-sm font-medium text-on-error-container">{{ errorMessage() }}</p>
             </div>
@@ -193,7 +190,8 @@
         <!-- Divider -->
         <div class="relative flex items-center py-2">
           <div class="flex-grow h-px bg-surface-container-highest"></div>
-          <span class="flex-shrink mx-4 text-xs font-bold uppercase tracking-[0.2em] text-on-surface-variant"
+          <span
+            class="flex-shrink mx-4 text-xs font-bold uppercase tracking-[0.2em] text-on-surface-variant"
             >Or connect via</span
           >
           <div class="flex-grow h-px bg-surface-container-highest"></div>

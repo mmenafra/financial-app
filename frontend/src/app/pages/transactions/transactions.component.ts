@@ -1,13 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, DestroyRef, HostListener, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import {
-  FormArray,
-  FormBuilder,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
+import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 
 import { CategorySelectComponent } from '../../components/category-select/category-select.component';
@@ -28,11 +22,7 @@ import type {
 } from '../../models/transaction.model';
 import { ToastService } from '../../services/toast.service';
 import { TransactionService } from '../../services/transaction.service';
-import {
-  httpErrorMessage,
-  positiveNumberValidator,
-  round2,
-} from '../../utils/transaction-edit';
+import { httpErrorMessage, positiveNumberValidator, round2 } from '../../utils/transaction-edit';
 
 const PAGE_SIZE = 100;
 const CONNECTED_SOURCES = 4;
@@ -501,7 +491,10 @@ export class TransactionsComponent {
   protected openSplitModal(t: Transaction): void {
     this.splitError.set(null);
     this.pendingSplit.set(t);
-    this.splitForm.setControl('rows', this.fb.array([this.createSplitRow(), this.createSplitRow()]));
+    this.splitForm.setControl(
+      'rows',
+      this.fb.array([this.createSplitRow(), this.createSplitRow()]),
+    );
     this.splitModalOpen.set(true);
   }
 
@@ -579,9 +572,7 @@ export class TransactionsComponent {
     const items = this.splitRows.controls.map((ctrl) => {
       const g = ctrl as FormGroup;
       const desc = String(g.get('description')?.value ?? '').trim();
-      const amountNum = round2(
-        parseAmount(String(g.get('amount')?.value ?? '').trim()) ?? 0,
-      );
+      const amountNum = round2(parseAmount(String(g.get('amount')?.value ?? '').trim()) ?? 0);
       const catRaw = g.get('category')?.value;
       const category =
         catRaw === null || catRaw === undefined || catRaw === '' ? null : String(catRaw);

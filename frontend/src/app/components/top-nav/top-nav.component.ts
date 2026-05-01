@@ -16,7 +16,8 @@ export class TopNavComponent {
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly userMenuRoot = viewChild.required<ElementRef<HTMLElement>>('userMenuRoot');
-  private readonly settingsMenuRoot = viewChild.required<ElementRef<HTMLElement>>('settingsMenuRoot');
+  private readonly settingsMenuRoot =
+    viewChild.required<ElementRef<HTMLElement>>('settingsMenuRoot');
 
   protected readonly menuOpen = signal(false);
   protected readonly settingsMenuOpen = signal(false);

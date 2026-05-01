@@ -192,9 +192,7 @@ export class CategoriesComponent {
         },
         error: (err: unknown) => {
           this.deleteSubmitting.set(false);
-          this.loadDeleteError.set(
-            this.httpErrorMessage(err) ?? 'Could not delete category.',
-          );
+          this.loadDeleteError.set(this.httpErrorMessage(err) ?? 'Could not delete category.');
         },
       });
   }

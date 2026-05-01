@@ -13,12 +13,16 @@
         </header>
 
         @if (loadError()) {
-          <div class="rounded-xl border border-red-200 bg-red-50 text-red-900 px-4 py-3 text-sm font-semibold">
+          <div
+            class="rounded-xl border border-red-200 bg-red-50 text-red-900 px-4 py-3 text-sm font-semibold"
+          >
             {{ loadError() }}
           </div>
         }
 
-        <section class="tx-summary rounded-3xl border border-outline-variant/60 bg-surface-container-low px-6 py-6">
+        <section
+          class="tx-summary rounded-3xl border border-outline-variant/60 bg-surface-container-low px-6 py-6"
+        >
           <p class="tx-summary-label m-0">Total on latest Visa statements</p>
           @if (isLoading()) {
             <p class="tx-summary-amount m-0 mt-2 text-on-surface-variant text-lg font-semibold">
@@ -35,11 +39,14 @@
           }
         </section>
 
-        <section class="rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm">
+        <section
+          class="rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm"
+        >
           <div class="px-6 py-4 border-b border-outline-variant/50">
             <h2 class="text-lg font-bold text-primary m-0 font-headline">All subscriptions</h2>
             <p class="text-xs text-on-surface-variant font-medium m-0 mt-1">
-              From recurring matches on your most recent Nacional or International Visa statement uploads.
+              From recurring matches on your most recent Nacional or International Visa statement
+              uploads.
             </p>
           </div>
 
@@ -87,7 +94,10 @@
                     </tr>
                   } @empty {
                     <tr>
-                      <td colspan="5" class="px-6 py-12 text-center text-on-surface-variant font-medium">
+                      <td
+                        colspan="5"
+                        class="px-6 py-12 text-center text-on-surface-variant font-medium"
+                      >
                         No subscriptions for those statements yet.
                       </td>
                     </tr>
@@ -96,9 +106,7 @@
               </table>
             </div>
 
-            <div
-              class="px-6 py-4 border-t border-outline-variant/50 bg-surface-container/40"
-            >
+            <div class="px-6 py-4 border-t border-outline-variant/50 bg-surface-container/40">
               <p class="text-sm text-on-surface-variant font-medium m-0">
                 @if (!isLoading()) {
                   {{ items().length }} subscription{{ items().length === 1 ? '' : 's' }}

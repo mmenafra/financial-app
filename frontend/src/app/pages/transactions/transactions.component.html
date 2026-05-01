@@ -20,7 +20,9 @@
               (change)="onMonthChange($event)"
             >
               @for (m of monthOptions; track m.value) {
-                <option [value]="m.value" [selected]="m.value === selectedMonth()">{{ m.label }}</option>
+                <option [value]="m.value" [selected]="m.value === selectedMonth()">
+                  {{ m.label }}
+                </option>
               }
             </select>
 
@@ -70,21 +72,29 @@
             class="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm flex flex-col gap-3 sm:flex-row sm:items-end"
           >
             <div class="flex flex-col gap-1 flex-1">
-              <label class="text-xs font-semibold text-on-surface-variant" for="flt-cat">Category</label>
+              <label class="text-xs font-semibold text-on-surface-variant" for="flt-cat"
+                >Category</label
+              >
               <select
                 id="flt-cat"
                 class="tx-select w-full"
                 [value]="filterCategoryId() ?? ''"
                 (change)="onFilterCategory($event)"
               >
-                <option value="" [selected]="filterCategoryId() === undefined">All categories</option>
+                <option value="" [selected]="filterCategoryId() === undefined">
+                  All categories
+                </option>
                 @for (c of categories(); track c.id) {
-                  <option [value]="c.id" [selected]="c.id === filterCategoryId()">{{ c.name }}</option>
+                  <option [value]="c.id" [selected]="c.id === filterCategoryId()">
+                    {{ c.name }}
+                  </option>
                 }
               </select>
             </div>
             <div class="flex flex-col gap-1 flex-1">
-              <label class="text-xs font-semibold text-on-surface-variant" for="flt-src">Source</label>
+              <label class="text-xs font-semibold text-on-surface-variant" for="flt-src"
+                >Source</label
+              >
               <select
                 id="flt-src"
                 class="tx-select w-full"
@@ -92,19 +102,31 @@
                 (change)="onFilterSource($event)"
               >
                 <option value="" [selected]="filterSource() === undefined">All sources</option>
-                <option value="BANK_ACCOUNT" [selected]="filterSource() === 'BANK_ACCOUNT'">Bank Account</option>
-                <option value="CREDIT_CARD_NATIONAL" [selected]="filterSource() === 'CREDIT_CARD_NATIONAL'"
-                  >Visa National</option
+                <option value="BANK_ACCOUNT" [selected]="filterSource() === 'BANK_ACCOUNT'">
+                  Bank Account
+                </option>
+                <option
+                  value="CREDIT_CARD_NATIONAL"
+                  [selected]="filterSource() === 'CREDIT_CARD_NATIONAL'"
                 >
-                <option value="CREDIT_CARD_INTERNATIONAL" [selected]="filterSource() === 'CREDIT_CARD_INTERNATIONAL'"
-                  >Visa International</option
+                  Visa National
+                </option>
+                <option
+                  value="CREDIT_CARD_INTERNATIONAL"
+                  [selected]="filterSource() === 'CREDIT_CARD_INTERNATIONAL'"
                 >
-                <option value="MERCADOPAGO" [selected]="filterSource() === 'MERCADOPAGO'">MercadoPago</option>
+                  Visa International
+                </option>
+                <option value="MERCADOPAGO" [selected]="filterSource() === 'MERCADOPAGO'">
+                  MercadoPago
+                </option>
               </select>
             </div>
             <div class="flex gap-2">
               <button type="button" class="tx-pill-btn" (click)="applyFilters()">Apply</button>
-              <button type="button" class="tx-pill-btn ghost" (click)="clearFilters()">Clear</button>
+              <button type="button" class="tx-pill-btn ghost" (click)="clearFilters()">
+                Clear
+              </button>
             </div>
           </div>
         }
@@ -120,7 +142,9 @@
                   (click)="removeFilter('category')"
                   aria-label="Remove category filter"
                 >
-                  <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 0"
+                  <span
+                    class="material-symbols-outlined text-[16px]"
+                    style="font-variation-settings: 'FILL' 0"
                     >close</span
                   >
                 </button>
@@ -135,7 +159,9 @@
                   (click)="removeFilter('source')"
                   aria-label="Remove source filter"
                 >
-                  <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 0"
+                  <span
+                    class="material-symbols-outlined text-[16px]"
+                    style="font-variation-settings: 'FILL' 0"
                     >close</span
                   >
                 </button>
@@ -145,18 +171,26 @@
         }
 
         @if (loadError()) {
-          <div class="rounded-xl border border-red-200 bg-red-50 text-red-900 px-4 py-3 text-sm font-semibold">
+          <div
+            class="rounded-xl border border-red-200 bg-red-50 text-red-900 px-4 py-3 text-sm font-semibold"
+          >
             {{ loadError() }}
           </div>
         }
 
-        <section class="tx-summary rounded-3xl border border-outline-variant/60 bg-surface-container-low px-6 py-6">
+        <section
+          class="tx-summary rounded-3xl border border-outline-variant/60 bg-surface-container-low px-6 py-6"
+        >
           <p class="tx-summary-label m-0">Total spent this month</p>
           @if (totalsByCurrency().length === 0) {
-            <p class="tx-summary-amount m-0 mt-2 text-on-surface-variant">No expenses this period</p>
+            <p class="tx-summary-amount m-0 mt-2 text-on-surface-variant">
+              No expenses this period
+            </p>
           } @else {
             @for (t of totalsByCurrency(); track t.currency) {
-              <p class="tx-summary-amount m-0 mt-2">{{ formatMoney(t.amount.toFixed(2), t.currency) }}</p>
+              <p class="tx-summary-amount m-0 mt-2">
+                {{ formatMoney(t.amount.toFixed(2), t.currency) }}
+              </p>
             }
           }
           @if (totalsByCurrency().length <= 1) {
@@ -229,7 +263,10 @@
                         </div>
                       </td>
                       <td>
-                        <span class="tx-chip inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide" [ngStyle]="categoryStyles(t)">
+                        <span
+                          class="tx-chip inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide"
+                          [ngStyle]="categoryStyles(t)"
+                        >
                           {{ categoryLabel(t) }}
                         </span>
                       </td>
@@ -240,7 +277,9 @@
                             style="font-variation-settings: 'FILL' 0"
                             >{{ sourceIcon(t.source) }}</span
                           >
-                          <span class="font-medium text-on-surface">{{ sourceLabel(t.source) }}</span>
+                          <span class="font-medium text-on-surface">{{
+                            sourceLabel(t.source)
+                          }}</span>
                         </div>
                       </td>
                       <td class="text-right font-bold whitespace-nowrap" [ngClass]="amountClass(t)">
@@ -331,7 +370,10 @@
                     </tr>
                   } @empty {
                     <tr>
-                      <td colspan="7" class="px-6 py-12 text-center text-on-surface-variant font-medium">
+                      <td
+                        colspan="7"
+                        class="px-6 py-12 text-center text-on-surface-variant font-medium"
+                      >
                         No transactions for this period.
                       </td>
                     </tr>
@@ -425,14 +467,22 @@
           id="ntx-desc"
           type="text"
           class="tx-input"
-          [class.border-red-400]="newTxForm.get('description')!.invalid && newTxForm.get('description')!.touched"
+          [class.border-red-400]="
+            newTxForm.get('description')!.invalid && newTxForm.get('description')!.touched
+          "
           formControlName="description"
           autocomplete="off"
           placeholder="e.g. Grocery store"
         />
-        @if (newTxForm.get('description')!.touched && newTxForm.get('description')!.hasError('required')) {
+        @if (
+          newTxForm.get('description')!.touched &&
+          newTxForm.get('description')!.hasError('required')
+        ) {
           <p class="text-xs text-red-600 font-semibold m-0">Description is required.</p>
-        } @else if (newTxForm.get('description')!.touched && newTxForm.get('description')!.hasError('maxlength')) {
+        } @else if (
+          newTxForm.get('description')!.touched &&
+          newTxForm.get('description')!.hasError('maxlength')
+        ) {
           <p class="text-xs text-red-600 font-semibold m-0">Maximum 255 characters.</p>
         }
       </div>
@@ -447,19 +497,27 @@
             type="text"
             inputmode="decimal"
             class="tx-input"
-            [class.border-red-400]="newTxForm.get('amount')!.invalid && newTxForm.get('amount')!.touched"
+            [class.border-red-400]="
+              newTxForm.get('amount')!.invalid && newTxForm.get('amount')!.touched
+            "
             formControlName="amount"
             autocomplete="off"
             placeholder="0.00"
           />
           @if (newTxForm.get('amount')!.touched && newTxForm.get('amount')!.hasError('required')) {
             <p class="text-xs text-red-600 font-semibold m-0">Amount is required.</p>
-          } @else if (newTxForm.get('amount')!.touched && newTxForm.get('amount')!.hasError('positiveNumber')) {
-            <p class="text-xs text-red-600 font-semibold m-0">Enter a valid amount greater than 0.</p>
+          } @else if (
+            newTxForm.get('amount')!.touched && newTxForm.get('amount')!.hasError('positiveNumber')
+          ) {
+            <p class="text-xs text-red-600 font-semibold m-0">
+              Enter a valid amount greater than 0.
+            </p>
           }
         </div>
         <div class="flex flex-col gap-1 w-28">
-          <label class="text-xs font-semibold text-on-surface-variant" for="ntx-currency">Currency</label>
+          <label class="text-xs font-semibold text-on-surface-variant" for="ntx-currency"
+            >Currency</label
+          >
           <select id="ntx-currency" class="tx-input" formControlName="currency">
             <option value="USD">USD</option>
             <option value="CLP">CLP</option>
@@ -469,7 +527,9 @@
 
       <div class="flex gap-3">
         <div class="flex flex-col gap-1 flex-1">
-          <label class="text-xs font-semibold text-on-surface-variant" for="ntx-direction">Type</label>
+          <label class="text-xs font-semibold text-on-surface-variant" for="ntx-direction"
+            >Type</label
+          >
           <select id="ntx-direction" class="tx-input" formControlName="direction">
             <option value="EXPENSE">Expense</option>
             <option value="INCOME">Income</option>
@@ -477,12 +537,7 @@
         </div>
         <div class="flex flex-col gap-1 flex-1">
           <label class="text-xs font-semibold text-on-surface-variant" for="ntx-date">Date</label>
-          <input
-            id="ntx-date"
-            type="date"
-            class="tx-input"
-            formControlName="date"
-          />
+          <input id="ntx-date" type="date" class="tx-input" formControlName="date" />
         </div>
       </div>
 
@@ -497,7 +552,9 @@
       </div>
 
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-semibold text-on-surface-variant" for="ntx-category">Category</label>
+        <label class="text-xs font-semibold text-on-surface-variant" for="ntx-category"
+          >Category</label
+        >
         <app-category-select
           [categories]="categories()"
           controlId="ntx-category"
@@ -510,14 +567,15 @@
       }
 
       <div class="flex flex-wrap gap-2 justify-end pt-1">
-        <button type="button" class="tx-pill-btn ghost" (click)="closeNewTxModal()" [disabled]="newTxSubmitting()">
-          Cancel
-        </button>
         <button
-          type="submit"
-          class="tx-pill-btn"
+          type="button"
+          class="tx-pill-btn ghost"
+          (click)="closeNewTxModal()"
           [disabled]="newTxSubmitting()"
         >
+          Cancel
+        </button>
+        <button type="submit" class="tx-pill-btn" [disabled]="newTxSubmitting()">
           {{ newTxSubmitting() ? 'Saving…' : 'Add Transaction' }}
         </button>
       </div>
@@ -562,10 +620,16 @@
         >delete_forever</span
       >
       <div>
-        <h2 id="tx-delete-title" class="text-xl font-extrabold text-on-surface m-0 font-headline">Delete transaction?</h2>
+        <h2 id="tx-delete-title" class="text-xl font-extrabold text-on-surface m-0 font-headline">
+          Delete transaction?
+        </h2>
         <p class="text-sm text-on-surface-variant font-semibold m-0 mt-1">
-          "<span class="text-on-surface">{{ tx.description }}</span>" —
-          <span [class]="tx.direction === 'INCOME' ? 'amount-income' : 'amount-expense'" class="font-bold">
+          "<span class="text-on-surface">{{ tx.description }}</span
+          >" —
+          <span
+            [class]="tx.direction === 'INCOME' ? 'amount-income' : 'amount-expense'"
+            class="font-bold"
+          >
             {{ displayAmount(tx) }}
           </span>
           on {{ formatTransactionCalendarDate(tx) }}
@@ -577,13 +641,21 @@
       <p class="text-sm font-semibold text-red-600 m-0 mt-4">{{ deleteError() }}</p>
     }
     <div class="flex flex-wrap gap-2 justify-end pt-5">
-      <button type="button" class="tx-pill-btn ghost" (click)="closeDeleteModal()" [disabled]="deleteSubmitting()">
+      <button
+        type="button"
+        class="tx-pill-btn ghost"
+        (click)="closeDeleteModal()"
+        [disabled]="deleteSubmitting()"
+      >
         Cancel
       </button>
       <button
         type="button"
         class="tx-pill-btn"
-        style="background-color: var(--color-error, #dc2626); border-color: var(--color-error, #dc2626);"
+        style="
+          background-color: var(--color-error, #dc2626);
+          border-color: var(--color-error, #dc2626);
+        "
         (click)="confirmDelete()"
         [disabled]="deleteSubmitting()"
       >
@@ -594,116 +666,134 @@
 }
 
 @if (splitModalOpen() && pendingSplit(); as bundle) {
-    <div
-      class="tx-modal-backdrop"
-      role="button"
-      tabindex="0"
-      aria-label="Close dialog"
-      (click)="!splitSubmitting() && closeSplitModal()"
-      (keydown.enter)="!splitSubmitting() && closeSplitModal()"
-      (keydown.space)="$event.preventDefault(); !splitSubmitting() && closeSplitModal()"
-    ></div>
-    <div class="tx-modal tx-modal--wide" role="dialog" aria-modal="true" aria-labelledby="tx-split-title">
-      <h2 id="tx-split-title" class="text-xl font-extrabold text-primary m-0 font-headline">
-        Split transaction: <span class="text-on-surface font-bold">{{ bundle.description }}</span>
-      </h2>
-      <p class="text-sm text-on-surface-variant font-semibold m-0 mt-2">
-        Original amount:
-        <span class="text-on-surface">{{ formatMoney(bundle.amount, bundle.currency) }}</span>
-        — split lines must add up to this total exactly.
-      </p>
-      <form class="mt-4 flex flex-col gap-3" [formGroup]="splitForm" (ngSubmit)="confirmSplit()">
-        <div class="flex flex-col gap-3" formArrayName="rows">
-          @for (ctrl of splitRows.controls; track $index) {
-            <div
-              class="rounded-2xl border border-outline-variant/60 bg-surface-container/30 p-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end"
-              [formGroup]="$any(ctrl)"
-            >
-              <div class="flex flex-col gap-1 flex-1 min-w-[8rem]">
-                <label class="text-xs font-semibold text-on-surface-variant" [attr.for]="'tx-split-desc-' + $index"
-                  >Description</label
-                >
-                <input
-                  [id]="'tx-split-desc-' + $index"
-                  type="text"
-                  class="tx-input"
-                  formControlName="description"
-                  autocomplete="off"
-                  placeholder="e.g. Electric"
-                />
-              </div>
-              <div class="flex flex-col gap-1 w-full sm:w-28">
-                <label class="text-xs font-semibold text-on-surface-variant" [attr.for]="'tx-split-amt-' + $index"
-                  >Amount</label
-                >
-                <input
-                  [id]="'tx-split-amt-' + $index"
-                  type="text"
-                  inputmode="decimal"
-                  class="tx-input"
-                  formControlName="amount"
-                  autocomplete="off"
-                  placeholder="0.00"
-                />
-              </div>
-              <div class="flex flex-col gap-1 flex-1 min-w-[8rem]">
-                <label
-                  class="text-xs font-semibold text-on-surface-variant"
-                  [attr.for]="'tx-split-cat-' + $index"
-                  >Category</label
-                >
-                <app-category-select
-                  [categories]="categories()"
-                  [controlId]="'tx-split-cat-' + $index"
-                  formControlName="category"
-                />
-              </div>
-              <div class="flex gap-1 justify-end sm:pb-0.5">
-                @if (splitRows.length > 2) {
-                  <button
-                    type="button"
-                    class="tx-pill-btn ghost text-sm py-2"
-                    (click)="removeSplitRow($index)"
-                    [disabled]="splitSubmitting()"
-                  >
-                    Remove
-                  </button>
-                }
-              </div>
+  <div
+    class="tx-modal-backdrop"
+    role="button"
+    tabindex="0"
+    aria-label="Close dialog"
+    (click)="!splitSubmitting() && closeSplitModal()"
+    (keydown.enter)="!splitSubmitting() && closeSplitModal()"
+    (keydown.space)="$event.preventDefault(); !splitSubmitting() && closeSplitModal()"
+  ></div>
+  <div
+    class="tx-modal tx-modal--wide"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="tx-split-title"
+  >
+    <h2 id="tx-split-title" class="text-xl font-extrabold text-primary m-0 font-headline">
+      Split transaction: <span class="text-on-surface font-bold">{{ bundle.description }}</span>
+    </h2>
+    <p class="text-sm text-on-surface-variant font-semibold m-0 mt-2">
+      Original amount:
+      <span class="text-on-surface">{{ formatMoney(bundle.amount, bundle.currency) }}</span>
+      — split lines must add up to this total exactly.
+    </p>
+    <form class="mt-4 flex flex-col gap-3" [formGroup]="splitForm" (ngSubmit)="confirmSplit()">
+      <div class="flex flex-col gap-3" formArrayName="rows">
+        @for (ctrl of splitRows.controls; track $index) {
+          <div
+            class="rounded-2xl border border-outline-variant/60 bg-surface-container/30 p-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end"
+            [formGroup]="$any(ctrl)"
+          >
+            <div class="flex flex-col gap-1 flex-1 min-w-[8rem]">
+              <label
+                class="text-xs font-semibold text-on-surface-variant"
+                [attr.for]="'tx-split-desc-' + $index"
+                >Description</label
+              >
+              <input
+                [id]="'tx-split-desc-' + $index"
+                type="text"
+                class="tx-input"
+                formControlName="description"
+                autocomplete="off"
+                placeholder="e.g. Electric"
+              />
             </div>
-          }
-        </div>
-        <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
-          <button
-            type="button"
-            class="tx-pill-btn ghost"
-            (click)="addSplitRow()"
-            [disabled]="splitSubmitting()"
-          >
-            <span class="material-symbols-outlined text-[18px]">add</span>
-            Add line
-          </button>
-          <p class="m-0 text-sm font-bold" [class.text-red-600]="!splitAmountsMatchTarget()" [class.text-on-surface]="splitAmountsMatchTarget()">
-            Total:
-            {{ formatMoney(splitRowsTotal().toFixed(2), bundle.currency) }}
-            / {{ formatMoney(bundle.amount, bundle.currency) }}
-          </p>
-        </div>
-        @if (splitError()) {
-          <p class="text-sm font-semibold text-red-600 m-0">{{ splitError() }}</p>
+            <div class="flex flex-col gap-1 w-full sm:w-28">
+              <label
+                class="text-xs font-semibold text-on-surface-variant"
+                [attr.for]="'tx-split-amt-' + $index"
+                >Amount</label
+              >
+              <input
+                [id]="'tx-split-amt-' + $index"
+                type="text"
+                inputmode="decimal"
+                class="tx-input"
+                formControlName="amount"
+                autocomplete="off"
+                placeholder="0.00"
+              />
+            </div>
+            <div class="flex flex-col gap-1 flex-1 min-w-[8rem]">
+              <label
+                class="text-xs font-semibold text-on-surface-variant"
+                [attr.for]="'tx-split-cat-' + $index"
+                >Category</label
+              >
+              <app-category-select
+                [categories]="categories()"
+                [controlId]="'tx-split-cat-' + $index"
+                formControlName="category"
+              />
+            </div>
+            <div class="flex gap-1 justify-end sm:pb-0.5">
+              @if (splitRows.length > 2) {
+                <button
+                  type="button"
+                  class="tx-pill-btn ghost text-sm py-2"
+                  (click)="removeSplitRow($index)"
+                  [disabled]="splitSubmitting()"
+                >
+                  Remove
+                </button>
+              }
+            </div>
+          </div>
         }
-        <div class="flex flex-wrap gap-2 justify-end pt-2">
-          <button type="button" class="tx-pill-btn ghost" (click)="closeSplitModal()" [disabled]="splitSubmitting()">
-            Cancel
-          </button>
-          <button
-            type="submit"
-            class="tx-pill-btn"
-            [disabled]="splitSubmitting() || !canSubmitSplit()"
-          >
-            {{ splitSubmitting() ? 'Splitting…' : 'Confirm split' }}
-          </button>
-        </div>
-      </form>
-    </div>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+        <button
+          type="button"
+          class="tx-pill-btn ghost"
+          (click)="addSplitRow()"
+          [disabled]="splitSubmitting()"
+        >
+          <span class="material-symbols-outlined text-[18px]">add</span>
+          Add line
+        </button>
+        <p
+          class="m-0 text-sm font-bold"
+          [class.text-red-600]="!splitAmountsMatchTarget()"
+          [class.text-on-surface]="splitAmountsMatchTarget()"
+        >
+          Total:
+          {{ formatMoney(splitRowsTotal().toFixed(2), bundle.currency) }}
+          / {{ formatMoney(bundle.amount, bundle.currency) }}
+        </p>
+      </div>
+      @if (splitError()) {
+        <p class="text-sm font-semibold text-red-600 m-0">{{ splitError() }}</p>
+      }
+      <div class="flex flex-wrap gap-2 justify-end pt-2">
+        <button
+          type="button"
+          class="tx-pill-btn ghost"
+          (click)="closeSplitModal()"
+          [disabled]="splitSubmitting()"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="tx-pill-btn"
+          [disabled]="splitSubmitting() || !canSubmitSplit()"
+        >
+          {{ splitSubmitting() ? 'Splitting…' : 'Confirm split' }}
+        </button>
+      </div>
+    </form>
+  </div>
 }

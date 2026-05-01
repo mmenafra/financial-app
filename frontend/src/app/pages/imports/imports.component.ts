@@ -1,12 +1,5 @@
 import { CommonModule } from '@angular/common';
-import {
-  Component,
-  DestroyRef,
-  HostListener,
-  computed,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { ImportModalComponent } from '../../components/import-modal/import-modal.component';
@@ -33,12 +26,7 @@ const SOURCE_LABELS: Record<Source, string> = {
 @Component({
   selector: 'app-imports',
   standalone: true,
-  imports: [
-    CommonModule,
-    ImportModalComponent,
-    SidebarComponent,
-    TopNavComponent,
-  ],
+  imports: [CommonModule, ImportModalComponent, SidebarComponent, TopNavComponent],
   templateUrl: './imports.component.html',
   styleUrl: './imports.component.scss',
 })
@@ -60,9 +48,7 @@ export class ImportsComponent {
   protected readonly rerunResultModalOpen = signal(false);
   /** Set when POST re-run succeeds; drives source-specific modal copy via `rerunModalPreset`. */
   protected readonly rerunModalSource = signal<Source>('BANK_ACCOUNT');
-  protected readonly prefilledImportResult = signal<BankStatementImportResult | null>(
-    null,
-  );
+  protected readonly prefilledImportResult = signal<BankStatementImportResult | null>(null);
 
   protected readonly rerunModalPreset = computed(() =>
     presetsForImportSource(this.rerunModalSource()),

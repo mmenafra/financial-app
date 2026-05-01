@@ -167,10 +167,7 @@ export class TransactionService {
   }
 
   /** Visa Nacional page: statement, transactions, and 12 rolling monthly totals (CLP). */
-  getVisaNacionalDashboard(
-    year: number,
-    month: number,
-  ): Observable<VisaNacionalDashboardResponse> {
+  getVisaNacionalDashboard(year: number, month: number): Observable<VisaNacionalDashboardResponse> {
     const params = new HttpParams().set('year', String(year)).set('month', String(month));
     return this.http.get<VisaNacionalDashboardResponse>(
       `${environment.apiUrl}/api/visa-nacional/dashboard/`,
@@ -179,29 +176,20 @@ export class TransactionService {
   }
 
   createTransaction(payload: CreateTransactionPayload): Observable<Transaction> {
-    return this.http.post<Transaction>(
-      `${environment.apiUrl}/api/transactions/`,
-      payload,
-    );
+    return this.http.post<Transaction>(`${environment.apiUrl}/api/transactions/`, payload);
   }
 
   splitTransaction(id: string, items: SplitItem[]): Observable<Transaction[]> {
-    return this.http.post<Transaction[]>(
-      `${environment.apiUrl}/api/transactions/${id}/split/`,
-      { items },
-    );
+    return this.http.post<Transaction[]>(`${environment.apiUrl}/api/transactions/${id}/split/`, {
+      items,
+    });
   }
 
   updateTransaction(id: string, payload: UpdateTransactionPayload): Observable<Transaction> {
-    return this.http.patch<Transaction>(
-      `${environment.apiUrl}/api/transactions/${id}/`,
-      payload,
-    );
+    return this.http.patch<Transaction>(`${environment.apiUrl}/api/transactions/${id}/`, payload);
   }
 
   deleteTransaction(id: string): Observable<void> {
-    return this.http.delete<void>(
-      `${environment.apiUrl}/api/transactions/${id}/`,
-    );
+    return this.http.delete<void>(`${environment.apiUrl}/api/transactions/${id}/`);
   }
 }

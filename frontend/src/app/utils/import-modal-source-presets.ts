@@ -26,11 +26,10 @@ export const IMPORT_SOURCE_PRESETS: Record<
   MERCADOPAGO: {
     accept: '.dat,.pdf,.csv',
     modalTitle: 'Import',
-    modalDescription:
-      'Re-process this import to view results and categorize transactions.',
+    modalDescription: 'Re-process this import to view results and categorize transactions.',
   },
 };
 
-export function presetsForImportSource(source: Source): typeof IMPORT_SOURCE_PRESETS[Source] {
+export function presetsForImportSource(source: Source): (typeof IMPORT_SOURCE_PRESETS)[Source] {
   return IMPORT_SOURCE_PRESETS[source] ?? IMPORT_SOURCE_PRESETS.BANK_ACCOUNT;
 }

@@ -152,9 +152,7 @@ export class IncomeComponent {
     return `Twelve-month income totals, ending ${MONTH_SHORT[d.getMonth()]} ${d.getFullYear()}.`;
   });
 
-  protected readonly highlightMonthIndex = computed(() =>
-    Math.max(0, this.chartBars().length - 1),
-  );
+  protected readonly highlightMonthIndex = computed(() => Math.max(0, this.chartBars().length - 1));
 
   constructor() {
     this.reload();

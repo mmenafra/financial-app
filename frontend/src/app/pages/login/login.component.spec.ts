@@ -169,10 +169,9 @@ describe('LoginComponent', () => {
       component.form.setValue({ username: 'wrong', password: 'bad', rememberMe: false });
       component.submit();
 
-      httpMock.expectOne(API_SIGNIN).flush(
-        { detail: 'Invalid credentials.' },
-        { status: 401, statusText: 'Unauthorized' },
-      );
+      httpMock
+        .expectOne(API_SIGNIN)
+        .flush({ detail: 'Invalid credentials.' }, { status: 401, statusText: 'Unauthorized' });
       fixture.detectChanges();
 
       expect(component.errorMessage()).toBe('Invalid username or password. Please try again.');
@@ -187,10 +186,9 @@ describe('LoginComponent', () => {
       component.form.setValue({ username: 'user', password: 'pass', rememberMe: false });
       component.submit();
 
-      httpMock.expectOne(API_SIGNIN).flush(
-        { detail: 'Server error.' },
-        { status: 500, statusText: 'Internal Server Error' },
-      );
+      httpMock
+        .expectOne(API_SIGNIN)
+        .flush({ detail: 'Server error.' }, { status: 500, statusText: 'Internal Server Error' });
       fixture.detectChanges();
 
       expect(component.errorMessage()).toBe('Something went wrong. Please try again later.');
@@ -203,10 +201,9 @@ describe('LoginComponent', () => {
 
       component.form.setValue({ username: 'wrong', password: 'bad', rememberMe: false });
       component.submit();
-      httpMock.expectOne(API_SIGNIN).flush(
-        { detail: 'Invalid credentials.' },
-        { status: 401, statusText: 'Unauthorized' },
-      );
+      httpMock
+        .expectOne(API_SIGNIN)
+        .flush({ detail: 'Invalid credentials.' }, { status: 401, statusText: 'Unauthorized' });
       fixture.detectChanges();
 
       const alert = fixture.debugElement.query(By.css('[role="alert"]'));
@@ -223,10 +220,7 @@ describe('LoginComponent', () => {
       component.submit();
       expect(component.loading()).toBe(true);
 
-      httpMock.expectOne(API_SIGNIN).flush(
-        {},
-        { status: 401, statusText: 'Unauthorized' },
-      );
+      httpMock.expectOne(API_SIGNIN).flush({}, { status: 401, statusText: 'Unauthorized' });
 
       expect(component.loading()).toBe(false);
     });

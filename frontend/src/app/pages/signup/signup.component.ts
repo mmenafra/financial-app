@@ -15,9 +15,7 @@ import { AuthService } from '../../services/auth.service';
 const GOOGLE_SCRIPT_WAIT_MS = 10_000;
 const GOOGLE_SCRIPT_POLL_MS = 50;
 
-const passwordsMatchValidator: ValidatorFn = (
-  group: AbstractControl,
-): ValidationErrors | null => {
+const passwordsMatchValidator: ValidatorFn = (group: AbstractControl): ValidationErrors | null => {
   const password = group.get('password')?.value as string | undefined;
   const passwordConfirm = group.get('passwordConfirm')?.value as string | undefined;
   if (!passwordConfirm) {
@@ -215,9 +213,7 @@ export class SignupComponent implements OnInit {
         this.loading.set(false);
         if (err.status === 400) {
           const msg = firstApiErrorMessage(err.error);
-          this.errorMessage.set(
-            msg ?? 'Please check your details and try again.',
-          );
+          this.errorMessage.set(msg ?? 'Please check your details and try again.');
         } else {
           this.errorMessage.set('Something went wrong. Please try again later.');
         }

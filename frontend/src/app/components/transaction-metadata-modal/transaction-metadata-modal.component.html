@@ -18,12 +18,14 @@
       Transaction metadata
     </h2>
     <p class="text-sm text-on-surface-variant font-semibold m-0 mt-2">
-      Raw API object for debugging (<span class="font-mono text-on-surface">{{ mtx.id }}</span>).
+      Raw API object for debugging (<span class="font-mono text-on-surface">{{ mtx.id }}</span
+      >).
     </p>
     <pre
       class="mt-4 max-h-[min(24rem,50vh)] overflow-auto rounded-xl border border-outline-variant/50 bg-surface-container/30 p-4 text-xs font-mono text-on-surface m-0 whitespace-pre"
       tabindex="0"
-    >{{ debugJson(mtx) }}</pre>
+      >{{ debugJson(mtx) }}</pre
+    >
     <div class="flex flex-wrap gap-2 justify-end pt-5">
       <button type="button" class="tx-pill-btn" (click)="closeModal()">Close</button>
     </div>

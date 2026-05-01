@@ -77,13 +77,7 @@ function tx(
   createdAt: string,
   partial: Pick<
     Transaction,
-    | 'description'
-    | 'amount'
-    | 'currency'
-    | 'transaction_type'
-    | 'direction'
-    | 'category'
-    | 'source'
+    'description' | 'amount' | 'currency' | 'transaction_type' | 'direction' | 'category' | 'source'
   > &
     Partial<Transaction>,
 ): Transaction {
@@ -192,18 +186,14 @@ function buildAllMockTransactions(): Transaction[] {
     for (let k = 0; k < 9 && n < 248; k++) {
       const direction: Direction = n % 12 === 0 ? 'INCOME' : 'EXPENSE';
       const amountNum =
-        direction === 'INCOME'
-          ? 2000 + (n % 50) * 100
-          : 12.5 + (n % 97) * 3.17 + (k % 5) * 10;
+        direction === 'INCOME' ? 2000 + (n % 50) * 100 : 12.5 + (n % 97) * 3.17 + (k % 5) * 10;
       const amount = amountNum.toFixed(2);
       const createdAt = `2026-04-${String(d).padStart(2, '0')}T${String((10 + k) % 24).padStart(2, '0')}:15:00Z`;
       const suffix = String(n + 1).padStart(12, '0');
       extra.push(
         tx(suffix, createdAt, {
           description:
-            direction === 'INCOME'
-              ? `Transfer in #${n}`
-              : `Card purchase ${n} — Merchant ${k}`,
+            direction === 'INCOME' ? `Transfer in #${n}` : `Card purchase ${n} — Merchant ${k}`,
           amount,
           currency: n % 7 === 0 ? 'USD' : 'CLP',
           transaction_type: types[n % types.length],
@@ -226,15 +216,19 @@ function buildAllMockTransactions(): Transaction[] {
       const amountNum = 18.25 + (s % 89) * 4.11 + j * 3;
       const suffix = `9${String(s + 1).padStart(11, '0')}`;
       march.push(
-        tx(suffix, `2026-03-${String(d).padStart(2, '0')}T${String((8 + j) % 24).padStart(2, '0')}:20:00Z`, {
-          description: `March spend ${s + 1}`,
-          amount: amountNum.toFixed(2),
-          currency: s % 6 === 0 ? 'USD' : 'CLP',
-          transaction_type: 'DEBIT',
-          direction: 'EXPENSE',
-          category: categoryIds[s % categoryIds.length],
-          source: sources[s % sources.length],
-        }),
+        tx(
+          suffix,
+          `2026-03-${String(d).padStart(2, '0')}T${String((8 + j) % 24).padStart(2, '0')}:20:00Z`,
+          {
+            description: `March spend ${s + 1}`,
+            amount: amountNum.toFixed(2),
+            currency: s % 6 === 0 ? 'USD' : 'CLP',
+            transaction_type: 'DEBIT',
+            direction: 'EXPENSE',
+            category: categoryIds[s % categoryIds.length],
+            source: sources[s % sources.length],
+          },
+        ),
       );
       s++;
     }

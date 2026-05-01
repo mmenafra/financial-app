@@ -1,12 +1,5 @@
 import { CommonModule } from '@angular/common';
-import {
-  Component,
-  DestroyRef,
-  HostListener,
-  computed,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription } from 'rxjs';
 
@@ -50,7 +43,20 @@ interface ChartBarPoint {
   label: string;
 }
 
-const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
+const MONTH_SHORT = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+] as const;
 
 /** Multi-payment installments only; 1/1 is a single charge, not shown as installment. */
 function isMultiInstallment(
@@ -233,7 +239,8 @@ export class VisaNacionalComponent {
     const st = this.currentStatement();
     if (st) {
       const p1 = new Date(`${st.period_end}T12:00:00`);
-      const b = `${MONTH_SHORT[p1.getMonth()]} ${pad2(p1.getDate())}, ${p1.getFullYear()}`.toUpperCase();
+      const b =
+        `${MONTH_SHORT[p1.getMonth()]} ${pad2(p1.getDate())}, ${p1.getFullYear()}`.toUpperCase();
       return `CURRENT PERIOD: ${b}`;
     }
     const y = this.selectedYear();
@@ -243,9 +250,7 @@ export class VisaNacionalComponent {
     return `CURRENT PERIOD: ${mon} 01 - ${mon} ${pad2(lastDay)}, ${y}`;
   });
 
-  protected readonly highlightMonthIndex = computed(() =>
-    Math.max(0, this.chartBars().length - 1),
-  );
+  protected readonly highlightMonthIndex = computed(() => Math.max(0, this.chartBars().length - 1));
 
   private transactionToRow(tx: Transaction, cmap: Map<string, Category>): TimelineRow {
     const cat = tx.category ? cmap.get(tx.category) : undefined;
@@ -254,17 +259,14 @@ export class VisaNacionalComponent {
     const dateLabel = `${MONTH_SHORT[m - 1]} ${pad2(d)}`.toUpperCase();
     const isSubscription = tx.matched_recurring_pattern != null;
     const isInstallment = Boolean(
-      tx.is_installment &&
-        isMultiInstallment(tx.installment_current, tx.installment_total),
+      tx.is_installment && isMultiInstallment(tx.installment_current, tx.installment_total),
     );
     const parts: string[] = [];
     if (isSubscription) {
       parts.push('Online Subscription');
     }
     if (isInstallment) {
-      parts.push(
-        `Installment ${tx.installment_current} of ${tx.installment_total}`,
-      );
+      parts.push(`Installment ${tx.installment_current} of ${tx.installment_total}`);
     }
     return {
       id: tx.id,
@@ -343,7 +345,9 @@ export class VisaNacionalComponent {
 
   protected onVisaImportDone(): void {
     this.loadTimeline();
-    this.transactionService.getRecurringPatterns().subscribe((pats) => this.recurringPatterns.set(pats));
+    this.transactionService
+      .getRecurringPatterns()
+      .subscribe((pats) => this.recurringPatterns.set(pats));
   }
 
   protected onVisaImportReviewCompleted(): void {
@@ -399,7 +403,9 @@ export class VisaNacionalComponent {
     this.editTarget.set(null);
     this.toast.success('Changes saved');
     this.loadTimeline();
-    this.transactionService.getRecurringPatterns().subscribe((pats) => this.recurringPatterns.set(pats));
+    this.transactionService
+      .getRecurringPatterns()
+      .subscribe((pats) => this.recurringPatterns.set(pats));
   }
 
   protected onMetaDataRow(row: TimelineRow, event: MouseEvent): void {
@@ -428,7 +434,9 @@ export class VisaNacionalComponent {
     this.recurringPatternTarget.set(null);
     this.toast.success('Recurring pattern saved');
     this.loadTimeline();
-    this.transactionService.getRecurringPatterns().subscribe((pats) => this.recurringPatterns.set(pats));
+    this.transactionService
+      .getRecurringPatterns()
+      .subscribe((pats) => this.recurringPatterns.set(pats));
   }
 
   protected onMetadataDismissed(): void {

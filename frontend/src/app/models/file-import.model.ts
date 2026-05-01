@@ -1,8 +1,4 @@
-import type {
-  BankStatementImportResult,
-  PaginatedResponse,
-  Source,
-} from './transaction.model';
+import type { BankStatementImportResult, PaginatedResponse, Source } from './transaction.model';
 
 /** Mirrors `FileImportSerializer` / `FileImport` model. */
 export type ImportRecordStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';

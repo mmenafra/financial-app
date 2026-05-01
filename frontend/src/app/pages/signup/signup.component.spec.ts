@@ -134,9 +134,7 @@ describe('SignupComponent', () => {
       });
       component.submit();
 
-      httpMock
-        .expectOne(API_SIGNUP)
-        .flush(MOCK_SUCCESS, { status: 201, statusText: 'Created' });
+      httpMock.expectOne(API_SIGNUP).flush(MOCK_SUCCESS, { status: 201, statusText: 'Created' });
 
       expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
     });
@@ -155,10 +153,12 @@ describe('SignupComponent', () => {
       });
       component.submit();
 
-      httpMock.expectOne(API_SIGNUP).flush(
-        { email: ['A user with this email already exists.'] },
-        { status: 400, statusText: 'Bad Request' },
-      );
+      httpMock
+        .expectOne(API_SIGNUP)
+        .flush(
+          { email: ['A user with this email already exists.'] },
+          { status: 400, statusText: 'Bad Request' },
+        );
       fixture.detectChanges();
 
       expect(component.errorMessage()).toBe('A user with this email already exists.');

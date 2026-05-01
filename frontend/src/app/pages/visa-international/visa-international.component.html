@@ -20,7 +20,9 @@
               (change)="onMonthChange($event)"
             >
               @for (m of monthOptions; track m.value) {
-                <option [value]="m.value" [selected]="m.value === selectedMonth()">{{ m.label }}</option>
+                <option [value]="m.value" [selected]="m.value === selectedMonth()">
+                  {{ m.label }}
+                </option>
               }
             </select>
 
@@ -69,7 +71,9 @@
             </div>
 
             <div class="flex flex-wrap items-end gap-3">
-              <p class="vi-forecast-amount m-0 font-headline text-4xl font-extrabold tracking-tight text-primary">
+              <p
+                class="vi-forecast-amount m-0 font-headline text-4xl font-extrabold tracking-tight text-primary"
+              >
                 {{ formatUsd(periodExpenseTotal()) }}
               </p>
               @if (vsLastMonthPct() !== null) {
@@ -85,11 +89,7 @@
               }
             </div>
 
-            <div
-              class="vi-chart-wrap"
-              role="img"
-              [attr.aria-label]="chartAriaLabel()"
-            >
+            <div class="vi-chart-wrap" role="img" [attr.aria-label]="chartAriaLabel()">
               <div class="vi-chart-bars flex items-end justify-between gap-1 sm:gap-1.5">
                 @for (bar of chartBars(); track $index; let i = $index) {
                   <div class="vi-chart-col group flex min-w-0 flex-1 flex-col items-center gap-2">
@@ -106,7 +106,9 @@
                         [style.height.%]="barHeightPercent(bar.total)"
                       ></div>
                     </div>
-                    <span class="text-[10px] font-bold uppercase tracking-tighter text-on-surface-variant sm:text-xs">
+                    <span
+                      class="text-[10px] font-bold uppercase tracking-tighter text-on-surface-variant sm:text-xs"
+                    >
                       {{ bar.label }}
                     </span>
                   </div>
@@ -120,7 +122,9 @@
         <section
           class="vi-card rounded-3xl border border-outline-variant/40 bg-surface-container-lowest p-6 shadow-sm"
         >
-          <div class="flex flex-col gap-4 border-b border-outline-variant/30 pb-4 sm:flex-row sm:items-end sm:justify-between">
+          <div
+            class="flex flex-col gap-4 border-b border-outline-variant/30 pb-4 sm:flex-row sm:items-end sm:justify-between"
+          >
             <div>
               <h2 class="m-0 text-lg font-extrabold text-primary">Monthly Timeline</h2>
             </div>
@@ -151,132 +155,149 @@
 
           <ul class="vi-timeline m-0 mt-6 list-none p-0">
             @if (timelineLoading()) {
-              <li class="pb-8 text-center text-sm font-semibold text-on-surface-variant">Loading transactions…</li>
-            } @else if (timelineError()) {
-              <li class="pb-8 text-center text-sm font-semibold text-red-700">{{ timelineError() }}</li>
-            } @else {
-            @for (row of filteredTimeline(); track row.id) {
-              <li class="vi-timeline-row relative flex gap-4 pb-8 last:pb-0">
-                <div class="vi-timeline-rail flex shrink-0 flex-col items-center">
-                  <span class="vi-timeline-dot flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary-fixed text-primary shadow-sm">
-                    <span
-                      class="material-symbols-outlined text-[20px]"
-                      style="font-variation-settings: 'FILL' 1"
-                      aria-hidden="true"
-                      >circle</span
-                    >
-                  </span>
-                  @if (!$last) {
-                    <span class="vi-timeline-line flex min-h-[2rem] w-px flex-1 bg-outline-variant/70" aria-hidden="true"></span>
-                  }
-                </div>
-
-                <div
-                  class="vi-timeline-row__grid min-w-0 flex-1"
-                  role="group"
-                  [attr.aria-label]="row.title"
-                >
-                  <div class="vi-col-date">
-                    <p class="m-0 text-xs font-bold uppercase tracking-wide text-on-surface-variant">
-                      {{ row.dateLabel }}
-                    </p>
-                  </div>
-
-                  <div class="vi-col-main min-w-0">
-                    <p class="m-0 text-base font-extrabold leading-snug text-primary">{{ row.title }}</p>
-                    @if (row.subtitle) {
-                      <p class="m-0 mt-1 text-sm font-medium leading-snug text-on-surface-variant">
-                        {{ row.subtitle }}
-                      </p>
-                    }
-                  </div>
-
-                  <div class="vi-col-category flex items-center">
-                    <span
-                      class="tx-chip inline-flex max-w-full shrink-0 items-center truncate rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide"
-                      [ngStyle]="categoryBadgeStyles(row)"
-                      [attr.title]="row.categoryLabel"
-                    >
-                      {{ row.categoryLabel }}
-                    </span>
-                  </div>
-
-                  <div class="vi-col-amount">
-                    <p class="m-0 mt-1 font-headline text-lg font-extrabold tabular-nums text-primary">
-                      {{ formatMoney(row.amount, row.currency) }}
-                    </p>
-                    <p class="vi-currency-code m-0 mt-0.5 text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
-                      {{ row.currency }}
-                    </p>
-                  </div>
-
-                  <div class="vi-col-actions relative flex items-start justify-end">
-                    <button
-                      type="button"
-                      class="tx-menu-btn"
-                      aria-label="More options"
-                      [attr.aria-expanded]="openMenuId() === row.id"
-                      aria-haspopup="true"
-                      (click)="toggleTimelineMenu(row.id, $event)"
-                    >
-                      <span class="material-symbols-outlined text-[20px]">more_vert</span>
-                    </button>
-                    @if (openMenuId() === row.id) {
-                      <div
-                        class="tx-dropdown"
-                        [class.tx-dropdown--up]="$last"
-                        role="menu"
-                      >
-                        <button
-                          type="button"
-                          class="tx-dropdown-item"
-                          role="menuitem"
-                          (click)="onEditRow(row, $event)"
-                        >
-                          <span
-                            class="material-symbols-outlined text-[16px]"
-                            style="font-variation-settings: 'FILL' 0"
-                            >edit</span
-                          >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          class="tx-dropdown-item"
-                          role="menuitem"
-                          (click)="onCreateRecurringFromRow(row, $event)"
-                        >
-                          <span
-                            class="material-symbols-outlined text-[16px]"
-                            style="font-variation-settings: 'FILL' 0"
-                            >repeat</span
-                          >
-                          Subscription
-                        </button>
-                        <button
-                          type="button"
-                          class="tx-dropdown-item"
-                          role="menuitem"
-                          (click)="onMetaDataRow(row, $event)"
-                        >
-                          <span
-                            class="material-symbols-outlined text-[16px]"
-                            style="font-variation-settings: 'FILL' 0"
-                            >data_object</span
-                          >
-                          Meta data
-                        </button>
-                      </div>
-                    }
-                  </div>
-                </div>
+              <li class="pb-8 text-center text-sm font-semibold text-on-surface-variant">
+                Loading transactions…
               </li>
-            }
+            } @else if (timelineError()) {
+              <li class="pb-8 text-center text-sm font-semibold text-red-700">
+                {{ timelineError() }}
+              </li>
+            } @else {
+              @for (row of filteredTimeline(); track row.id) {
+                <li class="vi-timeline-row relative flex gap-4 pb-8 last:pb-0">
+                  <div class="vi-timeline-rail flex shrink-0 flex-col items-center">
+                    <span
+                      class="vi-timeline-dot flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary-fixed text-primary shadow-sm"
+                    >
+                      <span
+                        class="material-symbols-outlined text-[20px]"
+                        style="font-variation-settings: 'FILL' 1"
+                        aria-hidden="true"
+                        >circle</span
+                      >
+                    </span>
+                    @if (!$last) {
+                      <span
+                        class="vi-timeline-line flex min-h-[2rem] w-px flex-1 bg-outline-variant/70"
+                        aria-hidden="true"
+                      ></span>
+                    }
+                  </div>
+
+                  <div
+                    class="vi-timeline-row__grid min-w-0 flex-1"
+                    role="group"
+                    [attr.aria-label]="row.title"
+                  >
+                    <div class="vi-col-date">
+                      <p
+                        class="m-0 text-xs font-bold uppercase tracking-wide text-on-surface-variant"
+                      >
+                        {{ row.dateLabel }}
+                      </p>
+                    </div>
+
+                    <div class="vi-col-main min-w-0">
+                      <p class="m-0 text-base font-extrabold leading-snug text-primary">
+                        {{ row.title }}
+                      </p>
+                      @if (row.subtitle) {
+                        <p
+                          class="m-0 mt-1 text-sm font-medium leading-snug text-on-surface-variant"
+                        >
+                          {{ row.subtitle }}
+                        </p>
+                      }
+                    </div>
+
+                    <div class="vi-col-category flex items-center">
+                      <span
+                        class="tx-chip inline-flex max-w-full shrink-0 items-center truncate rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide"
+                        [ngStyle]="categoryBadgeStyles(row)"
+                        [attr.title]="row.categoryLabel"
+                      >
+                        {{ row.categoryLabel }}
+                      </span>
+                    </div>
+
+                    <div class="vi-col-amount">
+                      <p
+                        class="m-0 mt-1 font-headline text-lg font-extrabold tabular-nums text-primary"
+                      >
+                        {{ formatMoney(row.amount, row.currency) }}
+                      </p>
+                      <p
+                        class="vi-currency-code m-0 mt-0.5 text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+                      >
+                        {{ row.currency }}
+                      </p>
+                    </div>
+
+                    <div class="vi-col-actions relative flex items-start justify-end">
+                      <button
+                        type="button"
+                        class="tx-menu-btn"
+                        aria-label="More options"
+                        [attr.aria-expanded]="openMenuId() === row.id"
+                        aria-haspopup="true"
+                        (click)="toggleTimelineMenu(row.id, $event)"
+                      >
+                        <span class="material-symbols-outlined text-[20px]">more_vert</span>
+                      </button>
+                      @if (openMenuId() === row.id) {
+                        <div class="tx-dropdown" [class.tx-dropdown--up]="$last" role="menu">
+                          <button
+                            type="button"
+                            class="tx-dropdown-item"
+                            role="menuitem"
+                            (click)="onEditRow(row, $event)"
+                          >
+                            <span
+                              class="material-symbols-outlined text-[16px]"
+                              style="font-variation-settings: 'FILL' 0"
+                              >edit</span
+                            >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            class="tx-dropdown-item"
+                            role="menuitem"
+                            (click)="onCreateRecurringFromRow(row, $event)"
+                          >
+                            <span
+                              class="material-symbols-outlined text-[16px]"
+                              style="font-variation-settings: 'FILL' 0"
+                              >repeat</span
+                            >
+                            Subscription
+                          </button>
+                          <button
+                            type="button"
+                            class="tx-dropdown-item"
+                            role="menuitem"
+                            (click)="onMetaDataRow(row, $event)"
+                          >
+                            <span
+                              class="material-symbols-outlined text-[16px]"
+                              style="font-variation-settings: 'FILL' 0"
+                              >data_object</span
+                            >
+                            Meta data
+                          </button>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                </li>
+              }
             }
           </ul>
 
           @if (!timelineLoading() && !timelineError() && filteredTimeline().length === 0) {
-            <p class="mt-6 text-center text-sm font-semibold text-on-surface-variant">No items for this filter.</p>
+            <p class="mt-6 text-center text-sm font-semibold text-on-surface-variant">
+              No items for this filter.
+            </p>
           }
         </section>
       </div>

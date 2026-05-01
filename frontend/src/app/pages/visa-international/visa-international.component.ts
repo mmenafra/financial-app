@@ -1,12 +1,5 @@
 import { CommonModule } from '@angular/common';
-import {
-  Component,
-  DestroyRef,
-  HostListener,
-  computed,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription } from 'rxjs';
 
@@ -49,7 +42,20 @@ interface ChartBarPoint {
   label: string;
 }
 
-const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
+const MONTH_SHORT = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+] as const;
 
 @Component({
   selector: 'app-visa-international',
@@ -220,7 +226,8 @@ export class VisaInternationalComponent {
       const p0 = new Date(`${st.period_start}T12:00:00`);
       const p1 = new Date(`${st.period_end}T12:00:00`);
       const a = `${MONTH_SHORT[p0.getMonth()]} ${pad2(p0.getDate())}`.toUpperCase();
-      const b = `${MONTH_SHORT[p1.getMonth()]} ${pad2(p1.getDate())}, ${p1.getFullYear()}`.toUpperCase();
+      const b =
+        `${MONTH_SHORT[p1.getMonth()]} ${pad2(p1.getDate())}, ${p1.getFullYear()}`.toUpperCase();
       return `BILLING PERIOD: ${a} – ${b}`;
     }
     const y = this.selectedYear();
@@ -231,9 +238,7 @@ export class VisaInternationalComponent {
   });
 
   /** Last bar in the series is the dashboard’s selected month. */
-  protected readonly highlightMonthIndex = computed(() =>
-    Math.max(0, this.chartBars().length - 1),
-  );
+  protected readonly highlightMonthIndex = computed(() => Math.max(0, this.chartBars().length - 1));
 
   private transactionToRow(tx: Transaction, cmap: Map<string, Category>): TimelineRow {
     const cat = tx.category ? cmap.get(tx.category) : undefined;
@@ -328,7 +333,9 @@ export class VisaInternationalComponent {
 
   protected onVisaImportDone(): void {
     this.loadTimeline();
-    this.transactionService.getRecurringPatterns().subscribe((pats) => this.recurringPatterns.set(pats));
+    this.transactionService
+      .getRecurringPatterns()
+      .subscribe((pats) => this.recurringPatterns.set(pats));
   }
 
   protected onVisaImportReviewCompleted(): void {
@@ -384,7 +391,9 @@ export class VisaInternationalComponent {
     this.editTarget.set(null);
     this.toast.success('Changes saved');
     this.loadTimeline();
-    this.transactionService.getRecurringPatterns().subscribe((pats) => this.recurringPatterns.set(pats));
+    this.transactionService
+      .getRecurringPatterns()
+      .subscribe((pats) => this.recurringPatterns.set(pats));
   }
 
   protected onMetaDataRow(row: TimelineRow, event: MouseEvent): void {
@@ -413,7 +422,9 @@ export class VisaInternationalComponent {
     this.recurringPatternTarget.set(null);
     this.toast.success('Recurring pattern saved');
     this.loadTimeline();
-    this.transactionService.getRecurringPatterns().subscribe((pats) => this.recurringPatterns.set(pats));
+    this.transactionService
+      .getRecurringPatterns()
+      .subscribe((pats) => this.recurringPatterns.set(pats));
   }
 
   protected onMetadataDismissed(): void {
