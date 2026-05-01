@@ -1,0 +1,348 @@
+<div class="flex min-h-screen bg-surface font-body">
+  <app-sidebar />
+  <div class="flex flex-col flex-1 min-w-0">
+    <app-top-nav />
+    <main class="flex-1 p-8 overflow-x-auto">
+      <div class="mx-auto flex flex-col gap-6">
+        <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 class="text-3xl font-extrabold text-primary tracking-tight m-0 font-headline">
+              Income
+            </h1>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <button type="button" class="tx-filter-btn" (click)="toggleFilters()">
+              <span
+                class="material-symbols-outlined text-[20px]"
+                style="font-variation-settings: 'FILL' 0"
+                >filter_list</span
+              >
+              Filter
+            </button>
+          </div>
+        </header>
+
+        @if (filterOpen()) {
+          <div
+            class="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm flex flex-col gap-3 sm:flex-row sm:items-end"
+          >
+            <div class="flex flex-col gap-1 flex-1">
+              <label class="text-xs font-semibold text-on-surface-variant" for="inc-flt-year">Year</label>
+              <select
+                id="inc-flt-year"
+                class="tx-select w-full"
+                [value]="draftYear() ?? ''"
+                (change)="onDraftYear($event)"
+              >
+                <option value="">Any year</option>
+                @for (y of yearOptions; track y) {
+                  <option [value]="y" [selected]="y === draftYear()">{{ y }}</option>
+                }
+              </select>
+            </div>
+            <div class="flex flex-col gap-1 flex-1">
+              <label class="text-xs font-semibold text-on-surface-variant" for="inc-flt-month">Month</label>
+              <select
+                id="inc-flt-month"
+                class="tx-select w-full"
+                [value]="draftMonth() ?? ''"
+                [disabled]="draftYear() === undefined"
+                (change)="onDraftMonth($event)"
+              >
+                <option value="">Any month</option>
+                @for (m of monthOptions; track m.value) {
+                  <option [value]="m.value" [selected]="m.value === draftMonth()">{{ m.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="flex flex-col gap-1 flex-1">
+              <label class="text-xs font-semibold text-on-surface-variant" for="inc-flt-src">Source</label>
+              <select
+                id="inc-flt-src"
+                class="tx-select w-full"
+                [value]="draftSource() ?? ''"
+                (change)="onDraftSource($event)"
+              >
+                <option value="" [selected]="draftSource() === undefined">All sources</option>
+                <option value="BANK_ACCOUNT" [selected]="draftSource() === 'BANK_ACCOUNT'">Bank Account</option>
+                <option value="CREDIT_CARD_NATIONAL" [selected]="draftSource() === 'CREDIT_CARD_NATIONAL'"
+                  >Visa National</option
+                >
+                <option value="CREDIT_CARD_INTERNATIONAL" [selected]="draftSource() === 'CREDIT_CARD_INTERNATIONAL'"
+                  >Visa International</option
+                >
+                <option value="MERCADOPAGO" [selected]="draftSource() === 'MERCADOPAGO'">MercadoPago</option>
+              </select>
+            </div>
+            <div class="flex gap-2">
+              <button type="button" class="tx-pill-btn" (click)="applyFilters()">Apply</button>
+              <button type="button" class="tx-pill-btn ghost" (click)="clearFilters()">Clear</button>
+            </div>
+          </div>
+        }
+
+        @if (appliedYear() !== undefined || appliedMonth() !== undefined || appliedSource()) {
+          <div class="flex flex-wrap items-center gap-2 tx-active-filter-row">
+            @if (appliedYear() !== undefined) {
+              <span class="tx-active-filter-pill">
+                <span class="tx-active-filter-pill__label">Year: {{ activeYearLabel() }}</span>
+                <button
+                  type="button"
+                  class="tx-active-filter-pill__clear"
+                  (click)="removeFilter('year')"
+                  aria-label="Remove year filter"
+                >
+                  <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 0"
+                    >close</span
+                  >
+                </button>
+              </span>
+            }
+            @if (appliedMonth() !== undefined) {
+              <span class="tx-active-filter-pill">
+                <span class="tx-active-filter-pill__label">Month: {{ activeMonthLabel() }}</span>
+                <button
+                  type="button"
+                  class="tx-active-filter-pill__clear"
+                  (click)="removeFilter('month')"
+                  aria-label="Remove month filter"
+                >
+                  <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 0"
+                    >close</span
+                  >
+                </button>
+              </span>
+            }
+            @if (appliedSource()) {
+              <span class="tx-active-filter-pill">
+                <span class="tx-active-filter-pill__label">{{ activeSourceLabel() }}</span>
+                <button
+                  type="button"
+                  class="tx-active-filter-pill__clear"
+                  (click)="removeFilter('source')"
+                  aria-label="Remove source filter"
+                >
+                  <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 0"
+                    >close</span
+                  >
+                </button>
+              </span>
+            }
+          </div>
+        }
+
+        @if (loadError()) {
+          <div class="rounded-xl border border-red-200 bg-red-50 text-red-900 px-4 py-3 text-sm font-semibold">
+            {{ loadError() }}
+          </div>
+        }
+
+        <section
+          class="rounded-3xl border border-outline-variant/40 bg-surface-container-low p-6 shadow-sm flex flex-col gap-4"
+        >
+          <h2 class="m-0 text-sm font-extrabold uppercase tracking-wide text-on-surface-variant font-headline">
+            Past 12 months
+          </h2>
+          <div class="inc-chart-wrap" role="img" [attr.aria-label]="chartAriaLabel()">
+            <div class="inc-chart-bars flex items-end justify-between gap-1 sm:gap-1.5">
+              @for (bar of chartBars(); track $index; let i = $index) {
+                <div class="inc-chart-col group flex min-w-0 flex-1 flex-col items-center gap-2">
+                  <div class="inc-chart-bar-track relative">
+                    <div
+                      class="inc-chart-tooltip pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-xs font-bold text-primary opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100"
+                      role="tooltip"
+                    >
+                      {{ formatChartBarValue(bar.total) }}
+                    </div>
+                    <div
+                      class="inc-chart-bar rounded-t-xl transition-[height] duration-300"
+                      [class.inc-chart-bar--current]="i === highlightMonthIndex()"
+                      [style.height.%]="barHeightPercent(bar.total)"
+                    ></div>
+                  </div>
+                  <span class="text-[10px] font-bold uppercase tracking-tighter text-on-surface-variant sm:text-xs">
+                    {{ bar.label }}
+                  </span>
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+
+        <section
+          class="rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm"
+        >
+          <div class="px-6 py-4 border-b border-outline-variant/50">
+            <h2 class="text-lg font-bold text-primary m-0 font-headline">Income transactions</h2>
+          </div>
+
+          @if (isLoading()) {
+            <div class="px-6 py-16 text-center text-on-surface-variant font-semibold">Loading…</div>
+          } @else {
+            <div class="w-full min-w-0">
+              <table class="tx-table w-full text-left border-collapse">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Source</th>
+                    <th class="text-right">Amount</th>
+                    <th>Currency</th>
+                    <th class="w-12"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (t of transactions(); track t.id) {
+                    <tr>
+                      <td class="whitespace-nowrap text-on-surface-variant font-medium">
+                        {{ formatTransactionCalendarDate(t) }}
+                      </td>
+                      <td>
+                        <div class="flex items-center gap-2 min-w-[12rem]">
+                          <span
+                            class="material-symbols-outlined text-on-surface-variant shrink-0 text-[22px]"
+                            style="font-variation-settings: 'FILL' 0"
+                            >{{ categoryIcon(t) }}</span
+                          >
+                          <span class="font-semibold text-on-surface">{{ t.description }}</span>
+                          @if (t.parent) {
+                            <span
+                              class="tx-split-badge inline-flex items-center rounded-full border border-outline-variant/60 bg-surface-container px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant shrink-0"
+                              >Split</span
+                            >
+                          }
+                        </div>
+                      </td>
+                      <td>
+                        <span class="tx-chip inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide" [ngStyle]="categoryStyles(t)">
+                          {{ categoryLabel(t) }}
+                        </span>
+                      </td>
+                      <td>
+                        <div class="flex items-center gap-2 text-on-surface-variant">
+                          <span
+                            class="material-symbols-outlined text-[20px] shrink-0"
+                            style="font-variation-settings: 'FILL' 0"
+                            >{{ sourceIcon(t.source) }}</span
+                          >
+                          <span class="font-medium text-on-surface">{{ sourceLabel(t.source) }}</span>
+                        </div>
+                      </td>
+                      <td class="text-right font-bold whitespace-nowrap" [ngClass]="amountClass(t)">
+                        {{ displayAmount(t) }}
+                      </td>
+                      <td class="text-on-surface-variant font-semibold">{{ t.currency }}</td>
+                      <td class="relative">
+                        <button
+                          type="button"
+                          class="tx-menu-btn"
+                          aria-label="More options"
+                          (click)="toggleMenu(t.id, $event)"
+                        >
+                          <span class="material-symbols-outlined text-[20px]">more_vert</span>
+                        </button>
+                        @if (openMenuId() === t.id) {
+                          <div class="tx-dropdown" [class.tx-dropdown--up]="$last" role="menu">
+                            <button
+                              type="button"
+                              class="tx-dropdown-item"
+                              role="menuitem"
+                              (click)="onEdit(t, $event)"
+                            >
+                              <span
+                                class="material-symbols-outlined text-[16px]"
+                                style="font-variation-settings: 'FILL' 0"
+                                >edit</span
+                              >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              class="tx-dropdown-item"
+                              role="menuitem"
+                              (click)="onMetadata(t, $event)"
+                            >
+                              <span
+                                class="material-symbols-outlined text-[16px]"
+                                style="font-variation-settings: 'FILL' 0"
+                                >data_object</span
+                              >
+                              Metadata
+                            </button>
+                          </div>
+                        }
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="7" class="px-6 py-12 text-center text-on-surface-variant font-medium">
+                        No income for this period.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <div
+              class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-6 py-4 border-t border-outline-variant/50 bg-surface-container/40"
+            >
+              <p class="text-sm text-on-surface-variant font-medium m-0">
+                Showing {{ showingFrom() }}–{{ showingTo() }} of {{ totalCount() }} transactions
+              </p>
+              <nav class="flex items-center gap-1 flex-wrap justify-center" aria-label="Pagination">
+                <button
+                  type="button"
+                  class="tx-page"
+                  [disabled]="currentPage() <= 1"
+                  (click)="goToPage(currentPage() - 1)"
+                  aria-label="Previous page"
+                >
+                  <span class="material-symbols-outlined text-[20px]">chevron_left</span>
+                </button>
+                @for (item of pageNumbers(); track $index) {
+                  @if (item === 'ellipsis') {
+                    <span class="tx-ellipsis px-1 text-on-surface-variant">…</span>
+                  } @else {
+                    <button
+                      type="button"
+                      class="tx-page num"
+                      [class.active]="item === currentPage()"
+                      (click)="goToPage(item)"
+                    >
+                      {{ item }}
+                    </button>
+                  }
+                }
+                <button
+                  type="button"
+                  class="tx-page"
+                  [disabled]="currentPage() >= totalPages()"
+                  (click)="goToPage(currentPage() + 1)"
+                  aria-label="Next page"
+                >
+                  <span class="material-symbols-outlined text-[20px]">chevron_right</span>
+                </button>
+              </nav>
+            </div>
+          }
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<app-transaction-edit-modal
+  [transaction]="editTarget()"
+  [categories]="categories()"
+  idPrefix="inc"
+  (saved)="onEditSaved()"
+  (dismissed)="onEditDismissed()"
+/>
+<app-transaction-metadata-modal
+  [transaction]="metadataTarget()"
+  idPrefix="inc"
+  (dismissed)="onMetadataDismissed()"
+/>

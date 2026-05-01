@@ -8,6 +8,7 @@ import type {
   Category,
   CreateRecurringPatternPayload,
   CreateTransactionPayload,
+  IncomeDashboardResponse,
   PaginatedResponse,
   RecurringPattern,
   Subscription,
@@ -48,6 +49,32 @@ export class TransactionService {
       `${environment.apiUrl}/api/transactions/`,
       { params },
     );
+  }
+
+  /** Income page: INCOME-only list, monthly aggregates, rolling 12-month chart. */
+  getIncome(filters: TransactionFilters = {}): Observable<IncomeDashboardResponse> {
+    let params = new HttpParams();
+    if (filters.year != null) {
+      params = params.set('year', String(filters.year));
+    }
+    if (filters.month != null) {
+      params = params.set('month', String(filters.month));
+    }
+    if (filters.category) {
+      params = params.set('category', filters.category);
+    }
+    if (filters.source) {
+      params = params.set('source', filters.source);
+    }
+    if (filters.page != null) {
+      params = params.set('page', String(filters.page));
+    }
+    if (filters.pageSize != null) {
+      params = params.set('page_size', String(filters.pageSize));
+    }
+    return this.http.get<IncomeDashboardResponse>(`${environment.apiUrl}/api/income/`, {
+      params,
+    });
   }
 
   /**

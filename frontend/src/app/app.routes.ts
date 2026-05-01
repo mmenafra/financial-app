@@ -12,12 +12,14 @@ import { SettingsComponent } from './pages/settings/settings.component';
 import { VisaInternationalComponent } from './pages/visa-international/visa-international.component';
 import { VisaNacionalComponent } from './pages/visa-nacional/visa-nacional.component';
 import { SubscriptionsComponent } from './pages/subscriptions/subscriptions.component';
+import { IncomeComponent } from './pages/income/income.component';
 
 export const routes: Routes = [
   { path: '', component: LoginComponent, canActivate: [guestGuard] },
   { path: 'login', redirectTo: '', pathMatch: 'full' },
   { path: 'signup', component: SignupComponent, canActivate: [guestGuard] },
   { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
+  { path: 'income', component: IncomeComponent, canActivate: [authGuard] },
   { path: 'connections', component: DashboardComponent, canActivate: [authGuard] },
   { path: 'transactions', component: TransactionsComponent, canActivate: [authGuard] },
   {

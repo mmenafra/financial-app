@@ -9,6 +9,7 @@ from .views import (
     ForgotPasswordView,
     GoogleAuthView,
     HealthCheckView,
+    IncomeView,
     ImportBankStatementView,
     ImportVisaInternationalStatementView,
     ImportVisaNationalStatementView,
@@ -70,5 +71,6 @@ urlpatterns = [
         SubscriptionListView.as_view(),
         name="subscription-list",
     ),
+    path("income/", IncomeView.as_view(), name="income-list"),
     path("", include(router.urls)),
 ]

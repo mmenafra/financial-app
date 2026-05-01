@@ -185,6 +185,18 @@ export interface VisaMonthlyTotal {
   total: string;
 }
 
+/** One month bucket from GET /api/income/ */
+export interface IncomeMonthlyTotal {
+  year: number;
+  month: number;
+  total: string;
+}
+
+/** GET /api/income/ — paginated INCOME rows plus rolling chart. */
+export interface IncomeDashboardResponse extends PaginatedResponse<Transaction> {
+  monthly_totals?: IncomeMonthlyTotal[];
+}
+
 export interface VisaInternationalDashboardResponse {
   statement: VisaInternationalStatement | null;
   transactions: Transaction[];

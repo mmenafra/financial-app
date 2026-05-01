@@ -18,7 +18,7 @@ from google.oauth2 import id_token as google_id_token
 from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import RetrieveUpdateAPIView
+from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -32,6 +32,7 @@ from django.db import transaction as db_transaction
 from django.db.models import Q, Sum
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
+from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
@@ -44,6 +45,7 @@ from .import_pipeline import (
 )
 from .models import (
     Category,
+    Direction,
     FileImport,
     ImportStatus,
     RecurringPattern,
@@ -1029,6 +1031,138 @@ def _filter_transactions_list_queryset(qs, query_params, user):
     )
     qs = _apply_transaction_source_filter(qs, query_params.get("source"))
     return qs
+
+
+def _filter_income_list_queryset(qs, query_params):
+    """Apply optional GET /income/ filters: year, month, source only (no category)."""
+    year_raw = query_params.get("year")
+    month_raw = query_params.get("month")
+    if _query_param_non_empty(month_raw) and not _query_param_non_empty(year_raw):
+        raise ValidationError(
+            {"month": "year is required when month is provided."}
+        )
+    qs = _apply_transaction_year_filter(qs, year_raw)
+    qs = _apply_transaction_month_filter(qs, month_raw)
+    qs = _apply_transaction_source_filter(qs, query_params.get("source"))
+    return qs
+
+
+def _income_monthly_totals(request, user):
+    """Twelve calendar months of income totals for the chart."""
+    year_raw = request.query_params.get("year")
+    month_raw = request.query_params.get("month")
+    if _query_param_non_empty(year_raw) and _query_param_non_empty(month_raw):
+        end_year, end_month = int(year_raw), int(month_raw)
+    elif _query_param_non_empty(year_raw):
+        end_year = int(year_raw)
+        end_month = 12
+    else:
+        today = timezone.now().date()
+        end_year, end_month = today.year, today.month
+    months = _visa_international_dashboard_rolling_months(
+        end_year, end_month, 12
+    )
+    base = Transaction.objects.filter(
+        user=user, direction=Direction.INCOME, splits__isnull=True
+    )
+    base = _apply_transaction_source_filter(
+        base, request.query_params.get("source")
+    )
+    monthly_totals = []
+    for y, m in months:
+        total = (
+            base.filter(transaction_date__year=y, transaction_date__month=m).aggregate(
+                total=Sum("amount")
+            )["total"]
+            or Decimal("0")
+        )
+        monthly_totals.append({"year": y, "month": m, "total": str(total)})
+    return monthly_totals
+
+
+@extend_schema(
+    parameters=[
+        OpenApiParameter(
+            name="year",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description=(
+                "Filter by calendar year of `transaction_date`. "
+                "Use together with `month` to restrict to a single month."
+            ),
+            examples=[OpenApiExample("Current year", value=2026)],
+        ),
+        OpenApiParameter(
+            name="month",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description=(
+                "Filter by calendar month (1–12) of `transaction_date`. "
+                "Requires `year` to be set."
+            ),
+            examples=[OpenApiExample("April", value=4)],
+        ),
+        OpenApiParameter(
+            name="source",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="Filter by transaction source.",
+            enum=_SOURCE_QUERY_ENUM,
+            examples=[OpenApiExample("Mercado Pago", value=Source.MERCADOPAGO.value)],
+        ),
+        OpenApiParameter(
+            name="page",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="Page number (1-based).",
+            examples=[OpenApiExample("First page", value=1)],
+        ),
+        OpenApiParameter(
+            name="page_size",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description=(
+                "Number of results per page. "
+                "Capped at the API maximum (e.g. 100)."
+            ),
+            examples=[OpenApiExample("Default size", value=100)],
+        ),
+    ],
+)
+class IncomeView(ListAPIView):
+    """Paginated INCOME transactions with rolling 12-month totals."""
+
+    serializer_class = TransactionSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = TransactionPagination
+
+    def get_queryset(self):
+        qs = Transaction.objects.filter(
+            user=self.request.user,
+            direction=Direction.INCOME,
+            splits__isnull=True,
+        )
+        return _filter_income_list_queryset(qs, self.request.query_params)
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        monthly_totals = _income_monthly_totals(request, request.user)
+
+        page = self.paginate_queryset(queryset)
+        extra = {"monthly_totals": monthly_totals}
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response = self.get_paginated_response(serializer.data)
+            response.data.update(extra)
+            return response
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({"results": serializer.data, **extra})
 
 
 @extend_schema_view(
