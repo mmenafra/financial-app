@@ -37,28 +37,7 @@
 }
 
 .vi-chart-wrap {
-  min-height: 10rem;
-  overflow: visible;
-}
-
-.vi-chart-bars {
-  align-items: flex-end;
-}
-
-.vi-chart-bar-track {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  height: 8rem;
-  width: 100%;
-}
-
-.vi-chart-bar {
-  @apply w-full min-h-[4px] shrink-0 rounded-t-xl bg-secondary-fixed/80;
-
-  &--current {
-    @apply bg-secondary shadow-md ring-2 ring-primary/20;
-  }
+  height: 10rem;
 }
 
 .vi-cta {

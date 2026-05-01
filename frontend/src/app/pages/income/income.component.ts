@@ -3,6 +3,7 @@ import { Component, computed, DestroyRef, HostListener, inject, signal } from '@
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin } from 'rxjs';
 
+import { BarChartComponent } from '../../components/bar-chart/bar-chart.component';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { TopNavComponent } from '../../components/top-nav/top-nav.component';
 import { TransactionEditModalComponent } from '../../components/transaction-edit-modal/transaction-edit-modal.component';
@@ -50,6 +51,7 @@ interface ChartBarPoint {
   selector: 'app-income',
   standalone: true,
   imports: [
+    BarChartComponent,
     CommonModule,
     SidebarComponent,
     TopNavComponent,
@@ -127,11 +129,13 @@ export class IncomeComponent {
     }));
   });
 
-  protected readonly barChartSeries = computed(() => this.chartBars().map((b) => b.total));
-
-  protected readonly barMax = computed(() =>
-    Math.max(1, ...this.barChartSeries().map((v) => Number(v))),
-  );
+  protected readonly chartLabels = computed(() => this.chartBars().map((b) => b.label));
+  protected readonly chartData = computed(() => this.chartBars().map((b) => b.total));
+  protected readonly chartValueFormatter = (v: number): string =>
+    new Intl.NumberFormat(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(v);
 
   private syncDraftFromApplied(): void {
     this.draftYear.set(this.appliedYear());
@@ -402,17 +406,6 @@ export class IncomeComponent {
   protected categoryIcon(t: Transaction): string {
     const cat = t.category ? this.categoryById().get(t.category) : undefined;
     return cat?.icon ?? 'receipt';
-  }
-
-  protected barHeightPercent(value: number): number {
-    return (value / this.barMax()) * 100;
-  }
-
-  protected formatChartBarValue(value: number): string {
-    return new Intl.NumberFormat(undefined, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(value);
   }
 
   @HostListener('document:click')

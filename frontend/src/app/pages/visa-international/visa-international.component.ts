@@ -3,6 +3,7 @@ import { Component, DestroyRef, HostListener, computed, inject, signal } from '@
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription } from 'rxjs';
 
+import { BarChartComponent } from '../../components/bar-chart/bar-chart.component';
 import { ImportModalComponent } from '../../components/import-modal/import-modal.component';
 import { RecurringPatternModalComponent } from '../../components/recurring-pattern-modal/recurring-pattern-modal.component';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
@@ -61,6 +62,7 @@ const MONTH_SHORT = [
   selector: 'app-visa-international',
   standalone: true,
   imports: [
+    BarChartComponent,
     CommonModule,
     ImportModalComponent,
     SidebarComponent,
@@ -134,7 +136,9 @@ export class VisaInternationalComponent {
     }));
   });
 
-  protected readonly barChartSeries = computed(() => this.chartBars().map((b) => b.total));
+  protected readonly chartLabels = computed(() => this.chartBars().map((b) => b.label));
+  protected readonly chartData = computed(() => this.chartBars().map((b) => b.total));
+  protected readonly chartValueFormatter = (v: number): string => this.formatUsd(v);
 
   /** Compares the last two monthly-totals chart buckets (statement totals when available, else 0). */
   protected readonly vsLastMonthPct = computed((): number | null => {
@@ -210,10 +214,6 @@ export class VisaInternationalComponent {
     return rows;
   });
 
-  protected readonly barMax = computed(() =>
-    Math.max(1, ...this.barChartSeries().map((v) => Number(v))),
-  );
-
   protected readonly chartAriaLabel = computed(() => {
     const y = this.selectedYear();
     const m = this.selectedMonth();
@@ -257,15 +257,6 @@ export class VisaInternationalComponent {
       categoryLabel: cat?.name ?? 'Uncategorized',
       categoryColor: cat?.color ?? '#94a3b8',
     };
-  }
-
-  protected barHeightPercent(value: number): number {
-    return (value / this.barMax()) * 100;
-  }
-
-  /** Tooltip label for bar segment (USD). */
-  protected formatChartBarValue(value: number): string {
-    return this.formatUsd(value);
   }
 
   protected formatVsLastMonthLabel(pct: number): string {

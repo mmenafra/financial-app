@@ -88,31 +88,13 @@
               }
             </div>
 
-            <div class="vi-chart-wrap" role="img" [attr.aria-label]="chartAriaLabel()">
-              <div class="vi-chart-bars flex items-end justify-between gap-1 sm:gap-1.5">
-                @for (bar of chartBars(); track $index; let i = $index) {
-                  <div class="vi-chart-col group flex min-w-0 flex-1 flex-col items-center gap-2">
-                    <div class="vi-chart-bar-track relative">
-                      <div
-                        class="vi-chart-tooltip pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-xs font-bold text-primary opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100"
-                        role="tooltip"
-                      >
-                        {{ formatChartBarValue(bar.total) }}
-                      </div>
-                      <div
-                        class="vi-chart-bar rounded-t-xl transition-[height] duration-300"
-                        [class.vi-chart-bar--current]="i === highlightMonthIndex()"
-                        [style.height.%]="barHeightPercent(bar.total)"
-                      ></div>
-                    </div>
-                    <span
-                      class="text-[10px] font-bold uppercase tracking-tighter text-on-surface-variant sm:text-xs"
-                    >
-                      {{ bar.label }}
-                    </span>
-                  </div>
-                }
-              </div>
+            <div class="vi-chart-wrap" [attr.aria-label]="chartAriaLabel()">
+              <app-bar-chart
+                [labels]="chartLabels()"
+                [data]="chartData()"
+                [highlightIndex]="highlightMonthIndex()"
+                [formatValue]="chartValueFormatter"
+              />
             </div>
           </section>
         </div>
