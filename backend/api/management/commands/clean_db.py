@@ -186,7 +186,7 @@ class Command(BaseCommand):
             datetime.combine(cutoff_date, datetime.min.time())
         )
 
-        tx_count = self._purge_transactions_raw(
+        tx_count = self._purge_transactions_since(
             user_id=user.pk,
             created_at_gte=cutoff_dt,
         )
@@ -212,3 +212,27 @@ class Command(BaseCommand):
                 f"{fi_count} file imports, {rp_count} recurring patterns (categories unchanged)."
             )
         )
+
+    def _purge_transactions_since(self, *, user_id, created_at_gte) -> int:
+        """Remove transactions with ``created_at`` on/after ``created_at_gte`` via the
+        ORM (split rows first). Used for ``--user-since`` so SQLite compares datetimes
+        as datetimes; raw ``DELETE ... >= %s`` uses string ordering on SQLite and can
+        omit rows at the cutoff instant (e.g. midnight vs ``.000000`` in the bound
+        parameter). PostgreSQL is unaffected.
+        """
+        total = 0
+        while True:
+            deleted, _ = Transaction.objects.filter(
+                user_id=user_id,
+                parent_id__isnull=False,
+                created_at__gte=created_at_gte,
+            ).delete()
+            total += deleted
+            if deleted == 0:
+                break
+        deleted, _ = Transaction.objects.filter(
+            user_id=user_id,
+            created_at__gte=created_at_gte,
+        ).delete()
+        total += deleted
+        return total

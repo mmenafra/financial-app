@@ -988,6 +988,12 @@ def _apply_transaction_source_filter(qs, source_raw):
     return qs.filter(source=source_raw)
 
 
+def _expense_total_amount_str(value) -> str:
+    """Two-decimal string for API totals (SQLite Sum can yield int for whole amounts)."""
+    d = Decimal("0") if value is None else Decimal(str(value))
+    return format(d.quantize(Decimal("0.01")), "f")
+
+
 def _expense_totals_by_currency(queryset):
     """Sum EXPENSE amounts per ISO currency code for queryset (pre-filtered).
 
@@ -1000,7 +1006,7 @@ def _expense_totals_by_currency(queryset):
         .annotate(total=Sum("amount"))
         .order_by("currency")
     )
-    return {row["currency"]: str(row["total"] or Decimal("0")) for row in rows}
+    return {row["currency"]: _expense_total_amount_str(row["total"]) for row in rows}
 
 
 def _filter_transactions_list_queryset(qs, query_params, user):
