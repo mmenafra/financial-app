@@ -69,6 +69,16 @@ export interface MpEnrichedItem {
   permalink: string | null;
 }
 
+export interface MpTransactionDetails {
+  total_paid_amount?: number | null;
+  net_received_amount?: number | null;
+  installment_amount?: number | null;
+  overpaid_amount?: number | null;
+  financial_institution?: string | null;
+  payment_method_reference_id?: string | null;
+  acquirer_reference?: string | null;
+}
+
 export interface MpAdditionalInfo {
   items?: MpItem[] | null;
   [key: string]: unknown;
@@ -95,4 +105,8 @@ export interface MpPayment {
   acquirer_id?: number | string | null;
   operation_type?: string | null;
   additional_info?: MpAdditionalInfo | null;
+  transaction_details?: MpTransactionDetails | null;
+  shipping_amount?: number | null;
+  coupon_amount?: number | null;
+  taxes_amount?: number | null;
 }

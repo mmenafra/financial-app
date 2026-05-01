@@ -43,10 +43,10 @@
         <dd class="m-0 font-mono text-sm font-semibold text-on-surface">{{ pmt.id ?? '—' }}</dd>
 
         <dt class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">
-          Amount
+          Total paid
         </dt>
         <dd class="m-0 text-sm font-bold text-primary">
-          {{ formatMoney(pmt.transaction_amount ?? null, pmt.currency_id) ?? '—' }}
+          {{ formatMoney(pmt.transaction_details?.total_paid_amount ?? pmt.transaction_amount ?? null, pmt.currency_id) ?? '—' }}
         </dd>
 
         <dt class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">
@@ -84,14 +84,48 @@
         <dt class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">
           Installments
         </dt>
-        <dd class="m-0 text-sm font-semibold text-on-surface">{{ pmt.installments ?? '—' }}</dd>
+        <dd class="m-0 text-sm font-semibold text-on-surface">
+          @let instAmt = pmt.transaction_details?.installment_amount ?? null;
+          @if (pmt.installments && pmt.installments > 1 && instAmt) {
+            {{ pmt.installments }}x {{ formatMoney(instAmt, pmt.currency_id) }}
+          } @else {
+            {{ pmt.installments ?? '—' }}
+          }
+        </dd>
 
         <dt class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">
           Net received
         </dt>
         <dd class="m-0 text-sm font-semibold text-on-surface">
-          {{ formatMoney(pmt.net_received_amount ?? null, pmt.currency_id) ?? '—' }}
+          {{ formatMoney(pmt.transaction_details?.net_received_amount ?? pmt.net_received_amount ?? null, pmt.currency_id) ?? '—' }}
         </dd>
+
+        @if (pmt.shipping_amount) {
+          <dt class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">
+            Shipping
+          </dt>
+          <dd class="m-0 text-sm font-semibold text-on-surface">
+            {{ formatMoney(pmt.shipping_amount, pmt.currency_id) ?? '—' }}
+          </dd>
+        }
+
+        @if (pmt.coupon_amount) {
+          <dt class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">
+            Coupon discount
+          </dt>
+          <dd class="m-0 text-sm font-semibold text-emerald-700">
+            − {{ formatMoney(pmt.coupon_amount, pmt.currency_id) ?? '—' }}
+          </dd>
+        }
+
+        @if (pmt.taxes_amount) {
+          <dt class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">
+            Taxes
+          </dt>
+          <dd class="m-0 text-sm font-semibold text-on-surface">
+            {{ formatMoney(pmt.taxes_amount, pmt.currency_id) ?? '—' }}
+          </dd>
+        }
 
         @if (pmt.operation_type) {
           <dt class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">
