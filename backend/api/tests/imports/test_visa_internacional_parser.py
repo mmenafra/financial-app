@@ -2,7 +2,7 @@ from datetime import date
 
 from django.test import SimpleTestCase
 
-from api.visa_internacional_parser import (
+from api.imports.visa_internacional_parser import (
     parse_transaction_line_body,
     parse_visa_internacional_statement_text,
     resolve_dd_mm_in_period,

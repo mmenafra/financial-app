@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.test import SimpleTestCase
 
-from api.visa_nacional_parser import (
+from api.imports.visa_nacional_parser import (
     extract_periodo_actual_block,
     parse_transactions_from_periodo_text,
     parse_visa_nacional_statement_text,

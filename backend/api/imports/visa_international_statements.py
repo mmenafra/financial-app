@@ -7,15 +7,16 @@ from decimal import Decimal
 
 from django.db.models import Count
 
-from .models import FileImport, VisaInternationalStatement
+from ..models import FileImport, VisaInternationalStatement
 
 
-def reuse_or_create_statement_for_import(  # pylint: disable=too-many-positional-arguments
+def reuse_or_create_statement_for_import(
     user,
     file_import: FileImport,
     period_start: date,
     period_end: date,
     total_amount: Decimal,
+    *,
     currency: str = "USD",
 ) -> VisaInternationalStatement:
     """

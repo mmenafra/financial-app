@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from django.db.models import Count
 
-from .models import FileImport, VisaNacionalStatement
+from ..models import FileImport, VisaNacionalStatement
 
 
 def reuse_or_create_nacional_statement_for_import(

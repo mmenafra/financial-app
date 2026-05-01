@@ -14,7 +14,7 @@ from api.models import (
     TransactionStatus,
     TransactionType,
 )
-from api.recurring_match import (
+from api.recurring.match import (
     apply_recurring_match_if_missing,
     match_recurring_pattern_for_description,
     recurring_match_haystack,

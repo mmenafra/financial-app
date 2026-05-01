@@ -1,5 +1,6 @@
 import json
 from decimal import Decimal
+from typing import Any
 from unittest.mock import patch
 
 from rest_framework import status
@@ -221,7 +222,7 @@ class GeminiBankStatementImportTests(APITestCase):
         self.profile.save(update_fields=["_gemini_api_key", "updated_at"])
 
     def test_gemini_applies_bulk_categories_via_mock(self):
-        def stub(_, body, **_kwargs):  # noqa: ANN001
+        def stub(_: Any, body: Any, **_kwargs: Any) -> dict:
             blob = _parsed_context_from_gemini_body(body)
             cid = blob["categories"][0]["id"]
             return {
@@ -233,7 +234,7 @@ class GeminiBankStatementImportTests(APITestCase):
 
         self.client.force_authenticate(user=self.user)
         statement = SimpleUploadedFile("BSA.dat", _BSA_BASE, content_type="text/plain")
-        with patch("api.gemini_categorize._call_gemini_raw", side_effect=stub):
+        with patch("api.ai.categorize._call_gemini_raw", side_effect=stub):
             response = self.client.post(
                 self.url, {"file": statement}, format="multipart"
             )
@@ -246,13 +247,13 @@ class GeminiBankStatementImportTests(APITestCase):
             self.assertEqual(str(tx["category"]), str(self.cat.id))
 
     def test_gemini_soft_failure_leaves_uncategorized_rows(self):
-        def boom(_, body, **_kwargs):  # noqa: ANN001
+        def boom(_: Any, body: Any, **_kwargs: Any) -> None:
             _ = body
             raise RuntimeError("simulated Gemini outage")
 
         self.client.force_authenticate(user=self.user)
         statement = SimpleUploadedFile("BSA.dat", _BSA_BASE, content_type="text/plain")
-        with patch("api.gemini_categorize._call_gemini_raw", side_effect=boom):
+        with patch("api.ai.categorize._call_gemini_raw", side_effect=boom):
             response = self.client.post(
                 self.url, {"file": statement}, format="multipart"
             )

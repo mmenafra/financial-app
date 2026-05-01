@@ -8,8 +8,8 @@ from django.db.models import Q
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
-from .models import RecurringPattern, Transaction
-from .recurring_match import (
+from ..models import RecurringPattern, Transaction
+from .match import (
     q_substring_matches_recurring_haystack,
     refresh_matched_recurring_from_patterns,
 )
@@ -22,9 +22,8 @@ _PREVIOUS_DESCRIPTION_PATTERN = "_recurring_previous_description_pattern"
 
 @receiver(pre_save, sender=RecurringPattern)
 def _recurring_pattern_store_previous_description(
-    sender,  # pylint: disable=unused-argument
     instance: RecurringPattern,
-    **kwargs,
+    **_kwargs,
 ) -> None:
     prev: str | None = None
     if RecurringPattern.objects.filter(pk=instance.pk).exists():
@@ -38,10 +37,9 @@ def _recurring_pattern_store_previous_description(
 
 @receiver(post_save, sender=RecurringPattern)
 def _recurring_pattern_refresh_matching_transactions(
-    sender,  # pylint: disable=unused-argument
     instance: RecurringPattern,
     created: bool,
-    **kwargs,
+    **_kwargs,
 ) -> None:
     prev = instance.__dict__.pop(_PREVIOUS_DESCRIPTION_PATTERN, None)
     user = instance.user

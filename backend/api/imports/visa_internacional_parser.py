@@ -107,7 +107,21 @@ def _try_split_fused_country_last_word(word: str) -> tuple[str, str | None]:
     return stem, cc
 
 
-def _extract_country_and_merchant_line(  # pylint: disable=too-many-return-statements
+def _classify_last_word(word: str) -> tuple[str, str | None]:
+    """Return (merchant_suffix, country_code) for the last word of an operation line.
+
+    merchant_suffix is the cleaned word (or stem) to keep as part of the merchant name.
+    country_code is a 2-letter ISO token when one was found, else None.
+    """
+    if _LINE_COUNTRY_TOKEN_RE.fullmatch(word):
+        return "", word
+    stem, cc = _try_split_fused_country_last_word(word)
+    if cc:
+        return stem, cc
+    return word, None
+
+
+def _extract_country_and_merchant_line(
     rest: str,
 ) -> tuple[str, str | None]:
     """Split trailing ISO-like country token from operation text (handles fused ESTUY-style OCR)."""
@@ -115,21 +129,13 @@ def _extract_country_and_merchant_line(  # pylint: disable=too-many-return-state
     if not rest:
         return "", None
     parts = rest.rsplit(None, 1)
-    if len(parts) == 1:
-        word = parts[0]
-        if _LINE_COUNTRY_TOKEN_RE.fullmatch(word):
-            return "", word
-        stem, cc = _try_split_fused_country_last_word(word)
-        if cc:
-            return stem, cc
+    last = parts[-1].strip()
+    prefix = parts[0].strip() if len(parts) == 2 else ""
+    merchant_suffix, cc = _classify_last_word(last)
+    if cc is None:
         return rest, None
-    prefix, last = parts[0].strip(), parts[1].strip()
-    if _LINE_COUNTRY_TOKEN_RE.fullmatch(last):
-        return prefix, last
-    stem, cc = _try_split_fused_country_last_word(last)
-    if cc:
-        return f"{prefix} {stem}".strip(), cc
-    return rest, None
+    merchant = f"{prefix} {merchant_suffix}".strip() if prefix else merchant_suffix
+    return merchant, cc
 
 
 def _strip_trailing_locations(merchant_line: str) -> tuple[str, str | None]:

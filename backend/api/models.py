@@ -412,6 +412,6 @@ class RecurringPattern(AbstractBaseModel):
 
 
 @receiver(post_save, sender=get_user_model())
-def create_user_profile(sender, instance, created, **kwargs):  # pylint: disable=unused-argument
+def create_user_profile(instance, created, **kwargs):
     if created:
         UserProfile.objects.get_or_create(user=instance)

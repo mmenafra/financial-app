@@ -16,7 +16,7 @@ from api.models import (
     Transaction,
     VisaInternationalStatement,
 )
-from api.recurring_signals import _recurring_pattern_refresh_matching_transactions
+from api.recurring.signals import _recurring_pattern_refresh_matching_transactions
 
 User = get_user_model()
 
@@ -56,7 +56,7 @@ class ImportVisaInternationalAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["detail"], "Only .pdf files are supported.")
 
-    @patch("api.import_pipeline.parse_visa_internacional_statement_pdf")
+    @patch("api.imports.pipeline.parse_visa_internacional_statement_pdf")
     def test_success_returns_transactions_json(self, mock_parse):
         mock_parse.return_value = {
             "period_from": "2026-02-24",
@@ -100,7 +100,7 @@ class ImportVisaInternationalAPITests(APITestCase):
         self.assertEqual(tx.visa_international_statement_id, stmt.id)
         mock_parse.assert_called_once()
 
-    @patch("api.import_pipeline.parse_visa_internacional_statement_pdf")
+    @patch("api.imports.pipeline.parse_visa_internacional_statement_pdf")
     def test_reimport_same_period_reuses_single_statement_row(self, mock_parse):
         """Same statement period does not insert a second VisaInternationalStatement."""
         parsed = {
@@ -138,7 +138,7 @@ class ImportVisaInternationalAPITests(APITestCase):
         self.assertEqual(VisaInternationalStatement.objects.count(), 1)
         self.assertEqual(VisaInternationalStatement.objects.get().pk, stmt_id)
 
-    @patch("api.import_pipeline.parse_visa_internacional_statement_pdf")
+    @patch("api.imports.pipeline.parse_visa_internacional_statement_pdf")
     def test_reimport_drifting_period_creates_second_statement_row(self, mock_parse):
         """Different parsed period_from (same period_to) inserts another statement."""
         first_parse = {
@@ -184,7 +184,7 @@ class ImportVisaInternationalAPITests(APITestCase):
         self.assertIn(first_parse["period_from"], stmts_by_start)
         self.assertIn(drift_parse["period_from"], stmts_by_start)
 
-    @patch("api.import_pipeline.parse_visa_internacional_statement_pdf")
+    @patch("api.imports.pipeline.parse_visa_internacional_statement_pdf")
     def test_import_sets_matched_recurring_pattern(self, mock_parse):
         mock_parse.return_value = {
             "period_from": "2026-02-24",
@@ -217,7 +217,7 @@ class ImportVisaInternationalAPITests(APITestCase):
         tx0 = response.data["transactions"][0]
         self.assertEqual(str(pat.id), str(tx0["matched_recurring_pattern"]))
 
-    @patch("api.import_pipeline.parse_visa_internacional_statement_pdf")
+    @patch("api.imports.pipeline.parse_visa_internacional_statement_pdf")
     def test_skipped_duplicate_import_sets_recurring_when_still_missing(
         self,
         mock_parse,
@@ -292,7 +292,7 @@ class ImportVisaInternationalAPITests(APITestCase):
         tx.refresh_from_db()
         self.assertEqual(tx.matched_recurring_pattern_id, pat.id)
 
-    @patch("api.import_pipeline.parse_visa_internacional_statement_pdf")
+    @patch("api.imports.pipeline.parse_visa_internacional_statement_pdf")
     def test_pago_en_efectivo_skipped_not_imported_and_excluded_from_statement_total(
         self,
         mock_parse,

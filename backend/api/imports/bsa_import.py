@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from django.utils import timezone
 
-from .models import (
+from ..models import (
     Category,
     Direction,
     FileImport,
@@ -81,9 +81,34 @@ def inferred_category_for_bsa(user, description: str):
     return None, None
 
 
-def import_bsa_row(  # pylint: disable=too-many-return-statements  # noqa: C901
-    user, row: dict, file_import: FileImport | None = None
-) -> dict:
+class _BsaAmountError(ValueError):
+    """Raised when debit/credit fields are invalid."""
+
+
+def _resolve_bsa_amount(
+    row: dict,
+) -> tuple[Decimal, Direction, TransactionType]:
+    """Return (amount, direction, tx_type) or raise _BsaAmountError."""
+    debit = row.get("debit")
+    credit = row.get("credit")
+    if debit is not None and credit is not None:
+        raise _BsaAmountError(
+            "Row has both debit and credit; only one is allowed per row."
+        )
+    if debit is None and credit is None:
+        raise _BsaAmountError(
+            "Row has neither debit nor credit (no transaction amount)."
+        )
+    if debit is not None:
+        amount, direction, tx_type = debit, Direction.EXPENSE, TransactionType.DEBIT
+    else:
+        amount, direction, tx_type = credit, Direction.INCOME, TransactionType.CREDIT
+    if amount <= 0:
+        raise _BsaAmountError("Transaction amount must be positive.")
+    return amount, direction, tx_type
+
+
+def import_bsa_row(user, row: dict, file_import: FileImport | None = None) -> dict:
     """
     Import one BSA-parsed row. Returns one of:
     {"ok": "created", "instance": Transaction}
@@ -91,31 +116,13 @@ def import_bsa_row(  # pylint: disable=too-many-return-statements  # noqa: C901
     {"error": "..."}
     """
     try:
-        debit = row.get("debit")
-        credit = row.get("credit")
-        if debit is not None and credit is not None:
-            return {
-                "error": "Row has both debit and credit; only one is allowed per row."
-            }
-        if debit is None and credit is None:
-            return {
-                "error": "Row has neither debit nor credit (no transaction amount).",
-            }
-        if debit is not None:
-            amount = debit
-            direction = Direction.EXPENSE
-            tx_type = TransactionType.DEBIT
-        else:
-            amount = credit
-            direction = Direction.INCOME
-            tx_type = TransactionType.CREDIT
-        if amount <= 0:
-            return {"error": "Transaction amount must be positive."}
+        # _resolve_bsa_amount raises _BsaAmountError (a ValueError subclass) on invalid input.
+        amount, direction, tx_type = _resolve_bsa_amount(row)
         if not row.get("date"):
-            return {"error": "Row is missing date."}
+            raise ValueError("Row is missing date.")
         ext_id = bsa_row_external_id(row)
         if len(ext_id) > 255:
-            return {"error": "Could not build external_id: row data too long."}
+            raise ValueError("Could not build external_id: row data too long.")
         desc = (row.get("description") or "")[:255]
         category = None
         if desc:

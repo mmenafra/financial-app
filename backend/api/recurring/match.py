@@ -7,7 +7,7 @@ from typing import Any
 from django.contrib.auth.models import AbstractUser
 from django.db.models import Q
 
-from .models import RecurringPattern, Transaction
+from ..models import RecurringPattern, Transaction
 
 
 def recurring_match_haystack(

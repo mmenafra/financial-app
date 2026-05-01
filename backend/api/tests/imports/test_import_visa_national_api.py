@@ -45,7 +45,7 @@ class ImportVisaNationalAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["detail"], "Only .pdf files are supported.")
 
-    @patch("api.import_pipeline.parse_visa_nacional_statement_pdf")
+    @patch("api.imports.pipeline.parse_visa_nacional_statement_pdf")
     def test_success_returns_transactions_json(self, mock_parse):
         mock_parse.return_value = {
             "period_end": "2026-03-24",
@@ -77,7 +77,7 @@ class ImportVisaNationalAPITests(APITestCase):
         )
         mock_parse.assert_called_once()
 
-    @patch("api.import_pipeline.parse_visa_nacional_statement_pdf")
+    @patch("api.imports.pipeline.parse_visa_nacional_statement_pdf")
     def test_pago_en_efectivo_skipped_not_imported(self, mock_parse):
         mock_parse.return_value = {
             "period_end": "2026-03-24",
@@ -109,7 +109,7 @@ class ImportVisaNationalAPITests(APITestCase):
         )
         self.assertEqual(len(response.data["transactions"]), 0)
 
-    @patch("api.import_pipeline.parse_visa_nacional_statement_pdf")
+    @patch("api.imports.pipeline.parse_visa_nacional_statement_pdf")
     def test_duplicate_reference_populates_skipped_items(self, mock_parse):
         row = {
             "operation_date": "2026-03-06",
@@ -147,7 +147,7 @@ class ImportVisaNationalAPITests(APITestCase):
         self.assertEqual(r2.data["skipped_items"][0]["amount"], "100.00")
         self.assertEqual(r2.data["skipped_items"][0]["currency"], "CLP")
 
-    @patch("api.import_pipeline.parse_visa_nacional_statement_pdf")
+    @patch("api.imports.pipeline.parse_visa_nacional_statement_pdf")
     def test_same_reference_different_operation_date_creates_both(self, mock_parse):
         """Bank reference codes can repeat across months; id is reference + operation date."""
         mock_parse.return_value = {

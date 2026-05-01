@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from .amounts import parse_chilean_decimal
 from .bsa_import import bsa_row_json_safe, inferred_category_for_bsa
-from .models import (
+from ..models import (
     Direction,
     FileImport,
     Source,
@@ -20,9 +20,31 @@ from .models import (
     TransactionType,
     VisaInternationalStatement,
 )
-from .recurring_match import apply_recurring_match_if_missing
+from ..recurring.match import apply_recurring_match_if_missing
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_visa_direction(
+    amount_val: Decimal,
+) -> tuple[Decimal, "Direction", "TransactionType"]:
+    """Return (magnitude, direction, tx_type) from a signed Visa amount."""
+    magnitude = abs(amount_val)
+    if amount_val < 0:
+        return magnitude, Direction.INCOME, TransactionType.CREDIT
+    return magnitude, Direction.EXPENSE, TransactionType.DEBIT
+
+
+def _infer_desc_and_category(user, raw_desc) -> tuple[str, Any]:
+    """Apply category inference and return (canonical_description, category_or_none)."""
+    desc = (raw_desc or "")[:255]
+    if desc:
+        inferred, desc_override = inferred_category_for_bsa(user, desc)
+        if desc_override:
+            desc = desc_override[:255]
+        return desc, inferred
+    return desc, None
+
 
 _VISA_SKIP_PAGO_EN_EFECTIVO = "PAGO EN EFECTIVO"
 
@@ -100,7 +122,22 @@ def skipped_item_preview_from_internacional_row(row: dict) -> dict:
     }
 
 
-def import_visa_internacional_row(  # pylint: disable=too-many-return-statements,too-many-branches  # noqa: C901
+def _parse_internacional_ref(row: dict) -> str:
+    """Return validated reference string, or raise ValueError."""
+    ref_raw = row.get("reference")
+    ref = str(ref_raw).strip() if ref_raw is not None else ""
+    if not ref:
+        raise ValueError("Row is missing reference.")
+    if len(ref) > 255:
+        raise ValueError("Reference is too long for external_id.")
+    return ref
+
+
+class _SkippedRow(Exception):
+    """Raised when a row should be silently skipped (not an error)."""
+
+
+def import_visa_internacional_row(
     user,
     row: dict,
     file_import: FileImport | None = None,
@@ -115,58 +152,34 @@ def import_visa_internacional_row(  # pylint: disable=too-many-return-statements
         {"error": "..."}
     """
     try:
-        ref_raw = row.get("reference")
-        ref = str(ref_raw).strip() if ref_raw is not None else ""
-        if not ref:
-            return {"error": "Row is missing reference."}
-        if len(ref) > 255:
-            return {"error": "Reference is too long for external_id."}
-
+        ref = _parse_internacional_ref(row)
         raw_desc = row.get("description")
         if visa_skip_pago_en_efectivo(raw_desc):
-            return {"ok": "skipped", "instance": None}
+            raise _SkippedRow
 
-        desc = (raw_desc or "")[:255]
         if not row.get("operation_date"):
-            return {"error": "Row is missing operation_date."}
+            raise ValueError("Row is missing operation_date.")
 
         amount_usd = _decimal_from_row_field(row.get("amount_usd"), "amount_usd")
         if amount_usd is None:
-            return {"error": "Row is missing or invalid amount_usd."}
+            raise ValueError("Row is missing or invalid amount_usd.")
         if amount_usd == 0:
-            return {"error": "Transaction amount must not be zero."}
+            raise ValueError("Transaction amount must not be zero.")
 
-        magnitude = abs(amount_usd)
-        if amount_usd < 0:
-            direction = Direction.INCOME
-            tx_type = TransactionType.CREDIT
-        else:
-            direction = Direction.EXPENSE
-            tx_type = TransactionType.DEBIT
-
+        magnitude, direction, tx_type = _resolve_visa_direction(amount_usd)
         amount_local = _decimal_from_row_field(row.get("amount_local"), "amount_local")
-        currency = "USD"
-
-        category = None
-        if desc:
-            inferred, desc_override = inferred_category_for_bsa(user, desc)
-            category = inferred
-            if desc_override:
-                desc = desc_override[:255]
-
-        ext_id = ref
+        desc, category = _infer_desc_and_category(user, raw_desc)
         raw_safe = bsa_row_json_safe(row)
-
         statement_dt = _visa_statement_dt(row["operation_date"])
 
         tx, was_created = Transaction.objects.get_or_create(
             user=user,
             source=Source.CREDIT_CARD_INTERNATIONAL,
-            external_id=ext_id,
+            external_id=ref,
             defaults={
                 "description": desc,
                 "amount": magnitude,
-                "currency": currency,
+                "currency": "USD",
                 "amount_local": amount_local,
                 "exchange_rate": (
                     (amount_local / magnitude) if amount_local is not None else None
@@ -185,12 +198,12 @@ def import_visa_internacional_row(  # pylint: disable=too-many-return-statements
                 "visa_international_statement": visa_statement,
             },
         )
-        if not was_created:
-            apply_recurring_match_if_missing(user, tx.pk)
-            return {"ok": "skipped", "instance": None}
-
         apply_recurring_match_if_missing(user, tx.pk)
+        if not was_created:
+            return {"ok": "skipped", "instance": None}
         return {"ok": "created", "instance": tx}
+    except _SkippedRow:
+        return {"ok": "skipped", "instance": None}
     except (KeyError, TypeError, ValueError) as exc:
         return {"error": str(exc)}
     except Exception as exc:  # pylint: disable=broad-except

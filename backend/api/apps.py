@@ -5,6 +5,6 @@ class ApiConfig(AppConfig):
     name = "api"
 
     def ready(self) -> None:
-        import importlib  # pylint: disable=import-outside-toplevel
+        import importlib
 
-        importlib.import_module("api.recurring_signals")
+        importlib.import_module("api.recurring.signals")

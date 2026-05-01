@@ -70,7 +70,47 @@ def _norm_for_label_match(s: str) -> str:
     )
 
 
-def parse_monto_total_facturado_a_pagar_clp(  # noqa: C901  # pylint: disable=too-many-branches
+def _parse_amounts_in_lines(lines: list[str]) -> list[Decimal]:
+    """Collect all valid Chilean-format amounts from a list of text lines."""
+    amounts: list[Decimal] = []
+    for line in lines:
+        for m in _AMOUNT_TOKEN_RE.finditer(line):
+            try:
+                amounts.append(_parse_chilean_amount(m.group(0)))
+            except ValueError:
+                continue
+    return amounts
+
+
+def _extract_amount_from_window(local: list[str]) -> Decimal | None:
+    """Three-strategy amount extraction from a label-matching window of lines.
+
+    Strategy 1: last ``$``-amount on the ``pagar`` line.
+    Strategy 2: maximum ``$``-amount across all lines in the window.
+    Strategy 3: first valid plain Chilean number on lines after the first.
+    """
+    for line in local:
+        if "pagar" in _norm_for_label_match(line):
+            line_amts = _parse_amounts_in_lines([line])
+            if line_amts:
+                return line_amts[-1]
+
+    window_amounts = _parse_amounts_in_lines(local)
+    if window_amounts:
+        return max(window_amounts)
+
+    for line in local[1:]:
+        seg = line.strip()
+        if not seg or _norm_for_label_match(seg).startswith("monto"):
+            continue
+        try:
+            return parse_chilean_decimal(seg.replace("$", "").strip())
+        except ValueError:
+            continue
+    return None
+
+
+def parse_monto_total_facturado_a_pagar_clp(
     full_text: str,
 ) -> Decimal | None:
     """
@@ -89,34 +129,9 @@ def parse_monto_total_facturado_a_pagar_clp(  # noqa: C901  # pylint: disable=to
         joined = _norm_for_label_match(" ".join(local))
         if "facturado" not in joined or "a pagar" not in joined:
             continue
-        for jl in local:
-            if "pagar" in _norm_for_label_match(jl):
-                line_amts: list[Decimal] = []
-                for m in _AMOUNT_TOKEN_RE.finditer(jl):
-                    try:
-                        line_amts.append(_parse_chilean_amount(m.group(0)))
-                    except ValueError:
-                        continue
-                if line_amts:
-                    return line_amts[-1]
-        window_amounts: list[Decimal] = []
-        for jl in local:
-            for m in _AMOUNT_TOKEN_RE.finditer(jl):
-                try:
-                    window_amounts.append(_parse_chilean_amount(m.group(0)))
-                except ValueError:
-                    continue
-        if window_amounts:
-            return max(window_amounts)
-        for jl in local[1:]:
-            seg = jl.strip()
-            if not seg or _norm_for_label_match(seg).startswith("monto"):
-                continue
-            inner = seg.replace("$", "").strip()
-            try:
-                return parse_chilean_decimal(inner)
-            except ValueError:
-                continue
+        result = _extract_amount_from_window(local)
+        if result is not None:
+            return result
     return None
 
 

@@ -9,15 +9,15 @@ from rest_framework.response import Response
 
 from .bank_statement_parser import parse_bsa_bank_statement
 from .bsa_import import import_bsa_row
-from .gemini_categorize import run_bulk_categorization
-from .models import (
+from ..ai.categorize import run_bulk_categorization
+from ..models import (
     FileImport,
     ImportStatus,
     Source,
     Transaction,
     UserProfile,
 )
-from .serializers import TransactionSerializer
+from ..serializers import TransactionSerializer
 from .visa_internacional_import import (
     import_visa_internacional_row,
     skipped_item_preview_from_internacional_row,

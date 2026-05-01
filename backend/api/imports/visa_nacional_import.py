@@ -8,19 +8,21 @@ from typing import Any
 
 from django.db.models import Q
 
-from .bsa_import import bsa_row_json_safe, inferred_category_for_bsa
-from .models import (
+from .bsa_import import bsa_row_json_safe
+from ..models import (
     Direction,
     FileImport,
     Source,
     Transaction,
     TransactionStatus,
-    TransactionType,
     VisaNacionalStatement,
 )
-from .recurring_match import apply_recurring_match_if_missing
+from ..recurring.match import apply_recurring_match_if_missing
 from .visa_internacional_import import (
     _decimal_from_row_field,
+    _infer_desc_and_category,
+    _resolve_visa_direction,
+    _SkippedRow,
     _visa_statement_dt,
     transaction_date_from_iso,
     visa_skip_pago_en_efectivo,
@@ -83,7 +85,41 @@ def skipped_item_preview_from_nacional_row(row: dict) -> dict:
     }
 
 
-def import_visa_nacional_row(  # pylint: disable=too-many-return-statements,too-many-branches  # noqa: C901
+def _handle_nacional_duplicate(user, ext_id: str, ref: str, cal_date) -> bool:
+    """Return True and migrate external_id when a duplicate exists, else False."""
+    duplicate = (
+        Transaction.objects.filter(user=user, source=Source.CREDIT_CARD_NATIONAL)
+        .filter(Q(external_id=ext_id) | Q(external_id=ref, transaction_date=cal_date))
+        .first()
+    )
+    if duplicate is None:
+        return False
+    if duplicate.external_id == ref:
+        duplicate.external_id = ext_id
+        duplicate.save(update_fields=["external_id"])
+    apply_recurring_match_if_missing(user, duplicate.pk)
+    return True
+
+
+def _resolve_nacional_installment(
+    row: dict,
+) -> tuple[bool, int | None, int | None, Decimal | None]:
+    """Return (is_installment, current, total, amount) from the installment fields."""
+    inst_cur, inst_tot = _parse_installment_parts(row.get("installment"))
+    inst_amt = _decimal_from_row_field(
+        row.get("installment_value"), "installment_value"
+    )
+    trivial = inst_cur == 1 and inst_tot == 1
+    is_installment = inst_cur is not None and inst_tot is not None and not trivial
+    return (
+        is_installment,
+        None if trivial else inst_cur,
+        None if trivial else inst_tot,
+        None if trivial else inst_amt,
+    )
+
+
+def import_visa_nacional_row(
     user,
     row: dict,
     file_import: FileImport | None = None,
@@ -101,71 +137,36 @@ def import_visa_nacional_row(  # pylint: disable=too-many-return-statements,too-
         ref_raw = row.get("reference_code")
         ref = str(ref_raw).strip() if ref_raw is not None else ""
         if not ref:
-            return {"error": "Row is missing reference_code."}
+            raise ValueError("Row is missing reference_code.")
 
         raw_desc = row.get("description")
         if visa_skip_pago_en_efectivo(raw_desc):
-            return {"ok": "skipped", "instance": None}
+            raise _SkippedRow
 
-        desc = (raw_desc or "")[:255]
         op_date_iso = row.get("operation_date")
         if not op_date_iso:
-            return {"error": "Row is missing operation_date."}
+            raise ValueError("Row is missing operation_date.")
 
         ext_id = f"{ref}:{op_date_iso}"
         if len(ext_id) > 255:
-            return {"error": "Reference is too long for external_id."}
+            raise ValueError("Reference is too long for external_id.")
 
         amount_val = _decimal_from_row_field(row.get("amount"), "amount")
         if amount_val is None:
-            return {"error": "Row is missing or invalid amount."}
+            raise ValueError("Row is missing or invalid amount.")
         if amount_val == 0:
-            return {"error": "Transaction amount must not be zero."}
+            raise ValueError("Transaction amount must not be zero.")
 
-        magnitude = abs(amount_val)
-        if amount_val < 0:
-            direction = Direction.INCOME
-            tx_type = TransactionType.CREDIT
-        else:
-            direction = Direction.EXPENSE
-            tx_type = TransactionType.DEBIT
-
-        category = None
-        if desc:
-            inferred, desc_override = inferred_category_for_bsa(user, desc)
-            category = inferred
-            if desc_override:
-                desc = desc_override[:255]
-
-        inst_cur, inst_tot = _parse_installment_parts(row.get("installment"))
-        inst_amt = _decimal_from_row_field(
-            row.get("installment_value"), "installment_value"
+        magnitude, direction, tx_type = _resolve_visa_direction(amount_val)
+        desc, category = _infer_desc_and_category(user, raw_desc)
+        is_installment, inst_cur, inst_tot, inst_amt = _resolve_nacional_installment(
+            row
         )
-        trivial_one_of_one = inst_cur == 1 and inst_tot == 1
-        is_installment = (
-            inst_cur is not None and inst_tot is not None and not trivial_one_of_one
-        )
-        inst_cur_save = None if trivial_one_of_one else inst_cur
-        inst_tot_save = None if trivial_one_of_one else inst_tot
-        inst_amt_save = None if trivial_one_of_one else inst_amt
-
         raw_safe = bsa_row_json_safe(row)
-
         statement_dt = _visa_statement_dt(op_date_iso)
         cal_date = transaction_date_from_iso(op_date_iso)
 
-        duplicate = (
-            Transaction.objects.filter(user=user, source=Source.CREDIT_CARD_NATIONAL)
-            .filter(
-                Q(external_id=ext_id) | Q(external_id=ref, transaction_date=cal_date)
-            )
-            .first()
-        )
-        if duplicate is not None:
-            if duplicate.external_id == ref:
-                duplicate.external_id = ext_id
-                duplicate.save(update_fields=["external_id"])
-            apply_recurring_match_if_missing(user, duplicate.pk)
+        if _handle_nacional_duplicate(user, ext_id, ref, cal_date):
             return {"ok": "skipped", "instance": None}
 
         tx = Transaction.objects.create(
@@ -183,9 +184,9 @@ def import_visa_nacional_row(  # pylint: disable=too-many-return-statements,too-
             subcategory=None,
             original_reference=ref[:255] or None,
             is_installment=is_installment,
-            installment_current=inst_cur_save,
-            installment_total=inst_tot_save,
-            installment_amount=inst_amt_save,
+            installment_current=inst_cur,
+            installment_total=inst_tot,
+            installment_amount=inst_amt,
             raw_data=raw_safe,
             imported_at=statement_dt,
             transaction_date=cal_date,
@@ -196,6 +197,8 @@ def import_visa_nacional_row(  # pylint: disable=too-many-return-statements,too-
 
         apply_recurring_match_if_missing(user, tx.pk)
         return {"ok": "created", "instance": tx}
+    except _SkippedRow:
+        return {"ok": "skipped", "instance": None}
     except (KeyError, TypeError, ValueError) as exc:
         return {"error": str(exc)}
     except Exception as exc:  # pylint: disable=broad-except
