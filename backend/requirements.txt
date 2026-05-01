@@ -14,6 +14,7 @@ google-auth==2.40.1
 inflection==0.5.1
 requests==2.32.3
 jsonschema==4.26.0
+mercadopago==2.3.0
 jsonschema-specifications==2025.9.1
 packaging==26.2
 psycopg==3.3.3

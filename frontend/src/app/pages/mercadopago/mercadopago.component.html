@@ -1,0 +1,145 @@
+<div class="flex min-h-screen bg-surface font-body">
+  <app-sidebar />
+  <div class="flex flex-col flex-1 min-w-0">
+    <app-top-nav />
+    <main class="flex-1 p-8 overflow-x-auto">
+      <div class="mx-auto flex max-w-7xl flex-col gap-6">
+        <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 class="font-headline m-0 text-3xl font-extrabold tracking-tight text-primary">
+              Mercado Pago
+            </h1>
+            <p class="m-0 mt-2 text-sm font-semibold text-on-surface-variant">
+              Payments from your Mercado Pago account (server-side integration).
+            </p>
+          </div>
+          <div class="flex shrink-0 flex-wrap items-center gap-2">
+            <button type="button" class="tx-pill-btn ghost" (click)="reload()">
+              Refresh
+            </button>
+          </div>
+        </header>
+
+        @if (loadError(); as msg) {
+          <div
+            class="rounded-2xl border border-rose-500/35 bg-rose-500/10 px-5 py-4 text-sm font-semibold text-rose-950"
+            role="alert"
+          >
+            {{ msg }}
+          </div>
+        }
+
+        @if (listLoading()) {
+          <div
+            class="rounded-3xl border border-outline-variant/40 bg-surface-container-low p-8 text-center text-sm font-semibold text-on-surface-variant"
+          >
+            Loading Mercado Pago payments…
+          </div>
+        } @else {
+          <section
+            class="overflow-hidden rounded-3xl border border-outline-variant/40 bg-surface-container-low shadow-sm"
+          >
+            <div class="overflow-x-auto">
+              <table class="tx-table w-full min-w-[680px] text-left border-collapse" aria-label="Mercado Pago payments">
+                <thead>
+                  <tr class="border-b border-outline-variant/35 text-left">
+                    <th scope="col" class="bg-surface-container px-6 py-3 text-xs uppercase tracking-wide font-bold">
+                      Created
+                    </th>
+                    <th scope="col" class="bg-surface-container px-6 py-3 text-xs uppercase tracking-wide font-bold">
+                      Description
+                    </th>
+                    <th scope="col" class="bg-surface-container px-6 py-3 text-xs uppercase tracking-wide font-bold">
+                      Amount
+                    </th>
+                    <th scope="col" class="bg-surface-container px-6 py-3 text-xs uppercase tracking-wide font-bold">
+                      Method
+                    </th>
+                    <th scope="col" class="bg-surface-container px-6 py-3 text-xs uppercase tracking-wide font-bold">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of rows(); track $index) {
+                    <tr
+                      class="cursor-pointer hover:bg-secondary-container/70"
+                      tabindex="0"
+                      role="button"
+                      [attr.aria-label]="
+                        row.description
+                          ? 'Payment ' + (row.id ?? ($index + 1)) + ': ' + row.description
+                          : 'Payment detail'
+                      "
+                      (click)="rowClickPayment(row)"
+                      (keydown.enter)="rowClickPayment(row)"
+                      (keydown.space)="$event.preventDefault(); rowClickPayment(row)"
+                    >
+                      @let created = row.date_created | date : 'medium';
+                      @let amountLbl = formatMoney(row.transaction_amount, row.currency_id);
+                      <td class="px-6 py-3 text-xs font-semibold text-on-surface-variant">
+                        {{ created ?? row.date_created ?? '—' }}
+                      </td>
+                      <td class="px-6 py-3 text-xs font-semibold text-primary">
+                        {{ row.description ?? '—' }}
+                      </td>
+                      <td class="px-6 py-3 text-xs font-bold text-primary">
+                        {{ amountLbl ?? '—' }}
+                      </td>
+                      <td class="px-6 py-3 text-xs font-semibold text-on-surface-variant">
+                        {{ row.payment_method_id ?? row.payment_type_id ?? '—' }}
+                      </td>
+                      <td class="px-6 py-3">
+                        <span
+                          class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold"
+                          [ngClass]="statusBadgeClass(row.status ?? undefined)"
+                        >
+                          {{ row.status ?? '—' }}
+                        </span>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td
+                        colspan="5"
+                        class="px-6 py-16 text-center text-sm font-semibold text-on-surface-variant"
+                      >
+                        No Mercado Pago payments returned (or credentials not configured).
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <p class="m-0 text-xs font-semibold text-on-surface-variant">
+              @if (pagingTotal() !== null) {
+                Showing {{ rows().length }} of {{ pagingTotal() ?? 0 }} payments (last 12 months per MP).
+              }
+            </p>
+            @if (hasMore()) {
+              <button
+                type="button"
+                class="tx-pill-btn"
+                [disabled]="loadMoreLoading()"
+                (click)="loadMore()"
+              >
+                {{ loadMoreLoading() ? 'Loading…' : 'Load more' }}
+              </button>
+            }
+          </div>
+        }
+
+        @if (detailOpen()) {
+          <app-mercadopago-detail-modal
+            [payment]="detailPayment()"
+            [detailLoading]="detailLoading()"
+            (dismissed)="closeDetail()"
+          />
+        }
+      </div>
+    </main>
+  </div>
+</div>

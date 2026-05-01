@@ -235,6 +235,9 @@ SIMPLE_JWT = {
 # Google Sign-In (ID token verification). Set GOOGLE_CLIENT_ID in .env
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 
+# Mercado Pago (Payment API list/detail). Set MERCADOPAGO_ACCESS_TOKEN in .env
+MERCADOPAGO_ACCESS_TOKEN = os.environ.get("MERCADOPAGO_ACCESS_TOKEN", "")
+
 # Real Gemini HTTP on bank import (disabled when false).
 GEMINI_HTTP_ENABLED = os.environ.get("GEMINI_HTTP_ENABLED", "True").lower() in {
     "1",

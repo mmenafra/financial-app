@@ -1,0 +1,122 @@
+<div
+  class="tx-modal-backdrop"
+  role="button"
+  tabindex="0"
+  aria-label="Close dialog"
+  (click)="closeModal()"
+  (keydown.enter)="closeModal()"
+  (keydown.space)="$event.preventDefault(); closeModal()"
+></div>
+<div
+  class="tx-modal tx-modal--wide"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-labelledby]="titleId()"
+>
+  <div class="flex flex-col gap-1">
+    <h2 [id]="titleId()" class="text-xl font-extrabold text-primary m-0 font-headline">
+      Mercado Pago payment
+    </h2>
+
+    @if (detailLoading()) {
+      <div class="mt-4 flex items-center gap-3 text-sm font-semibold text-on-surface-variant">
+        <span class="animate-pulse">Loading details…</span>
+      </div>
+    } @else if (payment(); as pmt) {
+      <p class="text-sm font-semibold text-on-surface m-0 mt-1">
+        {{ pmt.description ?? '—' }}
+      </p>
+      <div class="mt-1 flex flex-wrap items-center gap-2">
+        <span
+          class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold"
+          [ngClass]="statusBadgeClass(pmt.status ?? undefined)"
+        >
+          {{ pmt.status ?? 'unknown' }}
+        </span>
+        @if (pmt.status_detail) {
+          <span class="text-xs font-semibold text-on-surface-variant">{{ pmt.status_detail }}</span>
+        }
+      </div>
+
+      <dl class="mt-6 grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2 m-0">
+        <dt class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">ID</dt>
+        <dd class="m-0 font-mono text-sm font-semibold text-on-surface">{{ pmt.id ?? '—' }}</dd>
+
+        <dt class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">
+          Amount
+        </dt>
+        <dd class="m-0 text-sm font-bold text-primary">
+          {{ formatMoney(pmt.transaction_amount ?? null, pmt.currency_id) ?? '—' }}
+        </dd>
+
+        <dt class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">
+          Created
+        </dt>
+        <dd class="m-0 text-sm font-semibold text-on-surface">{{ pmt.date_created ?? '—' }}</dd>
+
+        <dt class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">
+          Approved
+        </dt>
+        <dd class="m-0 text-sm font-semibold text-on-surface">{{ pmt.date_approved ?? '—' }}</dd>
+
+        <dt class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">
+          Method
+        </dt>
+        <dd class="m-0 text-sm font-semibold text-on-surface">
+          {{ pmt.payment_method_id ?? '—' }} · {{ pmt.payment_type_id ?? '—' }}
+        </dd>
+
+        <dt class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">
+          Payer
+        </dt>
+        <dd class="m-0 text-sm font-semibold text-on-surface">{{ payerLabel(pmt) ?? '—' }}</dd>
+
+        <dt class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">Card</dt>
+        <dd class="m-0 text-sm font-semibold text-on-surface">
+          @let last4 = pmt.card?.last_four_digits;
+          @if (last4) {
+            **** {{ last4 }}
+          } @else {
+            —
+          }
+        </dd>
+
+        <dt class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">
+          Installments
+        </dt>
+        <dd class="m-0 text-sm font-semibold text-on-surface">{{ pmt.installments ?? '—' }}</dd>
+
+        <dt class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">
+          Net received
+        </dt>
+        <dd class="m-0 text-sm font-semibold text-on-surface">
+          {{ formatMoney(pmt.net_received_amount ?? null, pmt.currency_id) ?? '—' }}
+        </dd>
+
+        @if (pmt.operation_type) {
+          <dt class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">
+            Operation
+          </dt>
+          <dd class="m-0 text-sm font-semibold text-on-surface">{{ pmt.operation_type }}</dd>
+        }
+      </dl>
+
+      <div class="mt-6 border-t border-outline-variant/40 pt-4">
+        <button type="button" class="tx-pill-btn ghost text-sm font-bold" (click)="toggleRaw()">
+          {{ showRawJson() ? 'Hide' : 'Show' }} raw JSON
+        </button>
+        @if (showRawJson()) {
+          <pre
+            class="mt-4 max-h-[min(28rem,50vh)] overflow-auto rounded-xl border border-outline-variant/50 bg-surface-container/30 p-4 text-xs font-mono text-on-surface m-0 whitespace-pre"
+            tabindex="0"
+            >{{ debugJson(pmt) }}</pre
+          >
+        }
+      </div>
+    }
+  </div>
+
+  <div class="flex flex-wrap gap-2 justify-end pt-5">
+    <button type="button" class="tx-pill-btn" (click)="closeModal()">Close</button>
+  </div>
+</div>

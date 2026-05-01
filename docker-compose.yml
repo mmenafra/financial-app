@@ -35,6 +35,7 @@ services:
       POSTGRES_HOST: "db"
       POSTGRES_PORT: "5432"
       GOOGLE_CLIENT_ID: "239990524994-h80h7dsd0ku0uv1k6okvsn5gakp9f5di.apps.googleusercontent.com"
+      MERCADOPAGO_ACCESS_TOKEN: "${MERCADOPAGO_ACCESS_TOKEN}"
     depends_on:
       db:
         condition: service_healthy
