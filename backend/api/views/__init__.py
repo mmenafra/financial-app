@@ -18,5 +18,6 @@ from .imports import (  # noqa: F401
     ImportVisaInternationalStatementView,
     ImportVisaNationalStatementView,
 )
+from .historic import HistoricView  # noqa: F401
 from .misc import FileImportViewSet, RecurringPatternViewSet, SubscriptionListView  # noqa: F401
 from .transactions import CategoryViewSet, IncomeView, TransactionViewSet  # noqa: F401

@@ -13,6 +13,7 @@ import { VisaInternationalComponent } from './pages/visa-international/visa-inte
 import { VisaNacionalComponent } from './pages/visa-nacional/visa-nacional.component';
 import { SubscriptionsComponent } from './pages/subscriptions/subscriptions.component';
 import { IncomeComponent } from './pages/income/income.component';
+import { HistoricComponent } from './pages/historic/historic.component';
 import { MercadoPagoComponent } from './pages/mercadopago/mercadopago.component';
 
 export const routes: Routes = [
@@ -21,6 +22,7 @@ export const routes: Routes = [
   { path: 'signup', component: SignupComponent, canActivate: [guestGuard] },
   { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
   { path: 'income', component: IncomeComponent, canActivate: [authGuard] },
+  { path: 'historic', component: HistoricComponent, canActivate: [authGuard] },
   { path: 'connections', component: DashboardComponent, canActivate: [authGuard] },
   { path: 'transactions', component: TransactionsComponent, canActivate: [authGuard] },
   {

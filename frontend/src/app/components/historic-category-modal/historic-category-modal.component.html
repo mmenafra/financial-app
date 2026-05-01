@@ -1,0 +1,102 @@
+<div
+  class="modal-backdrop fixed inset-0 z-50 bg-black/40"
+  role="button"
+  tabindex="0"
+  aria-label="Close dialog"
+  (click)="onBackdrop()"
+  (keydown.enter)="onBackdrop()"
+  (keydown.space)="$event.preventDefault(); onBackdrop()"
+></div>
+
+<div
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+>
+  <div
+    class="modal-panel relative w-full max-w-md rounded-3xl bg-surface shadow-xl flex flex-col max-h-[80vh] pointer-events-auto"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="historic-modal-title"
+  >
+    <div class="px-6 pt-6 pb-4 border-b border-outline-variant/50 shrink-0">
+      <h2 id="historic-modal-title" class="text-xl font-bold text-primary font-headline m-0">
+        Add categories
+      </h2>
+      <p class="text-sm text-on-surface-variant m-0 mt-1">
+        Select the categories to track in the Historic table.
+      </p>
+    </div>
+
+    <div class="px-6 py-3 border-b border-outline-variant/30 shrink-0">
+      <input
+        type="search"
+        placeholder="Search categories…"
+        class="w-full rounded-xl border border-outline-variant bg-surface-container-low px-4 py-2 text-sm text-on-surface placeholder-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/40"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)"
+        aria-label="Search categories"
+      />
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-3">
+      @if (isLoading()) {
+        <p class="text-center text-on-surface-variant py-8 text-sm font-medium">Loading…</p>
+      } @else if (loadError()) {
+        <p class="text-center text-red-600 py-8 text-sm font-semibold">{{ loadError() }}</p>
+      } @else if (!filteredCategories.length) {
+        <p class="text-center text-on-surface-variant py-8 text-sm font-medium">
+          No categories found.
+        </p>
+      } @else {
+        <ul class="flex flex-col gap-1" role="list">
+          @for (cat of filteredCategories; track cat.id) {
+            <li>
+              <label
+                class="flex items-center gap-3 rounded-xl px-3 py-2.5 cursor-pointer hover:bg-surface-container-low transition-colors"
+              >
+                <input
+                  type="checkbox"
+                  class="w-4 h-4 rounded accent-primary shrink-0"
+                  [checked]="isChecked(cat.id)"
+                  (change)="toggle(cat.id)"
+                />
+                @if (cat.icon) {
+                  <span
+                    class="material-symbols-outlined text-[20px] shrink-0"
+                    [style.color]="cat.color ?? undefined"
+                    style="font-variation-settings: 'FILL' 0"
+                    >{{ cat.icon }}</span
+                  >
+                } @else {
+                  <span
+                    class="w-5 h-5 rounded-full shrink-0 border border-outline-variant/60"
+                    [style.background-color]="cat.color ?? '#e0e0e0'"
+                  ></span>
+                }
+                <span class="text-sm font-semibold text-on-surface">{{ cat.name }}</span>
+              </label>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    <div
+      class="px-6 py-4 border-t border-outline-variant/50 flex justify-end gap-3 shrink-0 bg-surface-container-low rounded-b-3xl"
+    >
+      <button
+        type="button"
+        class="rounded-xl border border-outline-variant px-5 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container transition-colors"
+        (click)="onBackdrop()"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50"
+        (click)="confirm()"
+      >
+        Apply
+      </button>
+    </div>
+  </div>
+</div>

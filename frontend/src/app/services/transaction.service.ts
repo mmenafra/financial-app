@@ -12,6 +12,7 @@ import type {
   PaginatedResponse,
   RecurringPattern,
   Subscription,
+  HistoricResponse,
   SplitItem,
   Transaction,
   TransactionFilters,
@@ -109,6 +110,14 @@ export class TransactionService {
       `${environment.apiUrl}/api/recurring-patterns/`,
       payload,
     );
+  }
+
+  /** Monthly spending breakdown per category for a given calendar year. */
+  getHistoric(categoryIds: string[], year: number): Observable<HistoricResponse> {
+    const params = new HttpParams()
+      .set('categories', categoryIds.join(','))
+      .set('year', String(year));
+    return this.http.get<HistoricResponse>(`${environment.apiUrl}/api/historic/`, { params });
   }
 
   /** Recurring matches on latest Visa Nacional and Visa International statements only. */

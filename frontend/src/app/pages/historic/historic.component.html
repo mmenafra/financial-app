@@ -1,0 +1,202 @@
+<div class="flex min-h-screen bg-surface font-body">
+  <app-sidebar />
+  <div class="flex flex-col flex-1 min-w-0">
+    <app-top-nav />
+    <main class="flex-1 p-8 overflow-x-auto">
+      <div class="mx-auto flex flex-col gap-6">
+
+        <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 class="text-3xl font-extrabold text-primary tracking-tight m-0 font-headline">
+              Historic
+            </h1>
+            <p class="text-sm text-on-surface-variant m-0 mt-1">
+              Monthly spending breakdown by category.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <label class="sr-only" for="hist-year">Year</label>
+            <select
+              id="hist-year"
+              class="tx-select"
+              [value]="selectedYear()"
+              (change)="onYearChange($event)"
+            >
+              @for (y of yearOptions; track y) {
+                <option [value]="y" [selected]="y === selectedYear()">{{ y }}</option>
+              }
+            </select>
+
+            <button type="button" class="tx-pill-btn" (click)="openModal()">
+              <span
+                class="material-symbols-outlined text-[18px]"
+                style="font-variation-settings: 'FILL' 0"
+                >tune</span
+              >
+              Manage categories
+            </button>
+          </div>
+        </header>
+
+        @if (loadError()) {
+          <div
+            class="rounded-xl border border-red-200 bg-red-50 text-red-900 px-4 py-3 text-sm font-semibold"
+          >
+            {{ loadError() }}
+          </div>
+        }
+
+        @if (!selectedIds().length) {
+          <div
+            class="flex flex-col items-center justify-center rounded-3xl border border-dashed border-outline-variant bg-surface-container-low py-20 gap-4"
+          >
+            <span
+              class="material-symbols-outlined text-on-surface-variant text-5xl"
+              style="font-variation-settings: 'FILL' 0"
+              >bar_chart</span
+            >
+            <p class="text-on-surface-variant font-semibold text-base m-0">
+              No categories selected yet.
+            </p>
+            <button type="button" class="tx-pill-btn" (click)="openModal()">
+              <span
+                class="material-symbols-outlined text-[18px]"
+                style="font-variation-settings: 'FILL' 0"
+                >add</span
+              >
+              Add categories
+            </button>
+          </div>
+        } @else if (isLoading()) {
+          <div
+            class="flex items-center justify-center rounded-3xl border border-outline-variant bg-surface-container-low py-20"
+          >
+            <p class="text-on-surface-variant font-semibold">Loading…</p>
+          </div>
+        } @else {
+          <section
+            class="rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm overflow-hidden"
+          >
+            <div
+              class="px-6 py-4 border-b border-outline-variant/50 flex items-center justify-between gap-4"
+            >
+              <h2 class="text-lg font-bold text-primary m-0 font-headline">
+                {{ selectedYear() }} — monthly breakdown
+              </h2>
+              <span class="text-xs text-on-surface-variant font-medium"
+                >{{ categories().length }}
+                {{ categories().length === 1 ? 'category' : 'categories' }}</span
+              >
+            </div>
+
+            @if (!months().length) {
+              <div class="px-6 py-16 text-center text-on-surface-variant font-medium">
+                No expense data for the selected categories in {{ selectedYear() }}.
+              </div>
+            } @else {
+              <div class="w-full overflow-x-auto">
+                <table class="tx-table w-full text-left border-collapse min-w-max">
+                  <thead>
+                    <tr>
+                      <th class="sticky left-0 z-10 bg-surface-container/50">Month</th>
+                      @for (cat of categories(); track cat.id) {
+                        <th class="text-right whitespace-nowrap">
+                          <div class="flex items-center justify-end gap-1.5">
+                            @if (cat.icon) {
+                              <span
+                                class="material-symbols-outlined text-[15px] shrink-0"
+                                [style.color]="cat.color ?? undefined"
+                                style="font-variation-settings: 'FILL' 0"
+                                >{{ cat.icon }}</span
+                              >
+                            } @else if (cat.color) {
+                              <span
+                                class="inline-block w-2 h-2 rounded-full shrink-0"
+                                [style.background-color]="cat.color"
+                              ></span>
+                            }
+                            {{ cat.name }}
+                          </div>
+                        </th>
+                      }
+                      <th class="text-right whitespace-nowrap text-primary">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (month of months(); track month; let i = $index) {
+                      <tr>
+                        <td
+                          class="sticky left-0 z-10 bg-surface-container-lowest whitespace-nowrap text-on-surface-variant font-medium"
+                        >
+                          {{ formatMonth(month) }}
+                        </td>
+                        @for (cat of categories(); track cat.id) {
+                          <td
+                            class="text-right whitespace-nowrap"
+                            [class.text-on-surface-variant]="
+                              (cat.monthly_totals[month] ?? '0') === '0'
+                            "
+                            [class.amount-expense]="
+                              (cat.monthly_totals[month] ?? '0') !== '0'
+                            "
+                          >
+                            {{ formatCellAmount(cat.monthly_totals[month] ?? '0') }}
+                          </td>
+                        }
+                        <td
+                          class="text-right whitespace-nowrap font-bold"
+                          [class.text-on-surface-variant]="rowTotals()[i] === 0"
+                          [class.amount-expense]="rowTotals()[i] !== 0"
+                        >
+                          {{ formatAmount(rowTotals()[i]) }}
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td
+                        class="sticky left-0 z-10 bg-surface-container-lowest whitespace-nowrap font-extrabold text-primary"
+                      >
+                        Total
+                      </td>
+                      @for (total of columnTotals(); track $index) {
+                        <td
+                          class="text-right whitespace-nowrap font-extrabold"
+                          [class.text-on-surface-variant]="total === 0"
+                          [class.amount-expense]="total !== 0"
+                        >
+                          {{ formatAmount(total) }}
+                        </td>
+                      }
+                      <td class="text-right whitespace-nowrap font-extrabold text-primary">
+                        {{ formatAmount(grandTotal()) }}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <div class="px-6 py-3 border-t border-outline-variant/50 bg-surface-container/40">
+                <p class="text-sm text-on-surface-variant font-medium m-0">
+                  Grand total — {{ selectedYear() }}:
+                  <span class="font-bold text-primary">{{ formatAmount(grandTotal()) }}</span>
+                </p>
+              </div>
+            }
+          </section>
+        }
+
+      </div>
+    </main>
+  </div>
+</div>
+
+@if (showModal()) {
+  <app-historic-category-modal
+    [selectedIds]="selectedIds()"
+    (confirmed)="onModalConfirmed($event)"
+    (dismissed)="onModalDismissed()"
+  />
+}

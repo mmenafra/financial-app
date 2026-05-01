@@ -14,6 +14,7 @@ from .views import (
     ForgotPasswordView,
     GoogleAuthView,
     HealthCheckView,
+    HistoricView,
     ImportBankStatementView,
     ImportVisaInternationalStatementView,
     ImportVisaNationalStatementView,
@@ -77,6 +78,7 @@ urlpatterns = [
         name="subscription-list",
     ),
     path("income/", IncomeView.as_view(), name="income-list"),
+    path("historic/", HistoricView.as_view(), name="historic"),
     path(
         "mercadopago/transactions/",
         MercadoPagoTransactionListView.as_view(),

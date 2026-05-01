@@ -225,6 +225,24 @@ export interface CreateTransactionPayload {
   transaction_date?: string;
 }
 
+/** One category column in the Historic table. */
+export interface HistoricCategoryData {
+  id: string;
+  name: string;
+  icon: string | null;
+  color: string | null;
+  /** month key (YYYY-MM) → amount string (undefined when no transactions for that month) */
+  monthly_totals: Record<string, string | undefined>;
+}
+
+/** GET /api/historic/?categories=id1,id2&year=2025 */
+export interface HistoricResponse {
+  year: number;
+  /** All 12 month keys for the year: ["2025-01", ..., "2025-12"] */
+  months: string[];
+  categories: HistoricCategoryData[];
+}
+
 /** Body for PATCH /api/transactions/:id/ */
 export interface UpdateTransactionPayload {
   description?: string;
