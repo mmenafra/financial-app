@@ -29,6 +29,51 @@ export interface MpCard {
   cardholder?: { name?: string };
 }
 
+export interface MpItem {
+  id?: string | null;
+  title?: string | null;
+  description?: string | null;
+  picture_url?: string | null;
+  category_id?: string | null;
+  /** MP API may return this as a string or number. */
+  quantity?: string | number | null;
+  /** MP API may return this as a string or number. */
+  unit_price?: string | number | null;
+  currency_id?: string | null;
+}
+
+/**
+ * MercadoLibre item detail as returned by
+ * GET https://api.mercadolibre.com/items?ids=...
+ * (public, no auth required).
+ */
+export interface MlItem {
+  id?: string;
+  title?: string;
+  price?: number;
+  currency_id?: string;
+  thumbnail?: string;
+  condition?: string;
+  category_id?: string;
+  permalink?: string;
+}
+
+/** One row merged from an MpItem stub (has quantity) + MlItem detail (has title/price). */
+export interface MpEnrichedItem {
+  id: string;
+  title: string | null;
+  quantity: string | number | null;
+  price: number | null;
+  currency_id: string | null;
+  condition: string | null;
+  permalink: string | null;
+}
+
+export interface MpAdditionalInfo {
+  items?: MpItem[] | null;
+  [key: string]: unknown;
+}
+
 export interface MpPayment {
   id?: number | string;
   date_created?: string;
@@ -49,4 +94,5 @@ export interface MpPayment {
   merchant_order_id?: string | number | null;
   acquirer_id?: number | string | null;
   operation_type?: string | null;
+  additional_info?: MpAdditionalInfo | null;
 }

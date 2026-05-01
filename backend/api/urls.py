@@ -4,6 +4,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from django.urls import include, path
 
 from .mercadopago.views import (
+    MercadoLibreItemsView,
     MercadoPagoTransactionDetailView,
     MercadoPagoTransactionListView,
 )
@@ -85,6 +86,11 @@ urlpatterns = [
         "mercadopago/transactions/<str:payment_id>/",
         MercadoPagoTransactionDetailView.as_view(),
         name="mercadopago-transaction-detail",
+    ),
+    path(
+        "mercadopago/items/",
+        MercadoLibreItemsView.as_view(),
+        name="mercadopago-items",
     ),
     path("", include(router.urls)),
 ]

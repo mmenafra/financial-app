@@ -1,6 +1,8 @@
-"""DRF views that proxy Mercado Pago Payments API for the frontend test page."""
+"""DRF views that proxy Mercado Pago / MercadoLibre APIs for the frontend."""
 
 from __future__ import annotations
+
+import requests as http_requests
 
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -8,7 +10,7 @@ from rest_framework.views import APIView
 
 from django.conf import settings
 
-from .client import MissingMercadoPagoTokenError, get_payment, search_payments
+from .client import MissingMercadoPagoTokenError, get_ml_items, get_payment, search_payments
 
 
 def _normalize_sdk_payload(raw: dict) -> tuple[int, dict | list]:
@@ -60,6 +62,44 @@ class MercadoPagoTransactionListView(APIView):
 
         code, body = _normalize_sdk_payload(raw)
         return Response(body, status=code if code >= 400 else 200)
+
+
+class MercadoLibreItemsView(APIView):
+    """Proxy GET https://api.mercadolibre.com/items?ids=… using the server-side MP token."""
+
+    permission_classes = [IsAuthenticated]
+
+    def _validate(self, request) -> tuple[list[str] | None, Response | None]:
+        """Return (item_ids, None) on success or (None, error_response) on failure."""
+        if not (settings.MERCADOPAGO_ACCESS_TOKEN or "").strip():
+            return None, Response(
+                {"detail": "Mercado Pago access token is not configured."}, status=503
+            )
+        ids_param = request.query_params.get("ids", "").strip()
+        item_ids = [i.strip() for i in ids_param.split(",") if i.strip()]
+        if not item_ids:
+            return None, Response({"detail": "ids query parameter is required."}, status=400)
+        return item_ids, None
+
+    def get(self, request, *args, **kwargs):
+        item_ids, err = self._validate(request)
+        if err is not None:
+            return err
+
+        try:
+            results = get_ml_items(item_ids)
+        except MissingMercadoPagoTokenError as exc:
+            return Response({"detail": str(exc)}, status=503)
+        except http_requests.HTTPError:
+            # All auth strategies exhausted — return empty list so the frontend
+            # falls back to displaying item IDs with constructed ML links.
+            return Response([], status=200)
+        except Exception as exc:  # pylint: disable=broad-except
+            return Response(
+                {"detail": f"MercadoLibre items request failed: {exc!s}"}, status=502
+            )
+
+        return Response(results)
 
 
 class MercadoPagoTransactionDetailView(APIView):
