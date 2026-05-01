@@ -16,6 +16,7 @@ from .views import (
     ResetPasswordView,
     SignInView,
     SignUpView,
+    SubscriptionListView,
     TransactionViewSet,
     UserProfileView,
     VisaInternationalDashboardView,
@@ -63,6 +64,11 @@ urlpatterns = [
         "visa-nacional/dashboard/",
         VisaNacionalDashboardView.as_view(),
         name="visa-nacional-dashboard",
+    ),
+    path(
+        "subscriptions/",
+        SubscriptionListView.as_view(),
+        name="subscription-list",
     ),
     path("", include(router.urls)),
 ]

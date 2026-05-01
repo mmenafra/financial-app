@@ -11,6 +11,7 @@ import { ImportsComponent } from './pages/imports/imports.component';
 import { SettingsComponent } from './pages/settings/settings.component';
 import { VisaInternationalComponent } from './pages/visa-international/visa-international.component';
 import { VisaNacionalComponent } from './pages/visa-nacional/visa-nacional.component';
+import { SubscriptionsComponent } from './pages/subscriptions/subscriptions.component';
 
 export const routes: Routes = [
   { path: '', component: LoginComponent, canActivate: [guestGuard] },
@@ -27,6 +28,11 @@ export const routes: Routes = [
   {
     path: 'visa-nacional',
     component: VisaNacionalComponent,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'subscriptions',
+    component: SubscriptionsComponent,
     canActivate: [authGuard],
   },
   { path: 'categories', component: CategoriesComponent, canActivate: [authGuard] },

@@ -63,6 +63,16 @@ export interface RecurringPattern {
 
 export type RecurringFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 
+/** One row from GET /api/subscriptions/ (latest Visa Nacional/Intl statements). */
+export interface Subscription {
+  id: string;
+  name: string;
+  amount: string;
+  currency: string;
+  frequency: RecurringFrequency;
+  last_matched_date: string | null;
+}
+
 /** Body for POST /api/recurring-patterns/ */
 export interface CreateRecurringPatternPayload {
   description_pattern: string;

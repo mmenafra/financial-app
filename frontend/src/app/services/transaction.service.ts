@@ -10,6 +10,7 @@ import type {
   CreateTransactionPayload,
   PaginatedResponse,
   RecurringPattern,
+  Subscription,
   SplitItem,
   Transaction,
   TransactionFilters,
@@ -81,6 +82,11 @@ export class TransactionService {
       `${environment.apiUrl}/api/recurring-patterns/`,
       payload,
     );
+  }
+
+  /** Recurring matches on latest Visa Nacional and Visa International statements only. */
+  getSubscriptions(): Observable<Subscription[]> {
+    return this.http.get<Subscription[]>(`${environment.apiUrl}/api/subscriptions/`);
   }
 
   /** Categories list is unpaginated on the backend (no pagination class on `CategoryViewSet`). */

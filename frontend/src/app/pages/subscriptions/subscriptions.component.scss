@@ -1,0 +1,32 @@
+// Align with transactions page tokens (global tokens in src/tailwind.css).
+
+.tx-summary-label {
+  @apply text-xs font-bold uppercase tracking-widest text-on-surface-variant;
+}
+
+.tx-summary-amount {
+  @apply text-4xl font-extrabold text-primary tracking-tight;
+}
+
+.tx-table {
+  th {
+    @apply px-6 py-3 text-xs font-bold uppercase tracking-wider text-on-surface-variant bg-surface-container/50 border-b border-outline-variant/40;
+  }
+
+  td {
+    @apply px-6 py-4 text-sm border-b border-outline-variant/30 align-middle;
+  }
+
+  tbody tr:hover td {
+    @apply bg-surface-container/30;
+  }
+}
+
+.tx-chip {
+  border-width: 1px;
+}
+
+.amount-expense {
+  @apply text-primary;
+}
+

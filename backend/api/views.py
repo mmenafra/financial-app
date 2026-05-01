@@ -29,7 +29,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.db import transaction as db_transaction
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.utils.encoding import force_bytes, force_str
@@ -1256,3 +1256,60 @@ class RecurringPatternViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+class SubscriptionListView(APIView):
+    """Recurring patterns that matched a txn on the user's latest Nacional/Intl Visa statements."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        latest_vn = (
+            VisaNacionalStatement.objects.filter(user=user).order_by("-period_end").first()
+        )
+        latest_vi = (
+            VisaInternationalStatement.objects.filter(user=user)
+            .order_by("-period_end")
+            .first()
+        )
+        if latest_vn is None and latest_vi is None:
+            return Response([])
+
+        stmt_filter = Q()
+        if latest_vn:
+            stmt_filter |= Q(visa_nacional_statement=latest_vn)
+        if latest_vi:
+            stmt_filter |= Q(visa_international_statement=latest_vi)
+
+        qs = Transaction.objects.filter(
+            user=user, matched_recurring_pattern__isnull=False
+        ).filter(stmt_filter)
+
+        txns = qs.select_related("matched_recurring_pattern").order_by(
+            "-transaction_date", "-created_at"
+        )
+
+        seen: dict[str, Transaction] = {}
+        for t in txns:
+            pid = str(t.matched_recurring_pattern_id)
+            if pid not in seen:
+                seen[pid] = t
+
+        result = []
+        for t in seen.values():
+            pat = t.matched_recurring_pattern
+            result.append(
+                {
+                    "id": str(pat.id),
+                    "name": pat.description_pattern,
+                    "amount": str(t.amount),
+                    "currency": t.currency,
+                    "frequency": pat.frequency,
+                    "last_matched_date": (
+                        t.transaction_date.isoformat() if t.transaction_date else None
+                    ),
+                }
+            )
+        result.sort(key=lambda row: row["name"].lower())
+        return Response(result)
