@@ -3,7 +3,7 @@
   <div class="flex flex-col flex-1 min-w-0">
     <app-top-nav />
     <main class="flex-1 p-8 overflow-x-auto">
-      <div class="mx-auto flex max-w-7xl flex-col gap-6">
+      <div class="mx-auto flex flex-col gap-6">
         <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 class="font-headline m-0 text-3xl font-extrabold tracking-tight text-primary">
@@ -14,8 +14,21 @@
             </p>
           </div>
           <div class="flex shrink-0 flex-wrap items-center gap-2">
-            <button type="button" class="tx-pill-btn ghost" (click)="reload()">
-              Refresh
+            <button
+              type="button"
+              class="mp-refresh-btn"
+              [disabled]="listLoading()"
+              [attr.aria-busy]="listLoading()"
+              aria-label="Reload payments from Mercado Pago"
+              (click)="reload()"
+            >
+              <span
+                class="material-symbols-outlined mp-refresh-icon shrink-0 text-[20px]"
+                [class.mp-refresh-icon-spinning]="listLoading()"
+                aria-hidden="true"
+                style="font-variation-settings: 'FILL' 0"
+              >refresh</span>
+              <span>Reload payments</span>
             </button>
           </div>
         </header>

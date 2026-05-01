@@ -1,1 +1,37 @@
 /** Mercado Pago test page shell – layout matches Visa pages. */
+
+.mp-refresh-btn {
+  @apply inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold text-primary;
+  @apply cursor-pointer border border-outline-variant/65 bg-surface-container-lowest shadow-sm;
+  @apply transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-out;
+}
+
+.mp-refresh-btn:hover:not(:disabled) {
+  @apply border-primary/30 bg-secondary-container/55 shadow-md;
+}
+
+.mp-refresh-btn:focus-visible {
+  @apply outline-none ring-2 ring-primary/40 ring-offset-2 ring-offset-surface-container-lowest;
+}
+
+.mp-refresh-btn:disabled {
+  @apply cursor-not-allowed opacity-[0.52] shadow-none;
+}
+
+.mp-refresh-btn:disabled:hover {
+  @apply border-outline-variant/65 bg-surface-container-lowest;
+}
+
+.mp-refresh-icon {
+  @apply inline-block;
+}
+
+.mp-refresh-icon-spinning {
+  animation: mp-refresh-spin 0.75s linear infinite;
+}
+
+@keyframes mp-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
