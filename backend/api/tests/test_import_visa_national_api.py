@@ -72,7 +72,9 @@ class ImportVisaNationalAPITests(APITestCase):
         self.assertEqual(response.data["skipped"], 0)
         self.assertEqual(response.data["skipped_items"], [])
         self.assertEqual(len(response.data["transactions"]), 1)
-        self.assertEqual(response.data["transactions"][0]["external_id"], "08128021:2026-03-06")
+        self.assertEqual(
+            response.data["transactions"][0]["external_id"], "08128021:2026-03-06"
+        )
         mock_parse.assert_called_once()
 
     @patch("api.import_pipeline.parse_visa_nacional_statement_pdf")

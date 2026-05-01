@@ -36,10 +36,7 @@ def bsa_row_external_id(row: dict) -> str:
     amount = debit if debit is not None else credit
     amount_str = str(amount) if amount is not None else ""
     desc = (row.get("description") or "")[:100]
-    return (
-        f"{row.get('date', '')}|{row.get('document_number', '')}"
-        f"|{amount_str}|{desc}"
-    )
+    return f"{row.get('date', '')}|{row.get('document_number', '')}|{amount_str}|{desc}"
 
 
 def bsa_statement_dt(iso_date: str) -> datetime:
@@ -140,8 +137,7 @@ def import_bsa_row(  # pylint: disable=too-many-return-statements  # noqa: C901
                 "direction": direction,
                 "category": category,
                 "subcategory": None,
-                "original_reference": (row.get("document_number") or "")[:255]
-                or None,
+                "original_reference": (row.get("document_number") or "")[:255] or None,
                 "is_installment": False,
                 "raw_data": bsa_row_json_safe(row),
                 "imported_at": statement_dt,

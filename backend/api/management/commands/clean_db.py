@@ -156,7 +156,9 @@ class Command(BaseCommand):
     def _clean_user(self, username):
         user = self._get_user(username)
         tx_count = self._purge_transactions_raw(user_id=user.pk)
-        visa_intl_count, _ = VisaInternationalStatement.objects.filter(user=user).delete()
+        visa_intl_count, _ = VisaInternationalStatement.objects.filter(
+            user=user
+        ).delete()
         visa_nac_count, _ = VisaNacionalStatement.objects.filter(user=user).delete()
         fi_count, _ = FileImport.objects.filter(user=user).delete()
         cat_count, _ = Category.objects.filter(user=user).delete()
@@ -180,7 +182,9 @@ class Command(BaseCommand):
 
     def _clean_user_since(self, username, cutoff_date: date):
         user = self._get_user(username)
-        cutoff_dt = timezone.make_aware(datetime.combine(cutoff_date, datetime.min.time()))
+        cutoff_dt = timezone.make_aware(
+            datetime.combine(cutoff_date, datetime.min.time())
+        )
 
         tx_count = self._purge_transactions_raw(
             user_id=user.pk,

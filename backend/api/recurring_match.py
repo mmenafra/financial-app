@@ -107,7 +107,9 @@ def apply_recurring_match_if_missing(user: AbstractUser, transaction_id: Any) ->
     ).update(matched_recurring_pattern=best)
 
 
-def refresh_matched_recurring_from_patterns(user: AbstractUser, transaction_id: Any) -> None:
+def refresh_matched_recurring_from_patterns(
+    user: AbstractUser, transaction_id: Any
+) -> None:
     """
     Recompute ``matched_recurring_pattern`` from all of the user's patterns (or clear it).
 

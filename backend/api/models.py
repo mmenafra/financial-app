@@ -3,6 +3,7 @@ import hashlib
 import uuid
 
 from cryptography.fernet import Fernet
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
@@ -234,7 +235,9 @@ class VisaNacionalStatement(AbstractBaseModel):
         ordering = ["-period_end", "-created_at"]
 
     def __str__(self):
-        return f"Visa Nac cierre {self.period_end} ({self.total_amount} {self.currency})"
+        return (
+            f"Visa Nac cierre {self.period_end} ({self.total_amount} {self.currency})"
+        )
 
 
 class TransactionQuerySet(models.QuerySet):

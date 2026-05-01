@@ -28,10 +28,10 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
-from django.db import transaction as db_transaction
-from django.db.models import Q, Sum
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
+from django.db import transaction as db_transaction
+from django.db.models import Q, Sum
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
@@ -692,24 +692,20 @@ class VisaInternationalDashboardView(APIView):
         statement = select_statement_for_period_end_month(user, year, month)
 
         if statement:
-            txs = (
-                Transaction.objects.filter(
-                    user=user,
-                    visa_international_statement=statement,
-                    splits__isnull=True,
-                ).order_by("transaction_date", "created_at")
-            )
+            txs = Transaction.objects.filter(
+                user=user,
+                visa_international_statement=statement,
+                splits__isnull=True,
+            ).order_by("transaction_date", "created_at")
         else:
             # Legacy / pre-parent rows: no statement with this closing month — show calendar month.
-            txs = (
-                Transaction.objects.filter(
-                    user=user,
-                    source=Source.CREDIT_CARD_INTERNATIONAL,
-                    splits__isnull=True,
-                    transaction_date__year=year,
-                    transaction_date__month=month,
-                ).order_by("transaction_date", "created_at")
-            )
+            txs = Transaction.objects.filter(
+                user=user,
+                source=Source.CREDIT_CARD_INTERNATIONAL,
+                splits__isnull=True,
+                transaction_date__year=year,
+                transaction_date__month=month,
+            ).order_by("transaction_date", "created_at")
 
         months = _visa_international_dashboard_rolling_months(year, month, 12)
         stmt_by_period: dict[tuple[int, int], VisaInternationalStatement | None] = {}
@@ -817,23 +813,19 @@ class VisaNacionalDashboardView(APIView):
         statement = select_nacional_statement_for_period_end_month(user, year, month)
 
         if statement:
-            txs = (
-                Transaction.objects.filter(
-                    user=user,
-                    visa_nacional_statement=statement,
-                    splits__isnull=True,
-                ).order_by("transaction_date", "created_at")
-            )
+            txs = Transaction.objects.filter(
+                user=user,
+                visa_nacional_statement=statement,
+                splits__isnull=True,
+            ).order_by("transaction_date", "created_at")
         else:
-            txs = (
-                Transaction.objects.filter(
-                    user=user,
-                    source=Source.CREDIT_CARD_NATIONAL,
-                    splits__isnull=True,
-                    transaction_date__year=year,
-                    transaction_date__month=month,
-                ).order_by("transaction_date", "created_at")
-            )
+            txs = Transaction.objects.filter(
+                user=user,
+                source=Source.CREDIT_CARD_NATIONAL,
+                splits__isnull=True,
+                transaction_date__year=year,
+                transaction_date__month=month,
+            ).order_by("transaction_date", "created_at")
 
         months = _visa_international_dashboard_rolling_months(year, month, 12)
         stmt_by_period: dict[tuple[int, int], VisaNacionalStatement | None] = {}
@@ -885,7 +877,9 @@ class FileImportViewSet(ModelViewSet):
                     "(same shape as the original import endpoint response)."
                 ),
             ),
-            400: OpenApiResponse(description="Invalid pipeline or unreadable stored file"),
+            400: OpenApiResponse(
+                description="Invalid pipeline or unreadable stored file"
+            ),
         },
         description=(
             "Re-process the stored file: creates a new FileImport row and runs "
@@ -952,9 +946,7 @@ def _apply_transaction_year_filter(qs, year_raw):
     try:
         year = int(year_raw)
     except (TypeError, ValueError) as err:
-        raise ValidationError(
-            {"year": "Must be a valid integer."}
-        ) from err
+        raise ValidationError({"year": "Must be a valid integer."}) from err
     if year < 1 or year > 9999:
         raise ValidationError({"year": "Invalid year."})
     return qs.filter(transaction_date__year=year)
@@ -966,9 +958,7 @@ def _apply_transaction_month_filter(qs, month_raw):
     try:
         month = int(month_raw)
     except (TypeError, ValueError) as err:
-        raise ValidationError(
-            {"month": "Must be a valid integer."}
-        ) from err
+        raise ValidationError({"month": "Must be a valid integer."}) from err
     if month < 1 or month > 12:
         raise ValidationError({"month": "Must be between 1 and 12."})
     return qs.filter(transaction_date__month=month)
@@ -991,8 +981,7 @@ def _apply_transaction_source_filter(qs, source_raw):
         raise ValidationError(
             {
                 "source": (
-                    "Invalid source. Must be one of: "
-                    f"{', '.join(_SOURCE_QUERY_ENUM)}."
+                    f"Invalid source. Must be one of: {', '.join(_SOURCE_QUERY_ENUM)}."
                 )
             }
         )
@@ -1011,9 +1000,7 @@ def _expense_totals_by_currency(queryset):
         .annotate(total=Sum("amount"))
         .order_by("currency")
     )
-    return {
-        row["currency"]: str(row["total"] or Decimal("0")) for row in rows
-    }
+    return {row["currency"]: str(row["total"] or Decimal("0")) for row in rows}
 
 
 def _filter_transactions_list_queryset(qs, query_params, user):
@@ -1021,14 +1008,10 @@ def _filter_transactions_list_queryset(qs, query_params, user):
     year_raw = query_params.get("year")
     month_raw = query_params.get("month")
     if _query_param_non_empty(month_raw) and not _query_param_non_empty(year_raw):
-        raise ValidationError(
-            {"month": "year is required when month is provided."}
-        )
+        raise ValidationError({"month": "year is required when month is provided."})
     qs = _apply_transaction_year_filter(qs, year_raw)
     qs = _apply_transaction_month_filter(qs, month_raw)
-    qs = _apply_transaction_category_filter(
-        qs, query_params.get("category"), user
-    )
+    qs = _apply_transaction_category_filter(qs, query_params.get("category"), user)
     qs = _apply_transaction_source_filter(qs, query_params.get("source"))
     return qs
 
@@ -1038,9 +1021,7 @@ def _filter_income_list_queryset(qs, query_params):
     year_raw = query_params.get("year")
     month_raw = query_params.get("month")
     if _query_param_non_empty(month_raw) and not _query_param_non_empty(year_raw):
-        raise ValidationError(
-            {"month": "year is required when month is provided."}
-        )
+        raise ValidationError({"month": "year is required when month is provided."})
     qs = _apply_transaction_year_filter(qs, year_raw)
     qs = _apply_transaction_month_filter(qs, month_raw)
     qs = _apply_transaction_source_filter(qs, query_params.get("source"))
@@ -1059,23 +1040,16 @@ def _income_monthly_totals(request, user):
     else:
         today = timezone.now().date()
         end_year, end_month = today.year, today.month
-    months = _visa_international_dashboard_rolling_months(
-        end_year, end_month, 12
-    )
+    months = _visa_international_dashboard_rolling_months(end_year, end_month, 12)
     base = Transaction.objects.filter(
         user=user, direction=Direction.INCOME, splits__isnull=True
     )
-    base = _apply_transaction_source_filter(
-        base, request.query_params.get("source")
-    )
+    base = _apply_transaction_source_filter(base, request.query_params.get("source"))
     monthly_totals = []
     for y, m in months:
-        total = (
-            base.filter(transaction_date__year=y, transaction_date__month=m).aggregate(
-                total=Sum("amount")
-            )["total"]
-            or Decimal("0")
-        )
+        total = base.filter(
+            transaction_date__year=y, transaction_date__month=m
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         monthly_totals.append({"year": y, "month": m, "total": str(total)})
     return monthly_totals
 
@@ -1127,8 +1101,7 @@ def _income_monthly_totals(request, user):
             location=OpenApiParameter.QUERY,
             required=False,
             description=(
-                "Number of results per page. "
-                "Capped at the API maximum (e.g. 100)."
+                "Number of results per page. Capped at the API maximum (e.g. 100)."
             ),
             examples=[OpenApiExample("Default size", value=100)],
         ),
@@ -1204,7 +1177,9 @@ class IncomeView(ListAPIView):
                 required=False,
                 description="Filter by transaction source.",
                 enum=_SOURCE_QUERY_ENUM,
-                examples=[OpenApiExample("Mercado Pago", value=Source.MERCADOPAGO.value)],
+                examples=[
+                    OpenApiExample("Mercado Pago", value=Source.MERCADOPAGO.value)
+                ],
             ),
             OpenApiParameter(
                 name="page",
@@ -1220,8 +1195,7 @@ class IncomeView(ListAPIView):
                 location=OpenApiParameter.QUERY,
                 required=False,
                 description=(
-                    "Number of results per page. "
-                    "Capped at the API maximum (e.g. 100)."
+                    "Number of results per page. Capped at the API maximum (e.g. 100)."
                 ),
                 examples=[OpenApiExample("Default size", value=100)],
             ),
@@ -1246,11 +1220,9 @@ class TransactionViewSet(ModelViewSet):
         queryset = self.filter_queryset(self.get_queryset())
 
         # Aggregate total expenses for the current filter period (legacy single field).
-        total_spent = (
-            queryset.filter(direction="EXPENSE")
-            .aggregate(total=Sum("amount"))["total"]
-            or Decimal("0")
-        )
+        total_spent = queryset.filter(direction="EXPENSE").aggregate(
+            total=Sum("amount")
+        )["total"] or Decimal("0")
         totals_by_currency = _expense_totals_by_currency(queryset)
 
         # Aggregate expenses for the previous calendar month (same category/source).
@@ -1274,11 +1246,9 @@ class TransactionViewSet(ModelViewSet):
             prev_qs = _apply_transaction_source_filter(
                 prev_qs, request.query_params.get("source")
             )
-            prev_spent = (
-                prev_qs.filter(direction="EXPENSE")
-                .aggregate(total=Sum("amount"))["total"]
-                or Decimal("0")
-            )
+            prev_spent = prev_qs.filter(direction="EXPENSE").aggregate(
+                total=Sum("amount")
+            )["total"] or Decimal("0")
             prev_totals_by_currency = _expense_totals_by_currency(prev_qs)
 
         page = self.paginate_queryset(queryset)
@@ -1317,16 +1287,12 @@ class TransactionViewSet(ModelViewSet):
         ser.is_valid(raise_exception=True)
         items = ser.validated_data["items"]
         if len(items) < 2:
-            raise ValidationError(
-                {"items": "At least two split lines are required."}
-            )
+            raise ValidationError({"items": "At least two split lines are required."})
 
         total = sum((row["amount"] for row in items), Decimal("0"))
         if total != bundle.amount:
             raise ValidationError(
-                {
-                    "items": "Sum of split amounts must equal the transaction amount."
-                }
+                {"items": "Sum of split amounts must equal the transaction amount."}
             )
 
         created = []
@@ -1372,9 +1338,7 @@ class TransactionViewSet(ModelViewSet):
             child.save()
             created.append(child)
 
-        out = TransactionSerializer(
-            created, many=True, context={"request": request}
-        )
+        out = TransactionSerializer(created, many=True, context={"request": request})
         return Response(out.data, status=status.HTTP_201_CREATED)
 
     def perform_create(self, serializer):
@@ -1400,7 +1364,9 @@ class SubscriptionListView(APIView):
     def get(self, request):
         user = request.user
         latest_vn = (
-            VisaNacionalStatement.objects.filter(user=user).order_by("-period_end").first()
+            VisaNacionalStatement.objects.filter(user=user)
+            .order_by("-period_end")
+            .first()
         )
         latest_vi = (
             VisaInternationalStatement.objects.filter(user=user)

@@ -168,7 +168,9 @@ def extract_periodo_actual_header_text(full_text: str) -> str:
     lines_out: list[str] = []
     for line in chunk.splitlines():
         stripped = line.strip()
-        if "1.TOTAL OPERACIONES" in stripped or stripped.startswith("1.TOTAL OPERACIONES"):
+        if "1.TOTAL OPERACIONES" in stripped or stripped.startswith(
+            "1.TOTAL OPERACIONES"
+        ):
             break
         if any(stripped.startswith(p) for p in _SECTION_END_PREFIXES):
             break

@@ -79,9 +79,7 @@ def bank_statement_import_pipeline(request, file_import):
             content = file_import.file.read().decode("utf-8")
         finally:
             file_import.file.close()
-        logger.debug(
-            "Bank statement file decoded, length=%s characters", len(content)
-        )
+        logger.debug("Bank statement file decoded, length=%s characters", len(content))
         parsed = parse_bsa_bank_statement(content)
     except UnicodeDecodeError as exc:
         logger.error("Bank statement UTF-8 decode failed: %s", exc)

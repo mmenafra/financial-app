@@ -11,6 +11,7 @@ from uuid import UUID
 
 import jsonschema
 import requests
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import transaction
@@ -327,7 +328,10 @@ def categorize_chunk(
     total_chunks: int = 1,
     user_id: int | None = None,
 ) -> dict[UUID, str | None]:
-    blob = {"categories": categories_json, "transactions": serialize_transactions_slice(txs)}
+    blob = {
+        "categories": categories_json,
+        "transactions": serialize_transactions_slice(txs),
+    }
     uid = user_id if user_id is not None else (txs[0].user_id if txs else None)
     user_message_text = USER_JSON_PRELUDE + json.dumps(blob, ensure_ascii=False)
 
@@ -435,9 +439,7 @@ def apply_decoded_mappings(user: AbstractUser, mappings: dict[UUID, str | None])
     for pk, cid_str in mappings.items():
         pk_to_cat[pk] = None
         if cid_str:
-            pk_to_cat[pk] = Category.objects.filter(
-                pk=cid_str, user=user
-            ).first()
+            pk_to_cat[pk] = Category.objects.filter(pk=cid_str, user=user).first()
 
     with transaction.atomic():
         txs = list(
@@ -524,7 +526,12 @@ def run_bulk_categorization(
         )
         return out
 
-    except (ValueError, jsonschema.ValidationError, json.JSONDecodeError, RuntimeError) as exc:
+    except (
+        ValueError,
+        jsonschema.ValidationError,
+        json.JSONDecodeError,
+        RuntimeError,
+    ) as exc:
         logger.warning(
             "Gemini bulk categorization failed user_id=%s err=%s",
             user.pk,

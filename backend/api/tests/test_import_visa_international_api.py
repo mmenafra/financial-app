@@ -1,12 +1,13 @@
 from decimal import Decimal
 from unittest.mock import patch
 
+from rest_framework import status
+from rest_framework.test import APITestCase
+
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models.signals import post_save
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APITestCase
 
 from api.models import (
     Frequency,
@@ -177,7 +178,8 @@ class ImportVisaInternationalAPITests(APITestCase):
         self.assertEqual(VisaInternationalStatement.objects.count(), 2)
 
         stmts_by_start = {
-            s.period_start.isoformat(): s for s in VisaInternationalStatement.objects.all()
+            s.period_start.isoformat(): s
+            for s in VisaInternationalStatement.objects.all()
         }
         self.assertIn(first_parse["period_from"], stmts_by_start)
         self.assertIn(drift_parse["period_from"], stmts_by_start)
@@ -217,7 +219,8 @@ class ImportVisaInternationalAPITests(APITestCase):
 
     @patch("api.import_pipeline.parse_visa_internacional_statement_pdf")
     def test_skipped_duplicate_import_sets_recurring_when_still_missing(
-        self, mock_parse,
+        self,
+        mock_parse,
     ):
         """Re-import skips rows but fills ``matched_recurring_pattern`` if unset."""
         mock_parse.return_value = {
@@ -291,7 +294,8 @@ class ImportVisaInternationalAPITests(APITestCase):
 
     @patch("api.import_pipeline.parse_visa_internacional_statement_pdf")
     def test_pago_en_efectivo_skipped_not_imported_and_excluded_from_statement_total(
-        self, mock_parse,
+        self,
+        mock_parse,
     ):
         mock_parse.return_value = {
             "period_from": "2026-02-24",

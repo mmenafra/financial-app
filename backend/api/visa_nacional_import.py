@@ -143,9 +143,7 @@ def import_visa_nacional_row(  # pylint: disable=too-many-return-statements,too-
         )
         trivial_one_of_one = inst_cur == 1 and inst_tot == 1
         is_installment = (
-            inst_cur is not None
-            and inst_tot is not None
-            and not trivial_one_of_one
+            inst_cur is not None and inst_tot is not None and not trivial_one_of_one
         )
         inst_cur_save = None if trivial_one_of_one else inst_cur
         inst_tot_save = None if trivial_one_of_one else inst_tot
@@ -158,7 +156,9 @@ def import_visa_nacional_row(  # pylint: disable=too-many-return-statements,too-
 
         duplicate = (
             Transaction.objects.filter(user=user, source=Source.CREDIT_CARD_NATIONAL)
-            .filter(Q(external_id=ext_id) | Q(external_id=ref, transaction_date=cal_date))
+            .filter(
+                Q(external_id=ext_id) | Q(external_id=ref, transaction_date=cal_date)
+            )
             .first()
         )
         if duplicate is not None:

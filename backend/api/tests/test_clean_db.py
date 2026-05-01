@@ -132,9 +132,15 @@ class CleanDbUserSinceTests(TestCase):
         )
         Transaction.objects.filter(pk=t_mar.pk).update(created_at=mar)
 
-        call_command("clean_db", "--user-since", self.user.username, "--from-date", "2026-02-01")
+        call_command(
+            "clean_db", "--user-since", self.user.username, "--from-date", "2026-02-01"
+        )
 
-        remaining = set(Transaction.objects.filter(user=self.user).values_list("description", flat=True))
+        remaining = set(
+            Transaction.objects.filter(user=self.user).values_list(
+                "description", flat=True
+            )
+        )
         self.assertEqual(remaining, {"January"})
 
     def test_user_since_deletes_matching_visa_statements_and_file_imports(self):
@@ -174,14 +180,18 @@ class CleanDbUserSinceTests(TestCase):
             total_amount=Decimal("2.00"),
         )
 
-        call_command("clean_db", "--user-since", self.user.username, "--from-date", "2026-02-01")
+        call_command(
+            "clean_db", "--user-since", self.user.username, "--from-date", "2026-02-01"
+        )
 
         self.assertEqual(FileImport.objects.filter(user=self.user).count(), 1)
         self.assertEqual(
             FileImport.objects.filter(user=self.user).first().pk,
             fi_old.pk,
         )
-        self.assertEqual(VisaInternationalStatement.objects.filter(user=self.user).count(), 1)
+        self.assertEqual(
+            VisaInternationalStatement.objects.filter(user=self.user).count(), 1
+        )
 
     def test_user_since_deletes_all_recurring_patterns_keeps_categories(self):
         cat = Category.objects.create(name="Keep me", user=self.user)
@@ -190,7 +200,9 @@ class CleanDbUserSinceTests(TestCase):
             description_pattern="NETFLIX",
             frequency=Frequency.MONTHLY,
         )
-        call_command("clean_db", "--user-since", self.user.username, "--from-date", "2026-02-01")
+        call_command(
+            "clean_db", "--user-since", self.user.username, "--from-date", "2026-02-01"
+        )
         self.assertFalse(RecurringPattern.objects.filter(user=self.user).exists())
         self.assertTrue(Category.objects.filter(pk=cat.pk).exists())
 

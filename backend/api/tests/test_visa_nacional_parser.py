@@ -92,10 +92,9 @@ III. INFORMACIÓN DE PAGO
         self.assertEqual(out["period_end"], "2026-03-20")
 
     def test_fallback_total_when_neither_monto_nor_total_operaciones_amount(self):
-        text = (
-            self.FIXTURE_TEXT.replace("Monto Total Facturado a Pagar $ 500.000\n\n", "")
-            .replace("1.TOTAL OPERACIONES $ 340.633\n", "1.TOTAL OPERACIONES\n")
-        )
+        text = self.FIXTURE_TEXT.replace(
+            "Monto Total Facturado a Pagar $ 500.000\n\n", ""
+        ).replace("1.TOTAL OPERACIONES $ 340.633\n", "1.TOTAL OPERACIONES\n")
         out = parse_visa_nacional_statement_text(text)
         # Row amounts use Valor cuota (last column); Falabella contributes one cuota not full purchase.
         self.assertEqual(Decimal(out["total_operaciones"]), Decimal("221986"))

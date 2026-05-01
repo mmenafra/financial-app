@@ -21,7 +21,9 @@ class DumpGeminiKeysTests(TestCase):
     def test_insecure_allowed_when_debug_false(self):
         out = StringIO()
         err = StringIO()
-        call_command("dump_gemini_keys", "--insecure", stdout=out, stderr=err, verbosity=0)
+        call_command(
+            "dump_gemini_keys", "--insecure", stdout=out, stderr=err, verbosity=0
+        )
         self.assertIn("no users", out.getvalue().lower())
 
     @override_settings(DEBUG=True)

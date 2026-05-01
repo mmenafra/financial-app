@@ -218,7 +218,5 @@ class VisaInternationalDashboardAPITests(APITestCase):
         response = self.client.get(self.url, {"year": "2026", "month": "3"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNotNone(response.data["statement"])
-        self.assertEqual(
-            response.data["statement"]["id"], str(stmt_with_tx.id)
-        )
+        self.assertEqual(response.data["statement"]["id"], str(stmt_with_tx.id))
         self.assertEqual(len(response.data["transactions"]), 1)

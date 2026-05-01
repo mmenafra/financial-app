@@ -83,14 +83,22 @@ class ImportBankStatementAPITests(APITestCase):
         self.client.force_authenticate(user=self.user)
         r1 = self.client.post(
             self.url,
-            {"file": SimpleUploadedFile("BSA.dat", _BSA_BASE, content_type="text/plain")},
+            {
+                "file": SimpleUploadedFile(
+                    "BSA.dat", _BSA_BASE, content_type="text/plain"
+                )
+            },
             format="multipart",
         )
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
         self.assertEqual(r1.data["created"], 2)
         r2 = self.client.post(
             self.url,
-            {"file": SimpleUploadedFile("BSA.dat", _BSA_BASE, content_type="text/plain")},
+            {
+                "file": SimpleUploadedFile(
+                    "BSA.dat", _BSA_BASE, content_type="text/plain"
+                )
+            },
             format="multipart",
         )
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
@@ -226,7 +234,9 @@ class GeminiBankStatementImportTests(APITestCase):
         self.client.force_authenticate(user=self.user)
         statement = SimpleUploadedFile("BSA.dat", _BSA_BASE, content_type="text/plain")
         with patch("api.gemini_categorize._call_gemini_raw", side_effect=stub):
-            response = self.client.post(self.url, {"file": statement}, format="multipart")
+            response = self.client.post(
+                self.url, {"file": statement}, format="multipart"
+            )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["created"], 2)
@@ -243,7 +253,9 @@ class GeminiBankStatementImportTests(APITestCase):
         self.client.force_authenticate(user=self.user)
         statement = SimpleUploadedFile("BSA.dat", _BSA_BASE, content_type="text/plain")
         with patch("api.gemini_categorize._call_gemini_raw", side_effect=boom):
-            response = self.client.post(self.url, {"file": statement}, format="multipart")
+            response = self.client.post(
+                self.url, {"file": statement}, format="multipart"
+            )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(response.data["ai_categorization_attempted"])

@@ -148,9 +148,7 @@ class TransactionAPITests(APITestCase):  # pylint: disable=too-many-public-metho
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.list_url, {"year": 2026})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            {row["id"] for row in response.data["results"]}, {str(b.id)}
-        )
+        self.assertEqual({row["id"] for row in response.data["results"]}, {str(b.id)})
 
     def test_list_filter_by_year_and_month(self):
         m3 = self._create_tx(self.user, description="March")
@@ -159,13 +157,9 @@ class TransactionAPITests(APITestCase):  # pylint: disable=too-many-public-metho
         Transaction.objects.filter(pk=m4.pk).update(transaction_date=date(2025, 4, 5))
 
         self.client.force_authenticate(user=self.user)
-        response = self.client.get(
-            self.list_url, {"year": 2025, "month": 3}
-        )
+        response = self.client.get(self.list_url, {"year": 2025, "month": 3})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            {row["id"] for row in response.data["results"]}, {str(m3.id)}
-        )
+        self.assertEqual({row["id"] for row in response.data["results"]}, {str(m3.id)})
 
     def test_list_month_without_year_returns_400(self):
         self.client.force_authenticate(user=self.user)
@@ -179,16 +173,10 @@ class TransactionAPITests(APITestCase):  # pylint: disable=too-many-public-metho
         t2 = self._create_tx(self.user, category=cat2)
 
         self.client.force_authenticate(user=self.user)
-        response = self.client.get(
-            self.list_url, {"category": str(self.category.id)}
-        )
+        response = self.client.get(self.list_url, {"category": str(self.category.id)})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            {row["id"] for row in response.data["results"]}, {str(t1.id)}
-        )
-        self.assertNotIn(
-            str(t2.id), {row["id"] for row in response.data["results"]}
-        )
+        self.assertEqual({row["id"] for row in response.data["results"]}, {str(t1.id)})
+        self.assertNotIn(str(t2.id), {row["id"] for row in response.data["results"]})
 
     def test_list_filter_by_category_not_owned_returns_400(self):
         self._create_tx(self.user)
@@ -200,21 +188,13 @@ class TransactionAPITests(APITestCase):  # pylint: disable=too-many-public-metho
         self.assertIn("category", response.data)
 
     def test_list_filter_by_source(self):
-        mp = self._create_tx(
-            self.user, source=Source.MERCADOPAGO, description="MP"
-        )
-        self._create_tx(
-            self.user, source=Source.CREDIT_CARD_NATIONAL, description="CC"
-        )
+        mp = self._create_tx(self.user, source=Source.MERCADOPAGO, description="MP")
+        self._create_tx(self.user, source=Source.CREDIT_CARD_NATIONAL, description="CC")
 
         self.client.force_authenticate(user=self.user)
-        response = self.client.get(
-            self.list_url, {"source": Source.MERCADOPAGO}
-        )
+        response = self.client.get(self.list_url, {"source": Source.MERCADOPAGO})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            {row["id"] for row in response.data["results"]}, {str(mp.id)}
-        )
+        self.assertEqual({row["id"] for row in response.data["results"]}, {str(mp.id)})
 
     def test_list_invalid_source_returns_400(self):
         self._create_tx(self.user)
@@ -225,21 +205,21 @@ class TransactionAPITests(APITestCase):  # pylint: disable=too-many-public-metho
 
     def test_list_invalid_month_returns_400(self):
         self.client.force_authenticate(user=self.user)
-        response = self.client.get(
-            self.list_url, {"year": 2025, "month": 13}
-        )
+        response = self.client.get(self.list_url, {"year": 2025, "month": 13})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("month", response.data)
 
     def test_list_combined_year_and_source(self):
-        match = self._create_tx(
-            self.user, source=Source.MERCADOPAGO, description="ok"
+        match = self._create_tx(self.user, source=Source.MERCADOPAGO, description="ok")
+        Transaction.objects.filter(pk=match.pk).update(
+            transaction_date=date(2025, 7, 1)
         )
-        Transaction.objects.filter(pk=match.pk).update(transaction_date=date(2025, 7, 1))
         other = self._create_tx(
             self.user, source=Source.MERCADOPAGO, description="other year"
         )
-        Transaction.objects.filter(pk=other.pk).update(transaction_date=date(2024, 7, 1))
+        Transaction.objects.filter(pk=other.pk).update(
+            transaction_date=date(2024, 7, 1)
+        )
 
         self.client.force_authenticate(user=self.user)
         response = self.client.get(
@@ -284,9 +264,7 @@ class TransactionAPITests(APITestCase):  # pylint: disable=too-many-public-metho
         )
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data["count"], total)
-        self.assertEqual(
-            len(r.data["results"]), TransactionPagination.max_page_size
-        )
+        self.assertEqual(len(r.data["results"]), TransactionPagination.max_page_size)
 
     def test_retrieve_ignores_list_query_params(self):
         t = self._create_tx(self.user)
@@ -382,7 +360,9 @@ class TransactionAPITests(APITestCase):  # pylint: disable=too-many-public-metho
         )
         bundle.amount = Decimal("100.00")
         bundle.save()
-        Transaction.objects.filter(pk=bundle.pk).update(transaction_date=date(2026, 1, 15))
+        Transaction.objects.filter(pk=bundle.pk).update(
+            transaction_date=date(2026, 1, 15)
+        )
         bundle.refresh_from_db()
 
         self.client.force_authenticate(user=self.user)
