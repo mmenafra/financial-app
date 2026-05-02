@@ -71,7 +71,7 @@ make docker-prod
 
 **Frontend quality:** `make fe-lint` (ESLint `ng lint` + Stylelint) | `make fe-test` (Vitest via `ng test`, watch) | `make fe-test-ci` (Vitest, `watch=false`) | `make fe-betterer` (incremental checks; `make fe-betterer-update` after improving results). In `frontend/`: `npm run format` / `format:check` (Prettier), `npm run lint:styles` (Stylelint), `npm run test:jest` (Jest, same `*.spec.ts` as Vitest in typical setups)
 
-**Combined:** `make lint-all` (backend stack above + Angular lint) | `make test-all` (pytest in Docker, then Angular `test:ci`)
+**Combined:** `make format-all` (`make fmt` in Docker + `make fe-fmt` / `npm run format`) | `make lint-all` (backend stack above + Angular lint) | `make test-all` (pytest in Docker, then Angular `test:ci`)
 
 `npm` scripts in `frontend/`: `npm run lint` (ESLint), `npm test` / `test:ci` (experimental `@angular/build:unit-test` + Vitest), `test:jest` / `test:jest:ci` (Jest + `jest-preset-angular`), `npm run betterer` / `betterer:update`. State uses [NgRx](https://ngrx.io/) (`provideStore`, `provideEffects`, `@ngrx/entity` helper example). Betterer: [`frontend/.betterer.ts`](frontend/.betterer.ts); `@betterer/eslint` is omitted (ESLint 8 vs flat ESLint 9).
 

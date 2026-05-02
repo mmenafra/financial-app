@@ -1,20 +1,21 @@
 ---
-description: One lint-all and one test-all per substantive change batch; fix failures properly (no ignore hacks); docker-build when Dockerfile/compose/install steps change
+description: One format-all, lint-all, and test-all per substantive change batch; fix failures properly (no ignore hacks); docker-build when Dockerfile/compose/install steps change
 alwaysApply: true
 ---
 
 # Agent validation workflow
 
-From the repo root, use [Makefile](Makefile) targets (see [AGENTS.md](../../AGENTS.md)). Docker is required for backend `lint` / `test` and for `docker-build`.
+From the repo root, use [Makefile](Makefile) targets (see [AGENTS.md](../../AGENTS.md)). Docker is required for backend `fmt` / `lint` / `test` and for `docker-build`.
 
 ## When to run (before treating work as done)
 
-After **substantive** edits (backend Python, frontend app, tests, or config that affects runtime), do **one validation pass**:
+After **substantive** edits (backend Python, frontend app, tests, or config that affects runtime), do **one validation pass** in this order:
 
-1. **`make lint-all`** — run **once** when edits for the task are substantially done (not after every small intermediate change).
-2. **`make test-all`** — run **once** after lint passes on that pass.
+1. **`make format-all`** — run **once** when edits for the task are substantially done (not after every small intermediate change). This runs backend **`make fmt`** (Docker) and frontend **`npm run format`** (Prettier via `make fe-fmt`).
+2. **`make lint-all`** — run **once** after formatting (or after fixing anything formatting surfaced).
+3. **`make test-all`** — run **once** after lint passes on that pass.
 
-**Do not** run `make lint-all` / `make test-all` repeatedly without a failing run to fix—batch edits, then validate. If lint or tests fail, fix and re-run only what’s needed until green.
+**Do not** run `make format-all` / `make lint-all` / `make test-all` repeatedly without a failing run to fix—batch edits, then validate. If lint or tests fail, fix and re-run only what’s needed until green. If you edit again after a green run, do another **single** full pass (`format-all` → `lint-all` → `test-all`) for that new batch.
 
 If you changed **Dockerfiles**, **`docker-compose*.yml`**, or **backend/frontend build/install steps** used in images:
 
@@ -22,16 +23,16 @@ If you changed **Dockerfiles**, **`docker-compose*.yml`**, or **backend/frontend
 
 For **large or risky frontend** changes, optionally run **`make fe-build`** once to catch production build errors without waiting on a full Docker cycle.
 
-Skip full runs only for tiny doc-only or comment-only edits when they cannot affect lint/tests.
+Skip full runs only for tiny doc-only or comment-only edits when they cannot affect lint/tests/formatting.
 
 ## Lint failures
 
-- Fix the underlying issue (refactor, types, formatting via **`make fmt`** when appropriate).
+- Fix the underlying issue (refactor, types, formatting via **`make format-all`** or **`make fmt`** / **`make fe-fmt`** when appropriate).
 - **Do not** satisfy lint by adding **`# noqa`**, unjustified **`# type: ignore`**, Ruff/per-file ignores, ESLint **`eslint-disable`**, or widening ignore lists **just to silence** diagnostics. Narrow, justified suppressions aligned with existing project patterns are acceptable only when unavoidable and worth a short inline reason.
 
 ## On failure
 
 - **Do not** stop at the first error: read the output, fix the code (or config/tests), then re-run the failed target(s) until they pass (without re-running a full **`lint-all`** if only **`test-all`** failed and lint stayed clean unless you suspect lint drift).
-- Prefer **`make fmt`** for backend formatting/ruff autofixes when appropriate, then re-run **`make lint-all`** once to confirm.
+- Prefer **`make format-all`** for end-of-batch formatting; or **`make fmt`** / **`make fe-fmt`** when only one side needs it, then re-run **`make lint-all`** once to confirm.
 - If the environment cannot run Docker, say so explicitly; otherwise assume it works and iterate until green.
 - If **`make fe-test-ci`** exits with an abort trap / signal in a restricted runner, re-run it outside the sandbox (full permissions); the suite should pass when the toolchain can run normally.

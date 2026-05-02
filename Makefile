@@ -4,8 +4,8 @@ BACKEND = backend
 FRONTEND = frontend
 
 .PHONY: help docker-build docker-up docker-down docker-prod migrate \
-	lint fmt test seed seed-categories lint-all test-all \
-	fe-install fe-dev fe-build fe-lint fe-test fe-test-ci fe-betterer fe-betterer-update \
+	lint fmt test seed seed-categories format-all lint-all test-all \
+	fe-install fe-dev fe-build fe-fmt fe-lint fe-test fe-test-ci fe-betterer fe-betterer-update \
 	db-clean-all db-clean-user db-clean-transactions db-clean-user-since \
 	db-backup db-restore \
 	createsuperuser dump-gemini-keys
@@ -21,9 +21,10 @@ help:
 	@echo "DB backup:      make db-backup  (gzip SQL under backups/; compose db service must be running)"
 	@echo "DB restore:     make db-restore BACKUP=path/to/file.sql.gz  (also accepts plain .sql)"
 	@echo "Frontend:      make fe-install | fe-dev | fe-build"
+	@echo "               make fe-fmt (npm run format / Prettier)"
 	@echo "               make fe-lint (ESLint + Stylelint) | fe-test (Vitest) | fe-test-ci (Vitest, no watch)"
 	@echo "               make fe-betterer | fe-betterer-update"
-	@echo "Combined:      make lint-all (lint + fe-lint) | make test-all (test + fe-test-ci)"
+	@echo "Combined:      make format-all (fmt + fe-fmt) | make lint-all (lint + fe-lint) | make test-all (test + fe-test-ci)"
 
 docker-build:
 	$(DC) build
@@ -45,6 +46,11 @@ lint:
 
 fe-lint:
 	cd $(FRONTEND) && npx ng lint && npx stylelint "src/**/*.scss"
+
+fe-fmt:
+	cd $(FRONTEND) && npm run format
+
+format-all: fmt fe-fmt
 
 lint-all: lint fe-lint
 
