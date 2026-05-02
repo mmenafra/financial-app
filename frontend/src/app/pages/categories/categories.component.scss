@@ -1,19 +1,4 @@
-// Categories page. Global tokens live in src/tailwind.css.
-// Table body matches transactions list (see transactions.component.scss `.tx-table`).
-
-.tx-table {
-  th {
-    @apply px-6 py-3 text-xs font-bold uppercase tracking-wider text-on-surface-variant bg-surface-container/50 border-b border-outline-variant/40;
-  }
-
-  td {
-    @apply px-6 py-4 text-sm border-b border-outline-variant/30 align-middle;
-  }
-
-  tbody tr:hover td {
-    @apply bg-surface-container/30;
-  }
-}
+// Categories page. Shared `.tx-table` lives in global `tx-shared-list.scss`.
 
 .cat-pill-btn {
   @apply inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-2.5 text-sm font-bold text-primary shadow-sm transition-colors hover:bg-surface-container;
