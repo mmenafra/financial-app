@@ -78,14 +78,14 @@
               <select
                 id="flt-cat"
                 class="tx-select w-full"
-                [value]="filterCategoryId() ?? ''"
-                (change)="onFilterCategory($event)"
+                [value]="filterDraftCategory() ?? ''"
+                (change)="onFilterDraftCategory($event)"
               >
-                <option value="" [selected]="filterCategoryId() === undefined">
+                <option value="" [selected]="filterDraftCategory() === undefined">
                   All categories
                 </option>
                 @for (c of categories(); track c.id) {
-                  <option [value]="c.id" [selected]="c.id === filterCategoryId()">
+                  <option [value]="c.id" [selected]="c.id === filterDraftCategory()">
                     {{ c.name }}
                   </option>
                 }
@@ -98,26 +98,26 @@
               <select
                 id="flt-src"
                 class="tx-select w-full"
-                [value]="filterSource() ?? ''"
-                (change)="onFilterSource($event)"
+                [value]="filterDraftSource() ?? ''"
+                (change)="onFilterDraftSource($event)"
               >
-                <option value="" [selected]="filterSource() === undefined">All sources</option>
-                <option value="BANK_ACCOUNT" [selected]="filterSource() === 'BANK_ACCOUNT'">
+                <option value="" [selected]="filterDraftSource() === undefined">All sources</option>
+                <option value="BANK_ACCOUNT" [selected]="filterDraftSource() === 'BANK_ACCOUNT'">
                   Bank Account
                 </option>
                 <option
                   value="CREDIT_CARD_NATIONAL"
-                  [selected]="filterSource() === 'CREDIT_CARD_NATIONAL'"
+                  [selected]="filterDraftSource() === 'CREDIT_CARD_NATIONAL'"
                 >
                   Visa National
                 </option>
                 <option
                   value="CREDIT_CARD_INTERNATIONAL"
-                  [selected]="filterSource() === 'CREDIT_CARD_INTERNATIONAL'"
+                  [selected]="filterDraftSource() === 'CREDIT_CARD_INTERNATIONAL'"
                 >
                   Visa International
                 </option>
-                <option value="MERCADOPAGO" [selected]="filterSource() === 'MERCADOPAGO'">
+                <option value="MERCADOPAGO" [selected]="filterDraftSource() === 'MERCADOPAGO'">
                   MercadoPago
                 </option>
               </select>
@@ -426,7 +426,7 @@
     [categories]="categories()"
     chooseFilePrompt="Choose a bank statement file (.dat) first."
     (closed)="closeImportModal()"
-    (imported)="reload()"
+    (imported)="onImportListSync()"
     (importReviewCompleted)="onImportReviewCompleted()"
   />
 }
@@ -573,8 +573,10 @@
 <app-transaction-edit-modal
   [transaction]="editTarget()"
   [categories]="categories()"
+  [isSaving]="isUpdatingTransaction()"
+  [serverError]="updateError()"
   idPrefix="tx"
-  (saved)="onEditSaved()"
+  (saveRequested)="onEditSaveRequest($event)"
   (dismissed)="onEditDismissed()"
 />
 <app-transaction-metadata-modal

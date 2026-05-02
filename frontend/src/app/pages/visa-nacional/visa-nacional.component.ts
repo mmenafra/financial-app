@@ -14,11 +14,13 @@ import type {
   Category,
   RecurringPattern,
   Transaction,
+  UpdateTransactionPayload,
   VisaMonthlyTotal,
   VisaNacionalStatement,
 } from '../../models/transaction.model';
 import { TransactionService } from '../../services/transaction.service';
 import { ToastService } from '../../services/toast.service';
+import { httpErrorMessage } from '../../utils/transaction-edit';
 import { resolveApiFileUrl } from '../../utils/resolve-api-file-url';
 
 type TimelineTab = 'all' | 'subscriptions' | 'installments';
@@ -138,6 +140,8 @@ export class VisaNacionalComponent {
   protected readonly timelineTab = signal<TimelineTab>('all');
   protected readonly openMenuId = signal<string | null>(null);
   protected readonly editTarget = signal<Transaction | null>(null);
+  protected readonly editSaving = signal(false);
+  protected readonly editServerError = signal<string | null>(null);
   protected readonly metadataTarget = signal<Transaction | null>(null);
   protected readonly recurringPatternTarget = signal<Transaction | null>(null);
 
@@ -380,6 +384,7 @@ export class VisaNacionalComponent {
   protected onEditRow(row: TimelineRow, event: MouseEvent): void {
     event.stopPropagation();
     this.openMenuId.set(null);
+    this.editServerError.set(null);
     const t = this.transactions().find((x) => x.id === row.id);
     if (t) {
       this.editTarget.set(t);
@@ -390,13 +395,29 @@ export class VisaNacionalComponent {
     this.editTarget.set(null);
   }
 
-  protected onEditSaved(): void {
-    this.editTarget.set(null);
-    this.toast.success('Changes saved');
-    this.loadTimeline();
+  protected onEditSaveRequest(event: { id: string; payload: UpdateTransactionPayload }): void {
+    this.editSaving.set(true);
+    this.editServerError.set(null);
     this.transactionService
-      .getRecurringPatterns()
-      .subscribe((pats) => this.recurringPatterns.set(pats));
+      .updateTransaction(event.id, event.payload)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.editSaving.set(false);
+          this.editTarget.set(null);
+          this.toast.success('Changes saved');
+          this.loadTimeline();
+          this.transactionService
+            .getRecurringPatterns()
+            .subscribe((pats) => this.recurringPatterns.set(pats));
+        },
+        error: (err: unknown) => {
+          this.editSaving.set(false);
+          this.editServerError.set(
+            httpErrorMessage(err) ?? 'Could not update transaction.',
+          );
+        },
+      });
   }
 
   protected onMetaDataRow(row: TimelineRow, event: MouseEvent): void {

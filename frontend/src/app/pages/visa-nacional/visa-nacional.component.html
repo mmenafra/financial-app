@@ -298,8 +298,10 @@
 <app-transaction-edit-modal
   [transaction]="editTarget()"
   [categories]="categories()"
+  [isSaving]="editSaving()"
+  [serverError]="editServerError()"
   idPrefix="vn"
-  (saved)="onEditSaved()"
+  (saveRequested)="onEditSaveRequest($event)"
   (dismissed)="onEditDismissed()"
 />
 <app-recurring-pattern-modal

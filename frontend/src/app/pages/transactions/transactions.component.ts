@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, DestroyRef, HostListener, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, computed, DestroyRef, effect, HostListener, inject, signal } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { Actions, ofType } from '@ngrx/effects';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { Store } from '@ngrx/store';
 
 import { CategorySelectComponent } from '../../components/category-select/category-select.component';
 import { ImportModalComponent } from '../../components/import-modal/import-modal.component';
@@ -14,16 +15,23 @@ import type {
   Category,
   CreateTransactionPayload,
   Direction,
-  PaginatedResponse,
   Source,
   Transaction,
   TransactionType,
+  UpdateTransactionPayload,
 } from '../../models/transaction.model';
 import { ToastService } from '../../services/toast.service';
 import { TransactionService } from '../../services/transaction.service';
-import { httpErrorMessage, positiveNumberValidator, round2 } from '../../utils/transaction-edit';
+import { TransactionsPageActions } from '../../store/transactions-page/transactions-page.actions';
+import { transactionsPageFeature } from '../../store/transactions-page/transactions-page.reducer';
+import { selectSpendTotalsAndTrend } from '../../store/transactions-page/transactions-page.selectors';
+import {
+  transactionsPageInitialState,
+  TRANSACTIONS_PAGE_SIZE,
+} from '../../store/transactions-page/transactions-page.state';
+import { positiveNumberValidator, round2 } from '../../utils/transaction-edit';
 
-const PAGE_SIZE = 100;
+const PAGE_SIZE = TRANSACTIONS_PAGE_SIZE;
 const CONNECTED_SOURCES = 4;
 
 const SOURCE_LABELS: Record<Source, string> = {
@@ -50,6 +58,8 @@ const SOURCE_LABELS: Record<Source, string> = {
   styleUrl: './transactions.component.scss',
 })
 export class TransactionsComponent {
+  private readonly store = inject(Store);
+  private readonly actions$ = inject(Actions);
   private readonly transactionService = inject(TransactionService);
   private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
@@ -66,19 +76,69 @@ export class TransactionsComponent {
   protected readonly pageSize = PAGE_SIZE;
   protected readonly connectedSources = CONNECTED_SOURCES;
 
-  protected readonly selectedYear = signal(new Date().getFullYear());
-  protected readonly selectedMonth = signal(new Date().getMonth() + 1);
-  protected readonly currentPage = signal(1);
+  protected readonly selectedYear = toSignal(this.store.select(transactionsPageFeature.selectYear), {
+    initialValue: transactionsPageInitialState.year,
+  });
+  protected readonly selectedMonth = toSignal(
+    this.store.select(transactionsPageFeature.selectMonth),
+    { initialValue: transactionsPageInitialState.month },
+  );
+  protected readonly currentPage = toSignal(this.store.select(transactionsPageFeature.selectPage), {
+    initialValue: transactionsPageInitialState.page,
+  });
 
-  protected readonly categories = signal<Category[]>([]);
-  protected readonly transactions = signal<Transaction[]>([]);
-  protected readonly totalCount = signal(0);
-  protected readonly isLoading = signal(false);
-  protected readonly loadError = signal<string | null>(null);
+  protected readonly categories = toSignal(
+    this.store.select(transactionsPageFeature.selectCategories),
+    { initialValue: transactionsPageInitialState.categories },
+  );
+  protected readonly transactions = toSignal(
+    this.store.select(transactionsPageFeature.selectTransactions),
+    { initialValue: transactionsPageInitialState.transactions },
+  );
+  protected readonly totalCount = toSignal(
+    this.store.select(transactionsPageFeature.selectTotalCount),
+    { initialValue: transactionsPageInitialState.totalCount },
+  );
+  protected readonly isLoading = toSignal(this.store.select(transactionsPageFeature.selectLoading), {
+    initialValue: transactionsPageInitialState.loading,
+  });
+  protected readonly loadError = toSignal(
+    this.store.select(transactionsPageFeature.selectLoadError),
+    { initialValue: transactionsPageInitialState.loadError },
+  );
+
+  protected readonly filterCategoryId = toSignal(
+    this.store.select(transactionsPageFeature.selectFilterCategoryId),
+    { initialValue: transactionsPageInitialState.filterCategoryId },
+  );
+  protected readonly filterSource = toSignal(
+    this.store.select(transactionsPageFeature.selectFilterSource),
+    { initialValue: transactionsPageInitialState.filterSource },
+  );
+
+  protected readonly isUpdatingTransaction = toSignal(
+    this.store.select(transactionsPageFeature.selectIsUpdatingTransaction),
+    { initialValue: transactionsPageInitialState.isUpdatingTransaction },
+  );
+  protected readonly updateError = toSignal(
+    this.store.select(transactionsPageFeature.selectUpdateError),
+    { initialValue: transactionsPageInitialState.updateError },
+  );
+
+  protected readonly spendSummary = toSignal(this.store.select(selectSpendTotalsAndTrend), {
+    initialValue: {
+      rows: [] as { currency: string; amount: number }[],
+      trendPct: null as number | null,
+      trendSpentLess: null as boolean | null,
+    },
+  });
+  protected readonly totalsByCurrency = computed(() => this.spendSummary().rows);
+  protected readonly trendVsPrevMonthPct = computed(() => this.spendSummary().trendPct);
+  protected readonly trendSpentLess = computed(() => this.spendSummary().trendSpentLess);
 
   protected readonly filterOpen = signal(false);
-  protected readonly filterCategoryId = signal<string | undefined>(undefined);
-  protected readonly filterSource = signal<Source | undefined>(undefined);
+  protected readonly filterDraftCategory = signal<string | undefined>(undefined);
+  protected readonly filterDraftSource = signal<Source | undefined>(undefined);
 
   protected readonly openMenuId = signal<string | null>(null);
 
@@ -117,10 +177,6 @@ export class TransactionsComponent {
     date: [new Date().toISOString().slice(0, 10)],
   });
 
-  protected readonly totalsByCurrency = signal<{ currency: string; amount: number }[]>([]);
-  protected readonly trendVsPrevMonthPct = signal<number | null>(null);
-  protected readonly trendSpentLess = signal<boolean | null>(null);
-
   protected readonly categoryById = computed(() => {
     const map = new Map<string, Category>();
     for (const c of this.categories()) {
@@ -150,96 +206,131 @@ export class TransactionsComponent {
   })();
 
   constructor() {
-    this.reload();
+    const y = new Date().getFullYear();
+    const m = new Date().getMonth() + 1;
+    this.store.dispatch(TransactionsPageActions.initialized({ year: y, month: m }));
+
+    effect(() => {
+      if (this.filterOpen()) {
+        this.filterDraftCategory.set(this.filterCategoryId());
+        this.filterDraftSource.set(this.filterSource());
+      }
+    });
+
+    this.actions$
+      .pipe(
+        ofType(TransactionsPageActions.deleteMutationSucceeded),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        this.deleteSubmitting.set(false);
+        this.closeDeleteModal();
+      });
+
+    this.actions$
+      .pipe(
+        ofType(TransactionsPageActions.deleteMutationFailed),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(({ message }) => {
+        this.deleteSubmitting.set(false);
+        this.deleteError.set(message);
+      });
+
+    this.actions$
+      .pipe(
+        ofType(TransactionsPageActions.updateMutationSucceeded),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        this.editTarget.set(null);
+      });
+
+    this.actions$
+      .pipe(
+        ofType(TransactionsPageActions.createMutationSucceeded),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        this.newTxSubmitting.set(false);
+        this.closeNewTxModal();
+      });
+
+    this.actions$
+      .pipe(
+        ofType(TransactionsPageActions.createMutationFailed),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(({ message }) => {
+        this.newTxSubmitting.set(false);
+        this.newTxError.set(message);
+      });
+
+    this.actions$
+      .pipe(
+        ofType(TransactionsPageActions.splitMutationSucceeded),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        this.splitSubmitting.set(false);
+        this.closeSplitModal();
+      });
+
+    this.actions$
+      .pipe(ofType(TransactionsPageActions.splitMutationFailed), takeUntilDestroyed(this.destroyRef))
+      .subscribe(({ message }) => {
+        this.splitSubmitting.set(false);
+        this.splitError.set(message);
+      });
   }
 
   protected onImportReviewCompleted(): void {
     this.toast.success('Import complete');
   }
 
-  protected reload(): void {
-    this.isLoading.set(true);
-    this.loadError.set(null);
-
-    const y = this.selectedYear();
-    const m = this.selectedMonth();
-    const page = this.currentPage();
-    const cat = this.filterCategoryId();
-    const src = this.filterSource();
-
-    const baseFilters = { year: y, month: m, category: cat, source: src };
-
-    forkJoin({
-      categories: this.transactionService.getCategories(),
-      page: this.transactionService.getTransactions({
-        ...baseFilters,
-        page,
-        pageSize: PAGE_SIZE,
-      }),
-    })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: ({ categories, page: p }) => {
-          this.categories.set(categories);
-          this.transactions.set(p.results);
-          this.totalCount.set(p.count);
-
-          const { rows, trendPct, trendSpentLess } = this.mapPageSpendTotals(p);
-          this.totalsByCurrency.set(rows);
-          this.trendVsPrevMonthPct.set(trendPct);
-          this.trendSpentLess.set(trendSpentLess);
-
-          this.isLoading.set(false);
-        },
-        error: () => {
-          const msg = 'Could not load transactions. Try again.';
-          this.loadError.set(msg);
-          this.toast.error(msg);
-          this.isLoading.set(false);
-        },
-      });
+  protected onImportListSync(): void {
+    this.store.dispatch(TransactionsPageActions.importCompleted());
   }
 
   protected onYearChange(event: Event): void {
     const v = Number((event.target as HTMLSelectElement).value);
-    this.selectedYear.set(v);
-    this.currentPage.set(1);
-    this.reload();
+    this.store.dispatch(TransactionsPageActions.yearChanged({ year: v }));
   }
 
   protected onMonthChange(event: Event): void {
     const v = Number((event.target as HTMLSelectElement).value);
-    this.selectedMonth.set(v);
-    this.currentPage.set(1);
-    this.reload();
+    this.store.dispatch(TransactionsPageActions.monthChanged({ month: v }));
   }
 
   protected toggleFilters(): void {
     this.filterOpen.update((o) => !o);
   }
 
-  protected onFilterCategory(event: Event): void {
+  protected onFilterDraftCategory(event: Event): void {
     const v = (event.target as HTMLSelectElement).value;
-    this.filterCategoryId.set(v || undefined);
+    this.filterDraftCategory.set(v || undefined);
   }
 
-  protected onFilterSource(event: Event): void {
+  protected onFilterDraftSource(event: Event): void {
     const v = (event.target as HTMLSelectElement).value as Source | '';
-    this.filterSource.set(v || undefined);
+    this.filterDraftSource.set(v || undefined);
   }
 
   protected applyFilters(): void {
-    this.currentPage.set(1);
+    this.store.dispatch(
+      TransactionsPageActions.filtersCommitted({
+        filterCategoryId: this.filterDraftCategory(),
+        filterSource: this.filterDraftSource(),
+      }),
+    );
     this.filterOpen.set(false);
-    this.reload();
   }
 
   protected clearFilters(): void {
-    this.filterCategoryId.set(undefined);
-    this.filterSource.set(undefined);
-    this.currentPage.set(1);
+    this.filterDraftCategory.set(undefined);
+    this.filterDraftSource.set(undefined);
+    this.store.dispatch(TransactionsPageActions.filtersCleared());
     this.filterOpen.set(false);
-    this.reload();
   }
 
   protected activeCategoryLabel(): string {
@@ -259,20 +350,13 @@ export class TransactionsComponent {
   }
 
   protected removeFilter(kind: 'category' | 'source'): void {
-    if (kind === 'category') {
-      this.filterCategoryId.set(undefined);
-    } else {
-      this.filterSource.set(undefined);
-    }
-    this.currentPage.set(1);
-    this.reload();
+    this.store.dispatch(TransactionsPageActions.filterChipRemoved({ kind }));
   }
 
   protected goToPage(p: number): void {
     const totalPages = Math.max(1, Math.ceil(this.totalCount() / PAGE_SIZE));
     const next = Math.min(Math.max(1, p), totalPages);
-    this.currentPage.set(next);
-    this.reload();
+    this.store.dispatch(TransactionsPageActions.pageChanged({ page: next }));
   }
 
   protected pageNumbers(): (number | 'ellipsis')[] {
@@ -410,10 +494,8 @@ export class TransactionsComponent {
     this.editTarget.set(null);
   }
 
-  protected onEditSaved(): void {
-    this.editTarget.set(null);
-    this.toast.success('Changes saved');
-    this.reload();
+  protected onEditSaveRequest(event: { id: string; payload: UpdateTransactionPayload }): void {
+    this.store.dispatch(TransactionsPageActions.updateRequested(event));
   }
 
   protected onDelete(t: Transaction, event: MouseEvent): void {
@@ -446,21 +528,7 @@ export class TransactionsComponent {
     if (!tx) return;
     this.deleteSubmitting.set(true);
     this.deleteError.set(null);
-    this.transactionService
-      .deleteTransaction(tx.id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.deleteSubmitting.set(false);
-          this.closeDeleteModal();
-          this.toast.success('Transaction deleted');
-          this.reload();
-        },
-        error: (err: unknown) => {
-          this.deleteSubmitting.set(false);
-          this.deleteError.set(httpErrorMessage(err) ?? 'Could not delete transaction.');
-        },
-      });
+    this.store.dispatch(TransactionsPageActions.deleteRequested({ id: tx.id }));
   }
 
   protected onSplit(t: Transaction, event: MouseEvent): void {
@@ -563,21 +631,9 @@ export class TransactionsComponent {
         category,
       };
     });
-    this.transactionService
-      .splitTransaction(bundle.id, items)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.splitSubmitting.set(false);
-          this.closeSplitModal();
-          this.toast.success('Transaction split');
-          this.reload();
-        },
-        error: (err: unknown) => {
-          this.splitSubmitting.set(false);
-          this.splitError.set(httpErrorMessage(err) ?? 'Could not split transaction.');
-        },
-      });
+    this.store.dispatch(
+      TransactionsPageActions.splitRequested({ id: bundle.id, items }),
+    );
   }
 
   protected openNewTxModal(): void {
@@ -627,73 +683,7 @@ export class TransactionsComponent {
     };
     this.newTxSubmitting.set(true);
     this.newTxError.set(null);
-    this.transactionService
-      .createTransaction(payload)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.newTxSubmitting.set(false);
-          this.closeNewTxModal();
-          this.toast.success('Transaction created');
-          this.reload();
-        },
-        error: (err: unknown) => {
-          this.newTxSubmitting.set(false);
-          this.newTxError.set(httpErrorMessage(err) ?? 'Could not create transaction.');
-        },
-      });
-  }
-
-  private mapPageSpendTotals(page: PaginatedResponse<Transaction>): {
-    rows: { currency: string; amount: number }[];
-    trendPct: number | null;
-    trendSpentLess: boolean | null;
-  } {
-    const totals = page.totals_by_currency;
-    const prev = page.prev_totals_by_currency ?? {};
-
-    let rows: { currency: string; amount: number }[];
-
-    if (totals != null) {
-      if (Object.keys(totals).length > 0) {
-        rows = Object.keys(totals)
-          .sort()
-          .map((currency) => ({
-            currency,
-            amount: Number(totals[currency] ?? '0'),
-          }));
-      } else {
-        rows = [];
-      }
-    } else if (page.total_spent != null) {
-      rows = [{ currency: 'USD', amount: Number(page.total_spent ?? '0') }];
-    } else {
-      rows = [];
-    }
-
-    let trendPct: number | null = null;
-    let trendSpentLess: boolean | null = null;
-
-    if (rows.length === 1) {
-      const { currency } = rows[0];
-      const spentThis = rows[0].amount;
-      const spentPrev = Number(prev[currency] ?? '0');
-      if (spentPrev <= 0) {
-        trendPct = null;
-        trendSpentLess = null;
-      } else if (spentThis < spentPrev) {
-        trendPct = Math.round(((spentPrev - spentThis) / spentPrev) * 100 * 10) / 10;
-        trendSpentLess = true;
-      } else if (spentThis > spentPrev) {
-        trendPct = Math.round(((spentThis - spentPrev) / spentPrev) * 100 * 10) / 10;
-        trendSpentLess = false;
-      } else {
-        trendPct = 0;
-        trendSpentLess = null;
-      }
-    }
-
-    return { rows, trendPct, trendSpentLess };
+    this.store.dispatch(TransactionsPageActions.createRequested({ payload }));
   }
 
   protected trendText(): string {

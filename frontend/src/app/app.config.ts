@@ -5,7 +5,7 @@ import {
   provideZoneChangeDetection,
 } from '@angular/core';
 import { provideEffects } from '@ngrx/effects';
-import { provideStore } from '@ngrx/store';
+import { provideState, provideStore } from '@ngrx/store';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
@@ -15,6 +15,8 @@ import { tokenRefreshInterceptor } from './interceptors/token-refresh.intercepto
 import { mockTransactionsInterceptor } from './interceptors/mock-transactions.interceptor';
 import { routes } from './app.routes';
 import { AppEffects } from './store/app.effects';
+import { TransactionsPageEffects } from './store/transactions-page/transactions-page.effects';
+import { transactionsPageFeature } from './store/transactions-page/transactions-page.reducer';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -25,7 +27,8 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([authInterceptor, tokenRefreshInterceptor, mockTransactionsInterceptor]),
     ),
     provideStore({}),
-    provideEffects([AppEffects]),
+    provideState(transactionsPageFeature),
+    provideEffects([AppEffects, TransactionsPageEffects]),
     provideStoreDevtools({ maxAge: 25, logOnly: !isDevMode() }),
   ],
 };

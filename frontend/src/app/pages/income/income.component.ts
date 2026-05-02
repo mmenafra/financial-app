@@ -14,9 +14,11 @@ import type {
   Source,
   Transaction,
   TransactionFilters,
+  UpdateTransactionPayload,
 } from '../../models/transaction.model';
 import { ToastService } from '../../services/toast.service';
 import { TransactionService } from '../../services/transaction.service';
+import { httpErrorMessage } from '../../utils/transaction-edit';
 
 const PAGE_SIZE = 100;
 
@@ -91,6 +93,8 @@ export class IncomeComponent {
 
   protected readonly openMenuId = signal<string | null>(null);
   protected readonly editTarget = signal<Transaction | null>(null);
+  protected readonly editSaving = signal(false);
+  protected readonly editServerError = signal<string | null>(null);
   protected readonly metadataTarget = signal<Transaction | null>(null);
 
   protected readonly categoryById = computed(() => {
@@ -421,6 +425,7 @@ export class IncomeComponent {
   protected onEdit(t: Transaction, event: MouseEvent): void {
     event.stopPropagation();
     this.openMenuId.set(null);
+    this.editServerError.set(null);
     this.editTarget.set(t);
   }
 
@@ -428,10 +433,26 @@ export class IncomeComponent {
     this.editTarget.set(null);
   }
 
-  protected onEditSaved(): void {
-    this.editTarget.set(null);
-    this.toast.success('Changes saved');
-    this.reload();
+  protected onEditSaveRequest(event: { id: string; payload: UpdateTransactionPayload }): void {
+    this.editSaving.set(true);
+    this.editServerError.set(null);
+    this.transactionService
+      .updateTransaction(event.id, event.payload)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.editSaving.set(false);
+          this.editTarget.set(null);
+          this.toast.success('Changes saved');
+          this.reload();
+        },
+        error: (err: unknown) => {
+          this.editSaving.set(false);
+          this.editServerError.set(
+            httpErrorMessage(err) ?? 'Could not update transaction.',
+          );
+        },
+      });
   }
 
   protected onMetadata(t: Transaction, event: MouseEvent): void {

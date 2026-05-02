@@ -359,8 +359,10 @@
 <app-transaction-edit-modal
   [transaction]="editTarget()"
   [categories]="categories()"
+  [isSaving]="editSaving()"
+  [serverError]="editServerError()"
   idPrefix="inc"
-  (saved)="onEditSaved()"
+  (saveRequested)="onEditSaveRequest($event)"
   (dismissed)="onEditDismissed()"
 />
 <app-transaction-metadata-modal

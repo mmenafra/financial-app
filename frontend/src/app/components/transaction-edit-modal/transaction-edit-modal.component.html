@@ -118,8 +118,8 @@
         />
       </div>
 
-      @if (editError()) {
-        <p class="text-sm font-semibold text-red-600 m-0">{{ editError() }}</p>
+      @if (displayError()) {
+        <p class="text-sm font-semibold text-red-600 m-0">{{ displayError() }}</p>
       }
 
       <div class="flex flex-wrap gap-2 justify-end pt-1">
@@ -127,12 +127,12 @@
           type="button"
           class="tx-pill-btn ghost"
           (click)="closeModal()"
-          [disabled]="editSubmitting()"
+          [disabled]="isSaving()"
         >
           Cancel
         </button>
-        <button type="submit" class="tx-pill-btn" [disabled]="editSubmitting()">
-          {{ editSubmitting() ? 'Saving…' : 'Save changes' }}
+        <button type="submit" class="tx-pill-btn" [disabled]="isSaving()">
+          {{ isSaving() ? 'Saving…' : 'Save changes' }}
         </button>
       </div>
     </form>

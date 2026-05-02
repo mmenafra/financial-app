@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import {
   Component,
-  DestroyRef,
   computed,
   effect,
   inject,
@@ -9,7 +8,6 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { CategorySelectComponent } from '../category-select/category-select.component';
@@ -20,8 +18,7 @@ import type {
   TransactionType,
   UpdateTransactionPayload,
 } from '../../models/transaction.model';
-import { TransactionService } from '../../services/transaction.service';
-import { httpErrorMessage, positiveNumberValidator, round2 } from '../../utils/transaction-edit';
+import { positiveNumberValidator, round2 } from '../../utils/transaction-edit';
 
 @Component({
   selector: 'app-transaction-edit-modal',
@@ -32,21 +29,24 @@ import { httpErrorMessage, positiveNumberValidator, round2 } from '../../utils/t
 })
 export class TransactionEditModalComponent {
   private readonly fb = inject(FormBuilder);
-  private readonly transactionService = inject(TransactionService);
-  private readonly destroyRef = inject(DestroyRef);
 
   readonly transaction = input<Transaction | null>(null);
   readonly categories = input.required<Category[]>();
+  /** True while PATCH is in flight (from NgRx transactions page effects). */
+  readonly isSaving = input(false);
+  /** Server-side error message from failed update. */
+  readonly serverError = input<string | null>(null);
   /** Prefix for form control ids (avoid duplicates when multiple instances exist). */
   readonly idPrefix = input('tx');
 
-  readonly saved = output<void>();
+  readonly saveRequested = output<{ id: string; payload: UpdateTransactionPayload }>();
   readonly dismissed = output<void>();
 
   private patchedForId: string | null = null;
 
-  protected readonly editSubmitting = signal(false);
   protected readonly editError = signal<string | null>(null);
+
+  protected readonly displayError = computed(() => this.editError() ?? this.serverError());
 
   protected readonly titleId = computed(() => `${this.idPrefix()}-tx-edit-title`);
   protected readonly fieldId = (suffix: string) => `${this.idPrefix()}-edit-${suffix}`;
@@ -82,7 +82,7 @@ export class TransactionEditModalComponent {
   }
 
   protected closeModal(): void {
-    if (this.editSubmitting()) {
+    if (this.isSaving()) {
       return;
     }
     this.dismissed.emit();
@@ -114,20 +114,7 @@ export class TransactionEditModalComponent {
       category: v.category ?? null,
       ...(dateVal ? { transaction_date: dateVal } : {}),
     };
-    this.editSubmitting.set(true);
     this.editError.set(null);
-    this.transactionService
-      .updateTransaction(tx.id, payload)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.editSubmitting.set(false);
-          this.saved.emit();
-        },
-        error: (err: unknown) => {
-          this.editSubmitting.set(false);
-          this.editError.set(httpErrorMessage(err) ?? 'Could not update transaction.');
-        },
-      });
+    this.saveRequested.emit({ id: tx.id, payload });
   }
 }
