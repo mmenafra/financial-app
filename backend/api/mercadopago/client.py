@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import requests
 import mercadopago
+import requests
+
 from django.conf import settings
 
 ML_ITEMS_URL = "https://api.mercadolibre.com/items"

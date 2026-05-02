@@ -8,7 +8,6 @@ from typing import Any
 
 from django.db.models import Q
 
-from .bsa_import import bsa_row_json_safe
 from ..models import (
     Direction,
     FileImport,
@@ -18,6 +17,7 @@ from ..models import (
     VisaNacionalStatement,
 )
 from ..recurring.match import apply_recurring_match_if_missing
+from .bsa_import import bsa_row_json_safe
 from .visa_internacional_import import (
     _decimal_from_row_field,
     _infer_desc_and_category,

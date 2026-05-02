@@ -31,8 +31,12 @@ class StatsMonthlyAPITests(APITestCase):
             email="stats-other@example.com",
             password="StrongPass123!",
         )
-        self.cat_a = Category.objects.create(user=self.user, name="Food", color="#aa0000")
-        self.cat_b = Category.objects.create(user=self.user, name="Travel", color="#00aa00")
+        self.cat_a = Category.objects.create(
+            user=self.user, name="Food", color="#aa0000"
+        )
+        self.cat_b = Category.objects.create(
+            user=self.user, name="Travel", color="#00aa00"
+        )
         self.url = reverse("stats-monthly")
 
     def test_requires_auth(self):
@@ -64,7 +68,9 @@ class StatsMonthlyAPITests(APITestCase):
             status=TransactionStatus.CONFIRMED,
             transaction_date=date(2025, 3, 11),
         )
-        zero_cat = Category.objects.create(user=self.user, name="ZeroCat", color="#0000aa")
+        zero_cat = Category.objects.create(
+            user=self.user, name="ZeroCat", color="#0000aa"
+        )
         Transaction.objects.create(
             user=self.user,
             description="Nothing",

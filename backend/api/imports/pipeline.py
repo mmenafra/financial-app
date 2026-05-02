@@ -7,8 +7,6 @@ from decimal import Decimal
 from rest_framework import status
 from rest_framework.response import Response
 
-from .bank_statement_parser import parse_bsa_bank_statement
-from .bsa_import import import_bsa_row
 from ..ai.categorize import run_bulk_categorization
 from ..models import (
     FileImport,
@@ -18,6 +16,8 @@ from ..models import (
     UserProfile,
 )
 from ..serializers import TransactionSerializer
+from .bank_statement_parser import parse_bsa_bank_statement
+from .bsa_import import import_bsa_row
 from .visa_internacional_import import (
     import_visa_internacional_row,
     skipped_item_preview_from_internacional_row,

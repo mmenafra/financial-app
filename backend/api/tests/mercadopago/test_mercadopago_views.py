@@ -76,4 +76,6 @@ class MercadoPagoAPITests(APITestCase):
 
             detail_url = reverse("mercadopago-transaction-detail", args=["1"])
             resp_detail = self.client.get(detail_url)
-            self.assertEqual(resp_detail.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+            self.assertEqual(
+                resp_detail.status_code, status.HTTP_503_SERVICE_UNAVAILABLE
+            )

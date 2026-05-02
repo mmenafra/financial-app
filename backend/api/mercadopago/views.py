@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import requests as http_requests
-
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from django.conf import settings
 
-from .client import MissingMercadoPagoTokenError, get_ml_items, get_payment, search_payments
+from .client import (
+    MissingMercadoPagoTokenError,
+    get_ml_items,
+    get_payment,
+    search_payments,
+)
 
 
 def _normalize_sdk_payload(raw: dict) -> tuple[int, dict | list]:
@@ -78,7 +82,9 @@ class MercadoLibreItemsView(APIView):
         ids_param = request.query_params.get("ids", "").strip()
         item_ids = [i.strip() for i in ids_param.split(",") if i.strip()]
         if not item_ids:
-            return None, Response({"detail": "ids query parameter is required."}, status=400)
+            return None, Response(
+                {"detail": "ids query parameter is required."}, status=400
+            )
         return item_ids, None
 
     def get(self, request, *args, **kwargs):

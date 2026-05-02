@@ -9,8 +9,6 @@ from typing import Any
 
 from django.utils import timezone
 
-from .amounts import parse_chilean_decimal
-from .bsa_import import bsa_row_json_safe, inferred_category_for_bsa
 from ..models import (
     Direction,
     FileImport,
@@ -21,6 +19,8 @@ from ..models import (
     VisaInternationalStatement,
 )
 from ..recurring.match import apply_recurring_match_if_missing
+from .amounts import parse_chilean_decimal
+from .bsa_import import bsa_row_json_safe, inferred_category_for_bsa
 
 logger = logging.getLogger(__name__)
 

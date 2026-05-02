@@ -161,7 +161,9 @@ class StatsTrendView(APIView):
             )
 
         today = date.today()
-        ref_month = _int_param(request.query_params.get("reference_month"), today.month, 1, 12)
+        ref_month = _int_param(
+            request.query_params.get("reference_month"), today.month, 1, 12
+        )
         ref_year = _int_param(
             request.query_params.get("reference_year"), today.year, 1970, 2100
         )
@@ -204,7 +206,10 @@ class StatsTrendView(APIView):
             by_key[key] = row["total"] or Decimal("0")
 
         month_keys = _month_keys_starting_at(start_year, start_month, 12)
-        totals = [str(by_key.get(k, Decimal("0")).quantize(Decimal("0.01"))) for k in month_keys]
+        totals = [
+            str(by_key.get(k, Decimal("0")).quantize(Decimal("0.01")))
+            for k in month_keys
+        ]
 
         return Response(
             {

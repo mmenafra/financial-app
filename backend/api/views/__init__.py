@@ -13,12 +13,16 @@ from .dashboards import (  # noqa: F401
     VisaInternationalDashboardView,
     VisaNacionalDashboardView,
 )
+from .historic import HistoricView  # noqa: F401
 from .imports import (  # noqa: F401
     ImportBankStatementView,
     ImportVisaInternationalStatementView,
     ImportVisaNationalStatementView,
 )
-from .historic import HistoricView  # noqa: F401
-from .misc import FileImportViewSet, RecurringPatternViewSet, SubscriptionListView  # noqa: F401
+from .misc import (  # noqa: F401
+    FileImportViewSet,
+    RecurringPatternViewSet,
+    SubscriptionListView,
+)
 from .stats import StatsMonthlyView, StatsTrendView  # noqa: F401
 from .transactions import CategoryViewSet, IncomeView, TransactionViewSet  # noqa: F401

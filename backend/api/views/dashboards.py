@@ -13,6 +13,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from ..imports.visa_international_statements import (
+    select_statement_for_period_end_month,
+)
+from ..imports.visa_nacional_statements import (
+    select_nacional_statement_for_period_end_month,
+)
 from ..models import (
     Source,
     Transaction,
@@ -25,8 +31,6 @@ from ..serializers import (
     VisaNacionalStatementSerializer,
 )
 from .transactions import _query_param_non_empty, _rolling_calendar_months
-from ..imports.visa_international_statements import select_statement_for_period_end_month
-from ..imports.visa_nacional_statements import select_nacional_statement_for_period_end_month
 
 
 class VisaInternationalDashboardView(APIView):

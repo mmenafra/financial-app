@@ -16,8 +16,6 @@ from .views import (
     HealthCheckView,
     HistoricView,
     ImportBankStatementView,
-    StatsMonthlyView,
-    StatsTrendView,
     ImportVisaInternationalStatementView,
     ImportVisaNationalStatementView,
     IncomeView,
@@ -25,6 +23,8 @@ from .views import (
     ResetPasswordView,
     SignInView,
     SignUpView,
+    StatsMonthlyView,
+    StatsTrendView,
     SubscriptionListView,
     TransactionViewSet,
     UserProfileView,
@@ -82,7 +82,9 @@ urlpatterns = [
     path("income/", IncomeView.as_view(), name="income-list"),
     path("historic/", HistoricView.as_view(), name="historic"),
     path("stats/monthly/", StatsMonthlyView.as_view(), name="stats-monthly"),
-    path("stats/category-trend/", StatsTrendView.as_view(), name="stats-category-trend"),
+    path(
+        "stats/category-trend/", StatsTrendView.as_view(), name="stats-category-trend"
+    ),
     path(
         "mercadopago/transactions/",
         MercadoPagoTransactionListView.as_view(),
