@@ -80,9 +80,7 @@ export const transactionsPageFeature = createFeature({
         totalsByCurrency,
         prevTotalsByCurrency,
         totalSpent,
-        ...(categories != null
-          ? { categories, categoriesLoaded: true }
-          : {}),
+        ...(categories != null ? { categories, categoriesLoaded: true } : {}),
       }),
     ),
     on(
@@ -114,23 +112,26 @@ export const transactionsPageFeature = createFeature({
         page,
       };
     }),
-    on(TransactionsPageActions.splitMutationSucceeded, (state, { parentId, transactions: newRows }) => {
-      const idx = state.transactions.findIndex((x) => x.id === parentId);
-      if (idx === -1) {
-        return state;
-      }
-      const transactions: Transaction[] = [
-        ...state.transactions.slice(0, idx),
-        ...newRows,
-        ...state.transactions.slice(idx + 1),
-      ];
-      const delta = newRows.length - 1;
-      return {
-        ...state,
-        transactions,
-        totalCount: Math.max(0, state.totalCount + delta),
-      };
-    }),
+    on(
+      TransactionsPageActions.splitMutationSucceeded,
+      (state, { parentId, transactions: newRows }) => {
+        const idx = state.transactions.findIndex((x) => x.id === parentId);
+        if (idx === -1) {
+          return state;
+        }
+        const transactions: Transaction[] = [
+          ...state.transactions.slice(0, idx),
+          ...newRows,
+          ...state.transactions.slice(idx + 1),
+        ];
+        const delta = newRows.length - 1;
+        return {
+          ...state,
+          transactions,
+          totalCount: Math.max(0, state.totalCount + delta),
+        };
+      },
+    ),
     on(TransactionsPageActions.updateRequested, (state) => ({
       ...state,
       isUpdatingTransaction: true,

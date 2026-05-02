@@ -78,9 +78,7 @@ export class MercadoPagoDetailModalComponent {
         if (!pmt) {
           return;
         }
-        const stubs = Array.isArray(pmt.additional_info?.items)
-          ? pmt.additional_info!.items!
-          : [];
+        const stubs = Array.isArray(pmt.additional_info?.items) ? pmt.additional_info!.items! : [];
         if (stubs.length === 0) {
           return;
         }
@@ -112,7 +110,8 @@ export class MercadoPagoDetailModalComponent {
                     id,
                     title: detail?.title ?? stub.title ?? null,
                     quantity: stub.quantity ?? null,
-                    price: detail?.price ?? (stub.unit_price != null ? Number(stub.unit_price) : null),
+                    price:
+                      detail?.price ?? (stub.unit_price != null ? Number(stub.unit_price) : null),
                     currency_id: detail?.currency_id ?? stub.currency_id ?? pmt.currency_id ?? null,
                     condition: detail?.condition ?? null,
                     permalink: detail?.permalink ?? buildMlPermalink(id),
@@ -123,9 +122,7 @@ export class MercadoPagoDetailModalComponent {
             },
             error: () => {
               // ML items API unavailable (token lacks scope) — show IDs with links.
-              this.enrichedItems.set(
-                stubs.map((s) => stubToEnriched(s, pmt.currency_id ?? null)),
-              );
+              this.enrichedItems.set(stubs.map((s) => stubToEnriched(s, pmt.currency_id ?? null)));
               this.itemsLoading.set(false);
             },
           });
@@ -160,7 +157,10 @@ export class MercadoPagoDetailModalComponent {
     return email || name || pay.id?.toString() || null;
   }
 
-  protected formatMoney(amount: number | null | undefined, currency?: string | null): string | null {
+  protected formatMoney(
+    amount: number | null | undefined,
+    currency?: string | null,
+  ): string | null {
     if (amount == null || !Number.isFinite(amount)) {
       return null;
     }

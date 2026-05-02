@@ -132,7 +132,9 @@
                           {{ c.name }}
                         </span>
                       </td>
-                      <td class="text-right text-on-surface-variant">{{ formatPercent(c.percentage) }}</td>
+                      <td class="text-right text-on-surface-variant">
+                        {{ formatPercent(c.percentage) }}
+                      </td>
                       <td class="text-right amount-expense">{{ formatAmount(c.amount) }}</td>
                     </tr>
                   }

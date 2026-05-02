@@ -125,10 +125,9 @@ export class TransactionService {
   /** Monthly expense breakdown by category (pie + table). */
   getStatsMonthly(month: number, year: number): Observable<StatsMonthlyResponse> {
     const params = new HttpParams().set('month', String(month)).set('year', String(year));
-    return this.http.get<StatsMonthlyResponse>(
-      `${environment.apiUrl}/api/stats/monthly/`,
-      { params },
-    );
+    return this.http.get<StatsMonthlyResponse>(`${environment.apiUrl}/api/stats/monthly/`, {
+      params,
+    });
   }
 
   /** Last 12 months of expense for one category (line chart). */
@@ -141,10 +140,9 @@ export class TransactionService {
       .set('category_id', categoryId)
       .set('reference_month', String(referenceMonth))
       .set('reference_year', String(referenceYear));
-    return this.http.get<StatsTrendResponse>(
-      `${environment.apiUrl}/api/stats/category-trend/`,
-      { params },
-    );
+    return this.http.get<StatsTrendResponse>(`${environment.apiUrl}/api/stats/category-trend/`, {
+      params,
+    });
   }
 
   /** Recurring matches on latest Visa Nacional and Visa International statements only. */

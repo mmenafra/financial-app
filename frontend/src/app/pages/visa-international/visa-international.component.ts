@@ -401,9 +401,7 @@ export class VisaInternationalComponent {
         },
         error: (err: unknown) => {
           this.editSaving.set(false);
-          this.editServerError.set(
-            httpErrorMessage(err) ?? 'Could not update transaction.',
-          );
+          this.editServerError.set(httpErrorMessage(err) ?? 'Could not update transaction.');
         },
       });
   }

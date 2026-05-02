@@ -4,7 +4,6 @@
     <app-top-nav />
     <main class="flex-1 p-8 overflow-x-auto">
       <div class="mx-auto flex flex-col gap-6">
-
         <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 class="text-3xl font-extrabold text-primary tracking-tight m-0 font-headline">
@@ -137,9 +136,7 @@
                             [class.text-on-surface-variant]="
                               (cat.monthly_totals[month] ?? '0') === '0'
                             "
-                            [class.amount-expense]="
-                              (cat.monthly_totals[month] ?? '0') !== '0'
-                            "
+                            [class.amount-expense]="(cat.monthly_totals[month] ?? '0') !== '0'"
                           >
                             {{ formatCellAmount(cat.monthly_totals[month] ?? '0') }}
                           </td>
@@ -187,7 +184,6 @@
             }
           </section>
         }
-
       </div>
     </main>
   </div>

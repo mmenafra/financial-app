@@ -27,7 +27,8 @@
                 [class.mp-refresh-icon-spinning]="listLoading()"
                 aria-hidden="true"
                 style="font-variation-settings: 'FILL' 0"
-              >refresh</span>
+                >refresh</span
+              >
               <span>Reload payments</span>
             </button>
           </div>
@@ -53,22 +54,40 @@
             class="overflow-hidden rounded-3xl border border-outline-variant/40 bg-surface-container-low shadow-sm"
           >
             <div class="overflow-x-auto">
-              <table class="tx-table w-full min-w-[680px] text-left border-collapse" aria-label="Mercado Pago payments">
+              <table
+                class="tx-table w-full min-w-[680px] text-left border-collapse"
+                aria-label="Mercado Pago payments"
+              >
                 <thead>
                   <tr class="border-b border-outline-variant/35 text-left">
-                    <th scope="col" class="bg-surface-container px-6 py-3 text-xs uppercase tracking-wide font-bold">
+                    <th
+                      scope="col"
+                      class="bg-surface-container px-6 py-3 text-xs uppercase tracking-wide font-bold"
+                    >
                       Created
                     </th>
-                    <th scope="col" class="bg-surface-container px-6 py-3 text-xs uppercase tracking-wide font-bold">
+                    <th
+                      scope="col"
+                      class="bg-surface-container px-6 py-3 text-xs uppercase tracking-wide font-bold"
+                    >
                       Description
                     </th>
-                    <th scope="col" class="bg-surface-container px-6 py-3 text-xs uppercase tracking-wide font-bold">
+                    <th
+                      scope="col"
+                      class="bg-surface-container px-6 py-3 text-xs uppercase tracking-wide font-bold"
+                    >
                       Amount
                     </th>
-                    <th scope="col" class="bg-surface-container px-6 py-3 text-xs uppercase tracking-wide font-bold">
+                    <th
+                      scope="col"
+                      class="bg-surface-container px-6 py-3 text-xs uppercase tracking-wide font-bold"
+                    >
                       Method
                     </th>
-                    <th scope="col" class="bg-surface-container px-6 py-3 text-xs uppercase tracking-wide font-bold">
+                    <th
+                      scope="col"
+                      class="bg-surface-container px-6 py-3 text-xs uppercase tracking-wide font-bold"
+                    >
                       Status
                     </th>
                   </tr>
@@ -81,15 +100,19 @@
                       role="button"
                       [attr.aria-label]="
                         row.description
-                          ? 'Payment ' + (row.id ?? ($index + 1)) + ': ' + row.description
+                          ? 'Payment ' + (row.id ?? $index + 1) + ': ' + row.description
                           : 'Payment detail'
                       "
                       (click)="rowClickPayment(row)"
                       (keydown.enter)="rowClickPayment(row)"
                       (keydown.space)="$event.preventDefault(); rowClickPayment(row)"
                     >
-                      @let created = row.date_created | date : 'medium';
-                      @let amountLbl = formatMoney(row.transaction_details?.total_paid_amount ?? row.transaction_amount, row.currency_id);
+                      @let created = row.date_created | date: 'medium';
+                      @let amountLbl =
+                        formatMoney(
+                          row.transaction_details?.total_paid_amount ?? row.transaction_amount,
+                          row.currency_id
+                        );
                       <td class="px-6 py-3 text-xs font-semibold text-on-surface-variant">
                         {{ created ?? row.date_created ?? '—' }}
                       </td>
@@ -129,7 +152,8 @@
           <div class="flex flex-wrap items-center justify-between gap-2">
             <p class="m-0 text-xs font-semibold text-on-surface-variant">
               @if (pagingTotal() !== null) {
-                Showing {{ rows().length }} of {{ pagingTotal() ?? 0 }} payments (last 12 months per MP).
+                Showing {{ rows().length }} of {{ pagingTotal() ?? 0 }} payments (last 12 months per
+                MP).
               }
             </p>
             @if (hasMore()) {
@@ -146,7 +170,8 @@
                   [class.mp-refresh-icon-spinning]="loadMoreLoading()"
                   aria-hidden="true"
                   style="font-variation-settings: 'FILL' 0"
-                >{{ loadMoreLoading() ? 'progress_activity' : 'expand_circle_down' }}</span>
+                  >{{ loadMoreLoading() ? 'progress_activity' : 'expand_circle_down' }}</span
+                >
                 <span>{{ loadMoreLoading() ? 'Loading…' : 'Load more' }}</span>
               </button>
             }

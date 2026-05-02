@@ -1,5 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, DestroyRef, effect, HostListener, inject, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  HostListener,
+  inject,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { Actions, ofType } from '@ngrx/effects';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -76,9 +84,12 @@ export class TransactionsComponent {
   protected readonly pageSize = PAGE_SIZE;
   protected readonly connectedSources = CONNECTED_SOURCES;
 
-  protected readonly selectedYear = toSignal(this.store.select(transactionsPageFeature.selectYear), {
-    initialValue: transactionsPageInitialState.year,
-  });
+  protected readonly selectedYear = toSignal(
+    this.store.select(transactionsPageFeature.selectYear),
+    {
+      initialValue: transactionsPageInitialState.year,
+    },
+  );
   protected readonly selectedMonth = toSignal(
     this.store.select(transactionsPageFeature.selectMonth),
     { initialValue: transactionsPageInitialState.month },
@@ -99,9 +110,12 @@ export class TransactionsComponent {
     this.store.select(transactionsPageFeature.selectTotalCount),
     { initialValue: transactionsPageInitialState.totalCount },
   );
-  protected readonly isLoading = toSignal(this.store.select(transactionsPageFeature.selectLoading), {
-    initialValue: transactionsPageInitialState.loading,
-  });
+  protected readonly isLoading = toSignal(
+    this.store.select(transactionsPageFeature.selectLoading),
+    {
+      initialValue: transactionsPageInitialState.loading,
+    },
+  );
   protected readonly loadError = toSignal(
     this.store.select(transactionsPageFeature.selectLoadError),
     { initialValue: transactionsPageInitialState.loadError },
@@ -277,7 +291,10 @@ export class TransactionsComponent {
       });
 
     this.actions$
-      .pipe(ofType(TransactionsPageActions.splitMutationFailed), takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        ofType(TransactionsPageActions.splitMutationFailed),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe(({ message }) => {
         this.splitSubmitting.set(false);
         this.splitError.set(message);
@@ -631,9 +648,7 @@ export class TransactionsComponent {
         category,
       };
     });
-    this.store.dispatch(
-      TransactionsPageActions.splitRequested({ id: bundle.id, items }),
-    );
+    this.store.dispatch(TransactionsPageActions.splitRequested({ id: bundle.id, items }));
   }
 
   protected openNewTxModal(): void {

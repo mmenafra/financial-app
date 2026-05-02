@@ -1,12 +1,5 @@
 import { CommonModule } from '@angular/common';
-import {
-  Component,
-  computed,
-  DestroyRef,
-  inject,
-  OnInit,
-  signal,
-} from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { MercadoPagoDetailModalComponent } from '../../components/mercadopago-detail-modal/mercadopago-detail-modal.component';
@@ -22,12 +15,7 @@ const PAGE_SIZE = 30;
 @Component({
   selector: 'app-mercadopago',
   standalone: true,
-  imports: [
-    CommonModule,
-    SidebarComponent,
-    TopNavComponent,
-    MercadoPagoDetailModalComponent,
-  ],
+  imports: [CommonModule, SidebarComponent, TopNavComponent, MercadoPagoDetailModalComponent],
   templateUrl: './mercadopago.component.html',
   styleUrl: './mercadopago.component.scss',
 })
@@ -95,9 +83,7 @@ export class MercadoPagoComponent implements OnInit {
           this.detailLoading.set(false);
           this.detailOpen.set(false);
           this.detailPayment.set(null);
-          this.toast.error(
-            httpErrorMessage(err) ?? 'Could not load Mercado Pago payment.',
-          );
+          this.toast.error(httpErrorMessage(err) ?? 'Could not load Mercado Pago payment.');
         },
       });
   }
@@ -181,9 +167,7 @@ export class MercadoPagoComponent implements OnInit {
           } else {
             this.listLoading.set(false);
           }
-          this.loadError.set(
-            httpErrorMessage(err) ?? 'Could not load Mercado Pago payments.',
-          );
+          this.loadError.set(httpErrorMessage(err) ?? 'Could not load Mercado Pago payments.');
         },
       });
   }

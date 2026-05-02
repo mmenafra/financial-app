@@ -1,17 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import {
-  catchError,
-  concat,
-  forkJoin,
-  from,
-  map,
-  of,
-  switchMap,
-  take,
-  tap,
-} from 'rxjs';
+import { catchError, concat, forkJoin, from, map, of, switchMap, take, tap } from 'rxjs';
 
 import { ToastService } from '../../services/toast.service';
 import { TransactionService } from '../../services/transaction.service';

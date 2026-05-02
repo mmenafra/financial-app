@@ -54,9 +54,9 @@ export class CategoryTrendDialogComponent implements OnDestroy {
         switchMap(([cat, m, y]) => {
           this.isLoading.set(true);
           this.loadError.set(null);
-          return this.transactionService.getStatsTrend(cat.id, m, y).pipe(
-            finalize(() => this.isLoading.set(false)),
-          );
+          return this.transactionService
+            .getStatsTrend(cat.id, m, y)
+            .pipe(finalize(() => this.isLoading.set(false)));
         }),
         takeUntilDestroyed(this.destroyRef),
       )

@@ -81,9 +81,7 @@ export class HistoricComponent {
     );
   });
 
-  protected readonly grandTotal = computed(() =>
-    this.rowTotals().reduce((sum, t) => sum + t, 0),
-  );
+  protected readonly grandTotal = computed(() => this.rowTotals().reduce((sum, t) => sum + t, 0));
 
   constructor() {
     this.loadData();

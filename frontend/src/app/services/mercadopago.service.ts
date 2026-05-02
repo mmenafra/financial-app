@@ -16,9 +16,7 @@ export class MercadoPagoService {
   }
 
   getPayments(offset = 0, limit = 30): Observable<MpPaymentSearchResponse> {
-    const params = new HttpParams()
-      .set('offset', String(offset))
-      .set('limit', String(limit));
+    const params = new HttpParams().set('offset', String(offset)).set('limit', String(limit));
     return this.http.get<MpPaymentSearchResponse>(this.baseUrl(), { params });
   }
 
