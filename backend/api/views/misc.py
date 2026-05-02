@@ -142,9 +142,13 @@ class SubscriptionListView(APIView):
         if latest_vi:
             stmt_filter |= Q(visa_international_statement=latest_vi)
 
-        qs = Transaction.objects.filter(
-            user=user, matched_recurring_pattern__isnull=False
-        ).filter(stmt_filter)
+        qs = (
+            Transaction.objects.filter(
+                user=user, matched_recurring_pattern__isnull=False
+            )
+            .filter(stmt_filter)
+            .visible_only()
+        )
 
         txns = qs.select_related("matched_recurring_pattern").order_by(
             "-transaction_date", "-created_at"

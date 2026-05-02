@@ -9,6 +9,7 @@ from .models import (
     Category,
     FileImport,
     RecurringPattern,
+    Source,
     Transaction,
     UserProfile,
     VisaInternationalStatement,
@@ -17,6 +18,13 @@ from .models import (
 )
 
 User = get_user_model()
+
+_NON_HIDEABLE_SOURCES_FOR_REPORTS = frozenset(
+    {
+        Source.CREDIT_CARD_NATIONAL,
+        Source.CREDIT_CARD_INTERNATIONAL,
+    }
+)
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -255,6 +263,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             "visa_international_statement",
             "visa_nacional_statement",
             "matched_recurring_pattern",
+            "is_hidden",
             "splits",
         )
         read_only_fields = (
@@ -269,6 +278,25 @@ class TransactionSerializer(serializers.ModelSerializer):
             "visa_nacional_statement",
             "matched_recurring_pattern",
         )
+
+    def validate(self, attrs):
+        instance = self.instance
+        if instance is None:
+            src = attrs.get("source")
+            hidden = attrs.get("is_hidden", False)
+        else:
+            src = attrs.get("source", instance.source)
+            hidden = attrs.get("is_hidden", instance.is_hidden)
+        if hidden and src in _NON_HIDEABLE_SOURCES_FOR_REPORTS:
+            raise serializers.ValidationError(
+                {
+                    "is_hidden": (
+                        "National or international Visa card transactions "
+                        "cannot be hidden."
+                    ),
+                },
+            )
+        return attrs
 
     def validate_category(self, value):
         request = self.context.get("request")

@@ -49,6 +49,12 @@ export const transactionsPageFeature = createFeature({
       page: 1,
       loadError: null,
     })),
+    on(TransactionsPageActions.showHiddenTransactionsToggled, (state) => ({
+      ...state,
+      showHiddenTransactions: !state.showHiddenTransactions,
+      page: 1,
+      loadError: null,
+    })),
     on(TransactionsPageActions.pageChanged, (state, { page }) => ({
       ...state,
       page,

@@ -17,3 +17,7 @@
 .tx-trend-up {
   @apply text-red-700;
 }
+
+.tx-row-hidden-reports {
+  @apply bg-orange-50/80 dark:bg-orange-950/20 border-l-2 border-l-orange-200/90 dark:border-l-orange-700/50;
+}

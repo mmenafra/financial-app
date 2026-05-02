@@ -16,5 +16,8 @@ export function transactionInView(t: Transaction, state: TransactionsPageState):
   if (state.filterSource != null && t.source !== state.filterSource) {
     return false;
   }
+  if (!state.showHiddenTransactions && t.is_hidden) {
+    return false;
+  }
   return true;
 }

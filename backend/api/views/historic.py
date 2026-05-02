@@ -76,6 +76,7 @@ class HistoricView(APIView):
                 transaction_date__year=year,
                 transaction_date__isnull=False,
             )
+            .visible_only()
             .values("category", "transaction_date__month")
             .annotate(total=Sum("amount"))
         )

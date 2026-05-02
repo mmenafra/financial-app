@@ -9,6 +9,8 @@ export interface TransactionsPageState {
   page: number;
   filterCategoryId: string | undefined;
   filterSource: Source | undefined;
+  /** When true, GET /transactions/ includes rows hidden from other screens (default false). */
+  showHiddenTransactions: boolean;
   categories: Category[];
   categoriesLoaded: boolean;
   transactions: Transaction[];
@@ -28,6 +30,7 @@ export const transactionsPageInitialState: TransactionsPageState = {
   page: 1,
   filterCategoryId: undefined,
   filterSource: undefined,
+  showHiddenTransactions: false,
   categories: [],
   categoriesLoaded: false,
   transactions: [],

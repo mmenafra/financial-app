@@ -118,6 +118,31 @@
         />
       </div>
 
+      @if (showHideControl()) {
+        <div
+          class="flex items-start gap-3 rounded-xl border border-outline-variant/70 bg-surface-container-low px-3 py-2.5"
+        >
+          <input
+            [id]="fieldId('hide')"
+            type="checkbox"
+            class="mt-1 h-4 w-4 rounded border-outline-variant shrink-0"
+            formControlName="hideFromReports"
+          />
+          <div class="flex flex-col gap-0.5 min-w-0">
+            <label
+              class="text-sm font-semibold text-on-surface cursor-pointer"
+              [attr.for]="fieldId('hide')"
+            >
+              Hidden from totals and other screens
+            </label>
+            <span class="text-xs text-on-surface-variant leading-snug">
+              Won’t appear in income, historic, stats, or Visa lists. You can reveal hidden rows
+              here with “Show hidden”.
+            </span>
+          </div>
+        </div>
+      }
+
       @if (displayError()) {
         <p class="text-sm font-semibold text-red-600 m-0">{{ displayError() }}</p>
       }

@@ -34,6 +34,13 @@ def _query_param_non_empty(raw) -> bool:
     return raw is not None and str(raw).strip() != ""
 
 
+def _query_param_truthy(raw) -> bool:
+    if raw is None:
+        return False
+    normalized = str(raw).strip().lower()
+    return normalized in frozenset({"1", "true", "yes", "on"})
+
+
 def _rolling_calendar_months(
     end_year: int, end_month: int, n: int = 12
 ) -> list[tuple[int, int]]:
@@ -160,7 +167,7 @@ def _income_monthly_totals(request, user):
     months = _rolling_calendar_months(end_year, end_month, 12)
     base = Transaction.objects.filter(
         user=user, direction=Direction.INCOME, splits__isnull=True
-    )
+    ).visible_only()
     base = _apply_transaction_source_filter(base, request.query_params.get("source"))
     monthly_totals = []
     for y, m in months:
@@ -236,7 +243,7 @@ class IncomeView(ListAPIView):
             user=self.request.user,
             direction=Direction.INCOME,
             splits__isnull=True,
-        )
+        ).visible_only()
         return _filter_income_list_queryset(qs, self.request.query_params)
 
     def list(self, request, *args, **kwargs):
@@ -316,6 +323,16 @@ class IncomeView(ListAPIView):
                 ),
                 examples=[OpenApiExample("Default size", value=100)],
             ),
+            OpenApiParameter(
+                name="include_hidden",
+                type=OpenApiTypes.BOOL,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description=(
+                    "Include transactions hidden from aggregates and other screens; "
+                    "when false or omitted only visible rows appear (default)."
+                ),
+            ),
         ],
     ),
 )
@@ -329,9 +346,12 @@ class TransactionViewSet(ModelViewSet):
         if self.action != "list":
             return qs
         qs = qs.filter(splits__isnull=True)
-        return _filter_transactions_list_queryset(
+        qs = _filter_transactions_list_queryset(
             qs, self.request.query_params, self.request.user
         )
+        if not _query_param_truthy(self.request.query_params.get("include_hidden")):
+            qs = qs.visible_only()
+        return qs
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -357,6 +377,8 @@ class TransactionViewSet(ModelViewSet):
             ).filter(
                 transaction_date__year=prev_year, transaction_date__month=prev_month
             )
+            if not _query_param_truthy(request.query_params.get("include_hidden")):
+                prev_qs = prev_qs.visible_only()
             prev_qs = _apply_transaction_category_filter(
                 prev_qs, request.query_params.get("category"), request.user
             )
@@ -451,6 +473,7 @@ class TransactionViewSet(ModelViewSet):
                 status=bundle.status,
                 parent=bundle,
                 file_import=bundle.file_import,
+                is_hidden=bundle.is_hidden,
             )
             child.save()
             created.append(child)

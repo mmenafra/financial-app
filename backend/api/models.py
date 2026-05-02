@@ -270,6 +270,10 @@ class TransactionQuerySet(models.QuerySet):
         """Exclude bundle transactions that have been split into children."""
         return self.filter(splits__isnull=True)
 
+    def visible_only(self):
+        """Exclude rows excluded from aggregates and lists (hidden from reports)."""
+        return self.filter(is_hidden=False)
+
 
 class TransactionManager(models.Manager):
     def get_queryset(self):
@@ -286,6 +290,9 @@ class TransactionManager(models.Manager):
 
     def installments_pending(self):
         return self.get_queryset().installments_pending()
+
+    def visible_only(self):
+        return self.get_queryset().visible_only()
 
 
 class Transaction(AbstractBaseModel):
@@ -376,6 +383,7 @@ class Transaction(AbstractBaseModel):
         related_name="matched_transactions",
         db_index=True,
     )
+    is_hidden = models.BooleanField(default=False, db_index=True)
 
     objects = TransactionManager()
 

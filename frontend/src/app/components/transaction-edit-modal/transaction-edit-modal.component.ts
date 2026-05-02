@@ -10,7 +10,11 @@ import type {
   TransactionType,
   UpdateTransactionPayload,
 } from '../../models/transaction.model';
-import { positiveNumberValidator, round2 } from '../../utils/transaction-edit';
+import {
+  positiveNumberValidator,
+  round2,
+  transactionEligibleToHideFromReports,
+} from '../../utils/transaction-edit';
 
 @Component({
   selector: 'app-transaction-edit-modal',
@@ -30,6 +34,8 @@ export class TransactionEditModalComponent {
   readonly serverError = input<string | null>(null);
   /** Prefix for form control ids (avoid duplicates when multiple instances exist). */
   readonly idPrefix = input('tx');
+  /** When false, omit “Hide from totals / other screens”; used on Visa statement pages. */
+  readonly hideToggleOffered = input(true);
 
   readonly saveRequested = output<{ id: string; payload: UpdateTransactionPayload }>();
   readonly dismissed = output<void>();
@@ -43,6 +49,11 @@ export class TransactionEditModalComponent {
   protected readonly titleId = computed(() => `${this.idPrefix()}-tx-edit-title`);
   protected readonly fieldId = (suffix: string) => `${this.idPrefix()}-edit-${suffix}`;
 
+  protected readonly showHideControl = computed(() => {
+    const t = this.transaction();
+    return Boolean(this.hideToggleOffered() && t && transactionEligibleToHideFromReports(t));
+  });
+
   protected readonly editTxForm = this.fb.group({
     description: ['', [Validators.required, Validators.maxLength(255)]],
     amount: ['', [Validators.required, positiveNumberValidator]],
@@ -50,6 +61,7 @@ export class TransactionEditModalComponent {
     direction: ['EXPENSE', [Validators.required]],
     category: [null as string | null],
     date: [''],
+    hideFromReports: [false],
   });
 
   constructor() {
@@ -65,6 +77,7 @@ export class TransactionEditModalComponent {
           direction: t.direction,
           category: t.category ?? null,
           date: t.transaction_date ?? t.created_at.slice(0, 10),
+          hideFromReports: t.is_hidden ?? false,
         });
       }
       if (!t) {
@@ -106,6 +119,9 @@ export class TransactionEditModalComponent {
       category: v.category ?? null,
       ...(dateVal ? { transaction_date: dateVal } : {}),
     };
+    if (this.showHideControl()) {
+      payload.is_hidden = Boolean(v.hideFromReports);
+    }
     this.editError.set(null);
     this.saveRequested.emit({ id: tx.id, payload });
   }

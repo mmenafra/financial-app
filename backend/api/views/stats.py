@@ -85,6 +85,7 @@ class StatsMonthlyView(APIView):
                 transaction_date__isnull=False,
                 category_id__in=allowed_ids,
             )
+            .visible_only()
             .values("category_id")
             .annotate(total=Sum("amount"))
             .filter(total__gt=0)
@@ -194,6 +195,7 @@ class StatsTrendView(APIView):
                 transaction_date__lte=end_d,
                 transaction_date__isnull=False,
             )
+            .visible_only()
             .values("transaction_date__year", "transaction_date__month")
             .annotate(total=Sum("amount"))
         )

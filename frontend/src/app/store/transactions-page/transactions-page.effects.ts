@@ -26,6 +26,7 @@ export class TransactionsPageEffects {
         TransactionsPageActions.filtersCommitted,
         TransactionsPageActions.filtersCleared,
         TransactionsPageActions.filterChipRemoved,
+        TransactionsPageActions.showHiddenTransactionsToggled,
         TransactionsPageActions.pageChanged,
         TransactionsPageActions.listRefreshRequested,
         TransactionsPageActions.importCompleted,
@@ -41,6 +42,7 @@ export class TransactionsPageEffects {
               source: state.filterSource,
               page: state.page,
               pageSize: TRANSACTIONS_PAGE_SIZE,
+              includeHidden: state.showHiddenTransactions,
             };
             const data$ = state.categoriesLoaded
               ? this.transactionService.getTransactions(filters).pipe(
@@ -114,6 +116,7 @@ export class TransactionsPageEffects {
                 source: state.filterSource,
                 page: state.page,
                 pageSize: TRANSACTIONS_PAGE_SIZE,
+                includeHidden: state.showHiddenTransactions,
               })
               .pipe(
                 map((p) =>

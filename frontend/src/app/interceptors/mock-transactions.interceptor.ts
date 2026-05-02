@@ -118,6 +118,7 @@ function tx(
     file_import: partial.file_import ?? null,
     visa_international_statement: partial.visa_international_statement ?? null,
     visa_nacional_statement: partial.visa_nacional_statement ?? null,
+    is_hidden: partial.is_hidden ?? false,
   };
 }
 
@@ -141,6 +142,7 @@ function buildAllMockTransactions(): Transaction[] {
       direction: 'EXPENSE',
       category: CAT_DINING,
       source: 'BANK_ACCOUNT',
+      is_hidden: true,
     }),
     tx('000000000003', '2026-04-21T09:00:00Z', {
       description: 'Monthly Salary Deposit',
@@ -304,6 +306,24 @@ function readIntParam(url: string, key: string): number | undefined {
   }
 }
 
+function readStringParam(url: string, key: string): string | undefined {
+  try {
+    const u = new URL(url.includes('http') ? url : `http://local.invalid${url}`);
+    const raw = u.searchParams.get(key);
+    return raw && raw !== '' ? raw : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function parseIncludeHiddenFlag(url: string): boolean {
+  const raw = readStringParam(url, 'include_hidden');
+  if (!raw) {
+    return false;
+  }
+  return ['1', 'true', 'yes', 'on'].includes(raw.trim().toLowerCase());
+}
+
 function filterByYearMonth(rows: Transaction[], year?: number, month?: number): Transaction[] {
   if (year == null && month == null) {
     return rows;
@@ -429,6 +449,11 @@ export const mockTransactionsInterceptor: HttpInterceptorFn = (req, next) => {
     filtered = filtered.filter((t) => t.source === sourceFilter);
   }
 
+  const includeHidden = parseIncludeHiddenFlag(req.url);
+  if (!includeHidden) {
+    filtered = filtered.filter((t) => !t.is_hidden);
+  }
+
   const count = filtered.length;
   const totalPages = Math.max(1, Math.ceil(count / pageSize));
   const safePage = Math.min(Math.max(1, page), totalPages);
@@ -457,6 +482,11 @@ export const mockTransactionsInterceptor: HttpInterceptorFn = (req, next) => {
     if (sourceFilter) {
       u.searchParams.set('source', sourceFilter);
     }
+    if (includeHidden) {
+      u.searchParams.set('include_hidden', 'true');
+    } else {
+      u.searchParams.delete('include_hidden');
+    }
     return u.toString();
   };
 
@@ -475,13 +505,3 @@ export const mockTransactionsInterceptor: HttpInterceptorFn = (req, next) => {
     }),
   );
 };
-
-function readStringParam(url: string, key: string): string | undefined {
-  try {
-    const u = new URL(url.includes('http') ? url : `http://local.invalid${url}`);
-    const raw = u.searchParams.get(key);
-    return raw && raw !== '' ? raw : undefined;
-  } catch {
-    return undefined;
-  }
-}

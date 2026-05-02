@@ -124,3 +124,42 @@ class IncomeAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["description"], "June pay")
+
+    def test_excludes_hidden_income_from_list_and_monthly_totals(self):
+        Transaction.objects.create(
+            user=self.user,
+            description="Salary",
+            amount=Decimal("1000.00"),
+            currency="CLP",
+            transaction_type=TransactionType.CREDIT,
+            direction=Direction.INCOME,
+            source=Source.BANK_ACCOUNT,
+            status=TransactionStatus.CONFIRMED,
+            transaction_date=date(2024, 6, 1),
+            is_hidden=False,
+        )
+        Transaction.objects.create(
+            user=self.user,
+            description="Ghost pay",
+            amount=Decimal("500.00"),
+            currency="CLP",
+            transaction_type=TransactionType.CREDIT,
+            direction=Direction.INCOME,
+            source=Source.BANK_ACCOUNT,
+            status=TransactionStatus.CONFIRMED,
+            transaction_date=date(2024, 6, 15),
+            is_hidden=True,
+        )
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.income_url, {"year": 2024, "month": 6})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["amount"], "1000.00")
+        june = next(
+            m
+            for m in response.data["monthly_totals"]
+            if m["year"] == 2024 and m["month"] == 6
+        )
+        self.assertEqual(Decimal(june["total"]), Decimal("1000"))

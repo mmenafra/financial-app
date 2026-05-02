@@ -109,20 +109,28 @@ class VisaInternationalDashboardView(APIView):
         statement = select_statement_for_period_end_month(user, year, month)
 
         if statement:
-            txs = Transaction.objects.filter(
-                user=user,
-                visa_international_statement=statement,
-                splits__isnull=True,
-            ).order_by("transaction_date", "created_at")
+            txs = (
+                Transaction.objects.filter(
+                    user=user,
+                    visa_international_statement=statement,
+                    splits__isnull=True,
+                )
+                .visible_only()
+                .order_by("transaction_date", "created_at")
+            )
         else:
             # Legacy / pre-parent rows: no statement with this closing month — show calendar month.
-            txs = Transaction.objects.filter(
-                user=user,
-                source=Source.CREDIT_CARD_INTERNATIONAL,
-                splits__isnull=True,
-                transaction_date__year=year,
-                transaction_date__month=month,
-            ).order_by("transaction_date", "created_at")
+            txs = (
+                Transaction.objects.filter(
+                    user=user,
+                    source=Source.CREDIT_CARD_INTERNATIONAL,
+                    splits__isnull=True,
+                    transaction_date__year=year,
+                    transaction_date__month=month,
+                )
+                .visible_only()
+                .order_by("transaction_date", "created_at")
+            )
 
         months = _rolling_calendar_months(year, month, 12)
         stmt_by_period: dict[tuple[int, int], VisaInternationalStatement | None] = {}
@@ -230,19 +238,27 @@ class VisaNacionalDashboardView(APIView):
         statement = select_nacional_statement_for_period_end_month(user, year, month)
 
         if statement:
-            txs = Transaction.objects.filter(
-                user=user,
-                visa_nacional_statement=statement,
-                splits__isnull=True,
-            ).order_by("transaction_date", "created_at")
+            txs = (
+                Transaction.objects.filter(
+                    user=user,
+                    visa_nacional_statement=statement,
+                    splits__isnull=True,
+                )
+                .visible_only()
+                .order_by("transaction_date", "created_at")
+            )
         else:
-            txs = Transaction.objects.filter(
-                user=user,
-                source=Source.CREDIT_CARD_NATIONAL,
-                splits__isnull=True,
-                transaction_date__year=year,
-                transaction_date__month=month,
-            ).order_by("transaction_date", "created_at")
+            txs = (
+                Transaction.objects.filter(
+                    user=user,
+                    source=Source.CREDIT_CARD_NATIONAL,
+                    splits__isnull=True,
+                    transaction_date__year=year,
+                    transaction_date__month=month,
+                )
+                .visible_only()
+                .order_by("transaction_date", "created_at")
+            )
 
         months = _rolling_calendar_months(year, month, 12)
         stmt_by_period: dict[tuple[int, int], VisaNacionalStatement | None] = {}

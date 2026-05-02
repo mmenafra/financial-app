@@ -47,6 +47,18 @@
               Filter
             </button>
 
+            <label
+              class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-outline-variant/70 bg-surface-container-low text-sm font-semibold text-on-surface cursor-pointer select-none"
+            >
+              <input
+                type="checkbox"
+                class="h-4 w-4 rounded border-outline-variant"
+                [checked]="showHiddenTransactionsFlag()"
+                (change)="onShowHiddenReportsChange()"
+              />
+              Show hidden
+            </label>
+
             <button type="button" class="tx-pill-btn ghost" (click)="openImportModal()">
               <span
                 class="material-symbols-outlined text-[18px]"
@@ -242,7 +254,7 @@
                 </thead>
                 <tbody>
                   @for (t of transactions(); track t.id) {
-                    <tr>
+                    <tr [class.tx-row-hidden-reports]="hiddenRowHighlight(t)">
                       <td class="whitespace-nowrap text-on-surface-variant font-medium">
                         {{ formatTransactionCalendarDate(t) }}
                       </td>
@@ -338,6 +350,37 @@
                               >
                               Metadata
                             </button>
+                            @if (eligibleToHideFromReportsMenu(t)) {
+                              @if (!t.is_hidden) {
+                                <button
+                                  type="button"
+                                  class="tx-dropdown-item"
+                                  role="menuitem"
+                                  (click)="onRowHideReportsToggle(t, true, $event)"
+                                >
+                                  <span
+                                    class="material-symbols-outlined text-[16px]"
+                                    style="font-variation-settings: 'FILL' 0"
+                                    >visibility_off</span
+                                  >
+                                  Hide
+                                </button>
+                              } @else {
+                                <button
+                                  type="button"
+                                  class="tx-dropdown-item"
+                                  role="menuitem"
+                                  (click)="onRowHideReportsToggle(t, false, $event)"
+                                >
+                                  <span
+                                    class="material-symbols-outlined text-[16px]"
+                                    style="font-variation-settings: 'FILL' 0"
+                                    >visibility</span
+                                  >
+                                  Include in reports
+                                </button>
+                              }
+                            }
                             <button
                               type="button"
                               class="tx-dropdown-item tx-dropdown-item--danger"

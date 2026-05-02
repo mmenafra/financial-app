@@ -18,6 +18,7 @@ export const TransactionsPageActions = createActionGroup({
     filtersCommitted: props<{ filterCategoryId?: string; filterSource?: Source }>(),
     filtersCleared: emptyProps(),
     filterChipRemoved: props<{ kind: 'category' | 'source' }>(),
+    showHiddenTransactionsToggled: emptyProps(),
     pageChanged: props<{ page: number }>(),
     listRefreshRequested: emptyProps(),
     /** Re-fetch aggregates (and totalCount) without replacing the transaction rows. */

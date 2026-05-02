@@ -36,6 +36,8 @@ export interface Transaction {
   file_import: string | null;
   visa_international_statement: string | null;
   visa_nacional_statement: string | null;
+  /** Excluded from totals and other screens (not usable for Visa nacional/intl sources). */
+  is_hidden: boolean;
 }
 
 export type TransactionType = 'DEBIT' | 'CREDIT' | 'TRANSFER';
@@ -119,6 +121,8 @@ export interface TransactionFilters {
   source?: Source;
   page?: number;
   pageSize?: number;
+  /** When true, backend includes hidden rows on GET /transactions/ only. */
+  includeHidden?: boolean;
 }
 
 /** Body for POST /api/transactions/:id/split/ */
@@ -285,4 +289,6 @@ export interface UpdateTransactionPayload {
   transaction_type?: TransactionType;
   category?: string | null;
   transaction_date?: string;
+  /** Only for hide-eligible transactions; ignored for Visa card sources server-side. */
+  is_hidden?: boolean;
 }

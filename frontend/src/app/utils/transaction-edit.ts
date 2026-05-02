@@ -1,5 +1,7 @@
 import type { AbstractControl, ValidationErrors } from '@angular/forms';
 
+import type { Transaction } from '../models/transaction.model';
+
 /** Amount > 0 when non-empty (pair with Validators.required). */
 export function positiveNumberValidator(control: AbstractControl): ValidationErrors | null {
   const raw = String(control.value ?? '').trim();
@@ -15,6 +17,11 @@ export function positiveNumberValidator(control: AbstractControl): ValidationErr
 
 export function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+/** National / international Visa card rows cannot use “hide from reports”. */
+export function transactionEligibleToHideFromReports(tx: Pick<Transaction, 'source'>): boolean {
+  return tx.source !== 'CREDIT_CARD_NATIONAL' && tx.source !== 'CREDIT_CARD_INTERNATIONAL';
 }
 
 /** Best-effort message from Angular HttpClient / DRF error bodies. */

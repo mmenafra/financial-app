@@ -110,6 +110,39 @@ class StatsMonthlyAPITests(APITestCase):
         self.assertAlmostEqual(cats[0]["percentage"], 66.67, places=1)
         self.assertEqual(cats[1]["id"], str(self.cat_b.id))
 
+    def test_excludes_hidden_from_totals_and_grand_total(self):
+        Transaction.objects.create(
+            user=self.user,
+            description="Visible",
+            amount=Decimal("40.00"),
+            currency="CLP",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.BANK_ACCOUNT,
+            category=self.cat_a,
+            status=TransactionStatus.CONFIRMED,
+            transaction_date=date(2025, 8, 1),
+            is_hidden=False,
+        )
+        Transaction.objects.create(
+            user=self.user,
+            description="Hidden",
+            amount=Decimal("60.00"),
+            currency="CLP",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.BANK_ACCOUNT,
+            category=self.cat_a,
+            status=TransactionStatus.CONFIRMED,
+            transaction_date=date(2025, 8, 2),
+            is_hidden=True,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.url, {"month": 8, "year": 2025})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["total"], "40.00")
+        self.assertEqual(len(response.data["categories"]), 1)
+
 
 class StatsTrendAPITests(APITestCase):
     def setUp(self):
@@ -156,6 +189,45 @@ class StatsTrendAPITests(APITestCase):
         self.assertEqual(response.data["months"][0], "2024-06")
         self.assertEqual(response.data["months"][-1], "2025-05")
         self.assertEqual(response.data["totals"][-1], "120.00")
+
+    def test_excludes_hidden_from_category_trend_totals(self):
+        Transaction.objects.create(
+            user=self.user,
+            description="Vis",
+            amount=Decimal("10.00"),
+            currency="CLP",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.BANK_ACCOUNT,
+            category=self.cat,
+            status=TransactionStatus.CONFIRMED,
+            transaction_date=date(2025, 5, 5),
+            is_hidden=False,
+        )
+        Transaction.objects.create(
+            user=self.user,
+            description="Hid",
+            amount=Decimal("999.00"),
+            currency="CLP",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.BANK_ACCOUNT,
+            category=self.cat,
+            status=TransactionStatus.CONFIRMED,
+            transaction_date=date(2025, 5, 6),
+            is_hidden=True,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(
+            self.url,
+            {
+                "category_id": str(self.cat.id),
+                "reference_month": 5,
+                "reference_year": 2025,
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["totals"][-1], "10.00")
 
     def test_category_not_found(self):
         self.client.force_authenticate(user=self.user)

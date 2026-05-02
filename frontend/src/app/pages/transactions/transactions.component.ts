@@ -37,7 +37,11 @@ import {
   transactionsPageInitialState,
   TRANSACTIONS_PAGE_SIZE,
 } from '../../store/transactions-page/transactions-page.state';
-import { positiveNumberValidator, round2 } from '../../utils/transaction-edit';
+import {
+  positiveNumberValidator,
+  round2,
+  transactionEligibleToHideFromReports,
+} from '../../utils/transaction-edit';
 
 const PAGE_SIZE = TRANSACTIONS_PAGE_SIZE;
 const CONNECTED_SOURCES = 4;
@@ -128,6 +132,11 @@ export class TransactionsComponent {
   protected readonly filterSource = toSignal(
     this.store.select(transactionsPageFeature.selectFilterSource),
     { initialValue: transactionsPageInitialState.filterSource },
+  );
+
+  protected readonly showHiddenTransactionsFlag = toSignal(
+    this.store.select(transactionsPageFeature.selectShowHiddenTransactions),
+    { initialValue: transactionsPageInitialState.showHiddenTransactions },
   );
 
   protected readonly isUpdatingTransaction = toSignal(
@@ -505,6 +514,26 @@ export class TransactionsComponent {
     event.stopPropagation();
     this.openMenuId.set(null);
     this.editTarget.set(t);
+  }
+
+  protected hiddenRowHighlight(t: Transaction): boolean {
+    return Boolean(t.is_hidden && transactionEligibleToHideFromReports(t));
+  }
+
+  protected eligibleToHideFromReportsMenu(t: Transaction): boolean {
+    return transactionEligibleToHideFromReports(t);
+  }
+
+  protected onShowHiddenReportsChange(): void {
+    this.store.dispatch(TransactionsPageActions.showHiddenTransactionsToggled());
+  }
+
+  protected onRowHideReportsToggle(t: Transaction, hide: boolean, event: MouseEvent): void {
+    event.stopPropagation();
+    this.openMenuId.set(null);
+    this.store.dispatch(
+      TransactionsPageActions.updateRequested({ id: t.id, payload: { is_hidden: hide } }),
+    );
   }
 
   protected onEditDismissed(): void {

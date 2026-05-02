@@ -461,3 +461,153 @@ class TransactionAPITests(APITestCase):  # pylint: disable=too-many-public-metho
         prev_totals = response.data["prev_totals_by_currency"]
         self.assertEqual(prev_totals["CLP"], "80.00")
         self.assertNotIn("USD", prev_totals)
+
+    def test_hidden_excluded_from_list_and_totals_by_default(self):
+        visible_exp = Transaction.objects.create(
+            user=self.user,
+            description="Visible",
+            amount=Decimal("30.00"),
+            currency="CLP",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.BANK_ACCOUNT,
+            status=TransactionStatus.CONFIRMED,
+            is_hidden=False,
+        )
+        hidden_exp = Transaction.objects.create(
+            user=self.user,
+            description="Hidden",
+            amount=Decimal("70.00"),
+            currency="CLP",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.BANK_ACCOUNT,
+            status=TransactionStatus.CONFIRMED,
+            is_hidden=True,
+        )
+        Transaction.objects.filter(pk=visible_exp.pk).update(
+            transaction_date=date(2026, 4, 1)
+        )
+        Transaction.objects.filter(pk=hidden_exp.pk).update(
+            transaction_date=date(2026, 4, 2)
+        )
+
+        self.client.force_authenticate(user=self.user)
+        r = self.client.get(self.list_url, {"year": 2026, "month": 4})
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data["count"], 1)
+        self.assertEqual(r.data["results"][0]["id"], str(visible_exp.id))
+        self.assertEqual(r.data["totals_by_currency"]["CLP"], "30.00")
+
+        inc = self.client.get(
+            self.list_url, {"year": 2026, "month": 4, "include_hidden": "true"}
+        )
+        self.assertEqual(inc.status_code, status.HTTP_200_OK)
+        ids = {row["id"] for row in inc.data["results"]}
+        self.assertEqual(ids, {str(visible_exp.id), str(hidden_exp.id)})
+        self.assertEqual(inc.data["totals_by_currency"]["CLP"], "100.00")
+
+    def test_prev_month_totals_respect_visible_only(self):
+        """Previous-month envelope matches include_hidden semantics on the main list."""
+        vis_jan = Transaction.objects.create(
+            user=self.user,
+            description="Jan visible",
+            amount=Decimal("10.00"),
+            currency="CLP",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.BANK_ACCOUNT,
+            status=TransactionStatus.CONFIRMED,
+            is_hidden=False,
+        )
+        hid_jan = Transaction.objects.create(
+            user=self.user,
+            description="Jan hidden",
+            amount=Decimal("90.00"),
+            currency="CLP",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.BANK_ACCOUNT,
+            status=TransactionStatus.CONFIRMED,
+            is_hidden=True,
+        )
+        feb_vis = Transaction.objects.create(
+            user=self.user,
+            description="Feb",
+            amount=Decimal("5.00"),
+            currency="CLP",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.BANK_ACCOUNT,
+            status=TransactionStatus.CONFIRMED,
+        )
+        Transaction.objects.filter(pk=vis_jan.pk).update(
+            transaction_date=date(2026, 1, 5)
+        )
+        Transaction.objects.filter(pk=hid_jan.pk).update(
+            transaction_date=date(2026, 1, 6)
+        )
+        Transaction.objects.filter(pk=feb_vis.pk).update(
+            transaction_date=date(2026, 2, 1)
+        )
+
+        self.client.force_authenticate(user=self.user)
+        r = self.client.get(self.list_url, {"year": 2026, "month": 2})
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data["prev_totals_by_currency"]["CLP"], "10.00")
+
+        rh = self.client.get(
+            self.list_url, {"year": 2026, "month": 2, "include_hidden": "1"}
+        )
+        self.assertEqual(rh.status_code, status.HTTP_200_OK)
+        self.assertEqual(rh.data["prev_totals_by_currency"]["CLP"], "100.00")
+
+    def test_patch_is_hidden_mercado_ok(self):
+        t = self._create_tx(self.user, source=Source.MERCADOPAGO)
+        self.client.force_authenticate(user=self.user)
+        detail_url = reverse("transaction-detail", args=[t.id])
+        resp = self.client.patch(detail_url, {"is_hidden": True}, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertTrue(resp.data["is_hidden"])
+
+    def test_patch_is_hidden_visa_international_rejected(self):
+        t = Transaction.objects.create(
+            user=self.user,
+            description="Intl",
+            amount=Decimal("42.00"),
+            currency="USD",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.CREDIT_CARD_INTERNATIONAL,
+            status=TransactionStatus.CONFIRMED,
+        )
+        self.client.force_authenticate(user=self.user)
+        detail_url = reverse("transaction-detail", args=[t.id])
+        resp = self.client.patch(detail_url, {"is_hidden": True}, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("is_hidden", resp.data)
+
+    def test_split_children_inherit_is_hidden(self):
+        bundle = Transaction.objects.create(
+            user=self.user,
+            description="Bundle",
+            amount=Decimal("50.00"),
+            currency="CLP",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.MERCADOPAGO,
+            status=TransactionStatus.CONFIRMED,
+            is_hidden=True,
+        )
+        self.client.force_authenticate(user=self.user)
+        url = reverse("transaction-split", args=[bundle.id])
+        body = {
+            "items": [
+                {"description": "A", "amount": "20.00", "category": None},
+                {"description": "B", "amount": "30.00", "category": None},
+            ],
+        }
+        r = self.client.post(url, body, format="json")
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED)
+        for row in r.data:
+            self.assertTrue(row["is_hidden"])

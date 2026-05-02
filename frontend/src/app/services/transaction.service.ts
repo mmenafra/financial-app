@@ -48,6 +48,9 @@ export class TransactionService {
     if (filters.pageSize != null) {
       params = params.set('page_size', String(filters.pageSize));
     }
+    if (filters.includeHidden) {
+      params = params.set('include_hidden', 'true');
+    }
     return this.http.get<PaginatedResponse<Transaction>>(
       `${environment.apiUrl}/api/transactions/`,
       { params },
