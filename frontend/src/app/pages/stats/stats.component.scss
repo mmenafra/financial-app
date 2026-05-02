@@ -1,0 +1,21 @@
+.tx-select {
+  @apply rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm font-semibold text-on-surface shadow-sm min-w-[6rem];
+}
+
+.tx-table {
+  th {
+    @apply px-6 py-3 text-xs font-bold uppercase tracking-wider text-on-surface-variant bg-surface-container/50 border-b border-outline-variant/40;
+  }
+
+  td {
+    @apply px-6 py-4 text-sm border-b border-outline-variant/30 align-middle;
+  }
+
+  tbody tr:hover td {
+    @apply bg-surface-container/30;
+  }
+}
+
+.amount-expense {
+  @apply text-primary font-semibold;
+}

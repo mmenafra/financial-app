@@ -1,0 +1,156 @@
+<div class="flex min-h-screen bg-surface font-body">
+  <app-sidebar />
+  <div class="flex flex-col flex-1 min-w-0">
+    <app-top-nav />
+    <main class="flex-1 p-8 overflow-x-auto">
+      <div class="mx-auto flex flex-col gap-6">
+        <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 class="text-3xl font-extrabold text-primary tracking-tight m-0 font-headline">
+              Stats
+            </h1>
+            <p class="text-sm text-on-surface-variant m-0 mt-1">
+              Monthly expenses by category — share and trend.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <label class="sr-only" for="stats-month">Month</label>
+            <select
+              id="stats-month"
+              class="tx-select"
+              [value]="selectedMonth()"
+              (change)="onMonthChange($event)"
+            >
+              @for (m of monthOptions; track m.value) {
+                <option [value]="m.value" [selected]="m.value === selectedMonth()">
+                  {{ m.label }}
+                </option>
+              }
+            </select>
+
+            <label class="sr-only" for="stats-year">Year</label>
+            <select
+              id="stats-year"
+              class="tx-select"
+              [value]="selectedYear()"
+              (change)="onYearChange($event)"
+            >
+              @for (y of yearOptions; track y) {
+                <option [value]="y" [selected]="y === selectedYear()">{{ y }}</option>
+              }
+            </select>
+          </div>
+        </header>
+
+        @if (loadError()) {
+          <div
+            class="rounded-xl border border-red-200 bg-red-50 text-red-900 px-4 py-3 text-sm font-semibold"
+          >
+            {{ loadError() }}
+          </div>
+        }
+
+        @if (isLoading()) {
+          <div
+            class="flex items-center justify-center rounded-3xl border border-outline-variant bg-surface-container-low py-20"
+          >
+            <p class="text-on-surface-variant font-semibold">Loading…</p>
+          </div>
+        } @else if (!categories().length) {
+          <div
+            class="flex flex-col items-center justify-center rounded-3xl border border-dashed border-outline-variant bg-surface-container-low py-20 gap-4"
+          >
+            <span
+              class="material-symbols-outlined text-on-surface-variant text-5xl"
+              style="font-variation-settings: 'FILL' 0"
+              >pie_chart</span
+            >
+            <p class="text-on-surface-variant font-semibold text-base m-0">
+              No categorized expenses for this month.
+            </p>
+          </div>
+        } @else {
+          <section
+            class="rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm overflow-hidden p-6"
+          >
+            <div class="flex flex-col gap-2 mb-6">
+              <p class="text-xs font-bold uppercase tracking-widest text-on-surface-variant m-0">
+                Total spent
+              </p>
+              <p class="text-2xl font-extrabold text-primary m-0">
+                {{ formatAmount(monthTotal()) }}
+              </p>
+            </div>
+            <div class="h-[340px] w-full max-w-2xl mx-auto">
+              <canvas #pieCanvas class="max-h-full"></canvas>
+            </div>
+          </section>
+
+          <section
+            class="rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm overflow-hidden"
+          >
+            <div
+              class="px-6 py-4 border-b border-outline-variant/50 flex flex-wrap items-center justify-between gap-2"
+            >
+              <h2 class="text-lg font-bold text-on-surface m-0">By category</h2>
+              <p class="text-xs text-on-surface-variant m-0">Click a row for 12‑month trend</p>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="tx-table w-full text-left border-collapse">
+                <thead>
+                  <tr>
+                    <th scope="col">Category</th>
+                    <th scope="col" class="text-right">%</th>
+                    <th scope="col" class="text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (c of categories(); track c.id) {
+                    <tr
+                      class="cursor-pointer"
+                      tabindex="0"
+                      (click)="openTrend(c)"
+                      (keydown.enter)="openTrend(c)"
+                      (keydown.space)="$event.preventDefault(); openTrend(c)"
+                    >
+                      <td class="font-semibold text-on-surface">
+                        <span class="inline-flex items-center gap-2">
+                          @if (c.icon) {
+                            <span
+                              class="material-symbols-outlined text-[20px] shrink-0"
+                              [style.color]="c.color ?? undefined"
+                              style="font-variation-settings: 'FILL' 0"
+                              >{{ c.icon }}</span
+                            >
+                          } @else {
+                            <span
+                              class="w-5 h-5 rounded-full shrink-0 border border-outline-variant/60 inline-block"
+                              [style.background-color]="c.color ?? '#e0e0e0'"
+                            ></span>
+                          }
+                          {{ c.name }}
+                        </span>
+                      </td>
+                      <td class="text-right text-on-surface-variant">{{ formatPercent(c.percentage) }}</td>
+                      <td class="text-right amount-expense">{{ formatAmount(c.amount) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+      </div>
+    </main>
+  </div>
+</div>
+
+@if (showTrend() && trendCategory()) {
+  <app-category-trend-dialog
+    [category]="trendCategory()!"
+    [referenceMonth]="selectedMonth()"
+    [referenceYear]="selectedYear()"
+    (dismissed)="onTrendDismissed()"
+  />
+}

@@ -15,6 +15,7 @@ import { SubscriptionsComponent } from './pages/subscriptions/subscriptions.comp
 import { IncomeComponent } from './pages/income/income.component';
 import { HistoricComponent } from './pages/historic/historic.component';
 import { MercadoPagoComponent } from './pages/mercadopago/mercadopago.component';
+import { StatsComponent } from './pages/stats/stats.component';
 
 export const routes: Routes = [
   { path: '', component: LoginComponent, canActivate: [guestGuard] },
@@ -23,6 +24,7 @@ export const routes: Routes = [
   { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
   { path: 'income', component: IncomeComponent, canActivate: [authGuard] },
   { path: 'historic', component: HistoricComponent, canActivate: [authGuard] },
+  { path: 'stats', component: StatsComponent, canActivate: [authGuard] },
   { path: 'connections', component: DashboardComponent, canActivate: [authGuard] },
   { path: 'transactions', component: TransactionsComponent, canActivate: [authGuard] },
   {

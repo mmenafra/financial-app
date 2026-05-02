@@ -1,0 +1,47 @@
+<div
+  class="modal-backdrop fixed inset-0 z-50 bg-black/40"
+  role="button"
+  tabindex="0"
+  aria-label="Close dialog"
+  (click)="onBackdrop()"
+  (keydown.enter)="onBackdrop()"
+  (keydown.space)="$event.preventDefault(); onBackdrop()"
+></div>
+
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+  <div
+    class="modal-panel relative w-full max-w-[min(100%-2rem,56rem)] rounded-3xl bg-surface shadow-xl flex flex-col max-h-[min(100vh-2rem,90vh)] pointer-events-auto border border-outline-variant/60"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="trend-modal-title"
+  >
+    <div class="px-6 pt-6 pb-4 border-b border-outline-variant/50 shrink-0 flex items-start justify-between gap-4">
+      <div>
+        <h2 id="trend-modal-title" class="text-xl font-bold text-primary font-headline m-0">
+          {{ category().name }}
+        </h2>
+        <p class="text-sm text-on-surface-variant m-0 mt-1">Spending over the last 12 months</p>
+      </div>
+      <button
+        type="button"
+        class="rounded-xl border border-outline-variant px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container transition-colors shrink-0"
+        (click)="onBackdrop()"
+        aria-label="Close"
+      >
+        Close
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-4 min-h-[280px]">
+      @if (isLoading()) {
+        <p class="text-center text-on-surface-variant py-12 text-sm font-medium">Loading…</p>
+      } @else if (loadError()) {
+        <p class="text-center text-red-600 py-12 text-sm font-semibold">{{ loadError() }}</p>
+      } @else if (data()) {
+        <div class="h-[320px] w-full">
+          <canvas #lineCanvas class="max-h-full"></canvas>
+        </div>
+      }
+    </div>
+  </div>
+</div>

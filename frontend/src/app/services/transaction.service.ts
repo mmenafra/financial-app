@@ -13,6 +13,8 @@ import type {
   RecurringPattern,
   Subscription,
   HistoricResponse,
+  StatsMonthlyResponse,
+  StatsTrendResponse,
   SplitItem,
   Transaction,
   TransactionFilters,
@@ -118,6 +120,31 @@ export class TransactionService {
       .set('categories', categoryIds.join(','))
       .set('year', String(year));
     return this.http.get<HistoricResponse>(`${environment.apiUrl}/api/historic/`, { params });
+  }
+
+  /** Monthly expense breakdown by category (pie + table). */
+  getStatsMonthly(month: number, year: number): Observable<StatsMonthlyResponse> {
+    const params = new HttpParams().set('month', String(month)).set('year', String(year));
+    return this.http.get<StatsMonthlyResponse>(
+      `${environment.apiUrl}/api/stats/monthly/`,
+      { params },
+    );
+  }
+
+  /** Last 12 months of expense for one category (line chart). */
+  getStatsTrend(
+    categoryId: string,
+    referenceMonth: number,
+    referenceYear: number,
+  ): Observable<StatsTrendResponse> {
+    const params = new HttpParams()
+      .set('category_id', categoryId)
+      .set('reference_month', String(referenceMonth))
+      .set('reference_year', String(referenceYear));
+    return this.http.get<StatsTrendResponse>(
+      `${environment.apiUrl}/api/stats/category-trend/`,
+      { params },
+    );
   }
 
   /** Recurring matches on latest Visa Nacional and Visa International statements only. */

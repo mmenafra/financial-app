@@ -243,6 +243,39 @@ export interface HistoricResponse {
   categories: HistoricCategoryData[];
 }
 
+/** One category row in GET /api/stats/monthly/ */
+export interface StatsCategoryItem {
+  id: string;
+  name: string;
+  icon: string | null;
+  color: string | null;
+  amount: string;
+  percentage: number;
+}
+
+/** GET /api/stats/monthly/?month=&year= */
+export interface StatsMonthlyResponse {
+  month: number;
+  year: number;
+  total: string;
+  categories: StatsCategoryItem[];
+}
+
+/** Category summary inside GET /api/stats/category-trend/ */
+export interface StatsTrendCategoryMeta {
+  id: string;
+  name: string;
+  icon: string | null;
+  color: string | null;
+}
+
+/** GET /api/stats/category-trend/ */
+export interface StatsTrendResponse {
+  category: StatsTrendCategoryMeta;
+  months: string[];
+  totals: string[];
+}
+
 /** Body for PATCH /api/transactions/:id/ */
 export interface UpdateTransactionPayload {
   description?: string;
