@@ -1,3 +1,9 @@
+/** Linked Mercado Pago snapshot row (reverse relation from Transaction). */
+export interface MercadoPagoStoredPaymentSlim {
+  id: string;
+  mp_payment_id: number;
+}
+
 /** Mirrors `TransactionSerializer` / `Transaction` model. */
 export interface Transaction {
   id: string;
@@ -36,6 +42,8 @@ export interface Transaction {
   file_import: string | null;
   visa_international_statement: string | null;
   visa_nacional_statement: string | null;
+  /** Present when this Visa Nacional row was matched to a stored MP payment. */
+  mercadopago_stored_payment?: MercadoPagoStoredPaymentSlim | null;
   /** Excluded from totals and other screens (not usable for Visa nacional/intl sources). */
   is_hidden: boolean;
 }
@@ -147,6 +155,16 @@ export interface BankStatementImportSkippedItem {
   direction: Direction;
 }
 
+/** One row from Visa Nacional import MP linking (API). */
+export interface MercadoPagoLinkSummaryRow {
+  transaction_id: string;
+  mp_payment_id: number | null;
+  mp_total_amount: string | null;
+  visa_amount: string;
+  linked: boolean;
+  display_title: string | null;
+}
+
 export interface BankStatementImportResult {
   created: number;
   skipped: number;
@@ -159,6 +177,12 @@ export interface BankStatementImportResult {
   ai_categorization_attempted?: boolean;
   ai_categorization_failed?: boolean;
   ai_failure_detail?: string | null;
+  /** Visa Nacional import: Mercado Pago sync (optional for bank/international). */
+  mercadopago_payments_synced?: number;
+  mercadopago_links_created?: number;
+  mercadopago_sync_skipped_no_token?: boolean;
+  mercadopago_sync_error?: string | null;
+  mercadopago_link_summary?: MercadoPagoLinkSummaryRow[];
 }
 
 export interface VisaInternationalStatement {

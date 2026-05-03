@@ -5,6 +5,8 @@ from django.urls import include, path
 
 from .mercadopago.views import (
     MercadoLibreItemsView,
+    MercadoPagoStoredPaymentDetailView,
+    MercadoPagoStoredPaymentLinkView,
     MercadoPagoTransactionDetailView,
     MercadoPagoTransactionListView,
 )
@@ -84,6 +86,16 @@ urlpatterns = [
     path("stats/monthly/", StatsMonthlyView.as_view(), name="stats-monthly"),
     path(
         "stats/category-trend/", StatsTrendView.as_view(), name="stats-category-trend"
+    ),
+    path(
+        "mercadopago/stored-payments/link/",
+        MercadoPagoStoredPaymentLinkView.as_view(),
+        name="mercadopago-stored-payment-link",
+    ),
+    path(
+        "mercadopago/stored-payments/<uuid:pk>/",
+        MercadoPagoStoredPaymentDetailView.as_view(),
+        name="mercadopago-stored-payment-detail",
     ),
     path(
         "mercadopago/transactions/",

@@ -204,9 +204,16 @@
 
                     <div class="vi-col-amount">
                       <p
-                        class="m-0 mt-1 font-headline text-lg font-extrabold tabular-nums text-primary"
+                        class="m-0 mt-1 font-headline text-lg font-extrabold tabular-nums"
+                        [class.text-emerald-700]="row.direction === 'INCOME'"
+                        [class.dark:text-emerald-400]="row.direction === 'INCOME'"
+                        [class.text-primary]="row.direction === 'EXPENSE'"
                       >
-                        {{ formatMoney(row.amount, row.currency) }}
+                        @if (row.direction === 'EXPENSE') {
+                          -{{ formatMoney(row.amount, row.currency) }}
+                        } @else {
+                          {{ formatMoney(row.amount, row.currency) }}
+                        }
                       </p>
                       <p
                         class="vi-currency-code m-0 mt-0.5 text-xs font-semibold uppercase tracking-wide text-on-surface-variant"

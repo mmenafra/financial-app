@@ -64,6 +64,8 @@ export class ImportModalComponent implements OnChanges {
   protected readonly importResult = signal<BankStatementImportResult | null>(null);
   protected readonly importError = signal<string | null>(null);
   protected readonly importReviewStep = signal(false);
+  /** Visa Nacional: show Mercado Pago link summary before category review. */
+  protected readonly importMercadoPagoStep = signal(false);
   protected importReviewControls: FormControl<string | null>[] = [];
   protected readonly importFinishing = signal(false);
   protected readonly importFinishError = signal<string | null>(null);
@@ -83,6 +85,7 @@ export class ImportModalComponent implements OnChanges {
     this.importFile.set(null);
     this.importResult.set(normalizeBankStatementImportResult(res));
     this.importReviewStep.set(false);
+    this.importMercadoPagoStep.set(false);
     this.importReviewControls = [];
     this.importFinishError.set(null);
     this.importError.set(null);
@@ -99,6 +102,7 @@ export class ImportModalComponent implements OnChanges {
     this.importResult.set(null);
     this.importError.set(null);
     this.importReviewStep.set(false);
+    this.importMercadoPagoStep.set(false);
     this.importReviewControls = [];
     this.importFinishing.set(false);
     this.importFinishError.set(null);
@@ -130,6 +134,7 @@ export class ImportModalComponent implements OnChanges {
           this.importSubmitting.set(false);
           this.importResult.set(normalizeBankStatementImportResult(res));
           this.importReviewStep.set(false);
+          this.importMercadoPagoStep.set(false);
           this.importReviewControls = [];
           this.importFinishError.set(null);
           this.imported.emit();
@@ -148,11 +153,33 @@ export class ImportModalComponent implements OnChanges {
     if (!res) {
       return;
     }
+    this.importMercadoPagoStep.set(false);
     this.importReviewControls = res.transactions.map((tx) =>
       this.fb.control<string | null>(tx.category ?? null),
     );
     this.importReviewStep.set(true);
     this.importFinishError.set(null);
+  }
+
+  protected onSummaryNextFromImport(): void {
+    const res = this.importResult();
+    if (!res) {
+      return;
+    }
+    if (this.hasMercadoPagoImportMeta(res)) {
+      this.importMercadoPagoStep.set(true);
+    } else {
+      this.goToReviewStep();
+    }
+  }
+
+  protected continueFromMercadoPagoToCategories(): void {
+    this.importMercadoPagoStep.set(false);
+    this.goToReviewStep();
+  }
+
+  private hasMercadoPagoImportMeta(res: BankStatementImportResult): boolean {
+    return res.mercadopago_payments_synced !== undefined;
   }
 
   protected finishImportReview(): void {
@@ -180,6 +207,7 @@ export class ImportModalComponent implements OnChanges {
       this.importResult.set(null);
       this.importError.set(null);
       this.importReviewStep.set(false);
+      this.importMercadoPagoStep.set(false);
       this.importReviewControls = [];
       this.importFinishError.set(null);
       this.importReviewCompleted.emit();
@@ -198,6 +226,7 @@ export class ImportModalComponent implements OnChanges {
           this.importResult.set(null);
           this.importError.set(null);
           this.importReviewStep.set(false);
+          this.importMercadoPagoStep.set(false);
           this.importReviewControls = [];
           this.importFinishError.set(null);
           this.importReviewCompleted.emit();

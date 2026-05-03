@@ -2,9 +2,11 @@ import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 import { BarChartComponent } from '../../components/bar-chart/bar-chart.component';
 import { ImportModalComponent } from '../../components/import-modal/import-modal.component';
+import { MercadoPagoDetailModalComponent } from '../../components/mercadopago-detail-modal/mercadopago-detail-modal.component';
 import { RecurringPatternModalComponent } from '../../components/recurring-pattern-modal/recurring-pattern-modal.component';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { TopNavComponent } from '../../components/top-nav/top-nav.component';
@@ -12,12 +14,16 @@ import { TransactionEditModalComponent } from '../../components/transaction-edit
 import { TransactionMetadataModalComponent } from '../../components/transaction-metadata-modal/transaction-metadata-modal.component';
 import type {
   Category,
+  Direction,
+  MercadoPagoStoredPaymentSlim,
   RecurringPattern,
   Transaction,
   UpdateTransactionPayload,
   VisaMonthlyTotal,
   VisaNacionalStatement,
 } from '../../models/transaction.model';
+import type { MpPayment } from '../../models/mercadopago.model';
+import { MercadoPagoService } from '../../services/mercadopago.service';
 import { TransactionService } from '../../services/transaction.service';
 import { ToastService } from '../../services/toast.service';
 import { httpErrorMessage } from '../../utils/transaction-edit';
@@ -39,6 +45,9 @@ interface TimelineRow {
   isInstallment: boolean;
   categoryLabel: string;
   categoryColor: string;
+  direction: Direction;
+  /** Present when this row was matched to a stored MP payment (Visa Nacional sync). */
+  mercadopago_stored_payment?: MercadoPagoStoredPaymentSlim | null;
 }
 
 interface ChartBarPoint {
@@ -84,6 +93,7 @@ function isMultiInstallment(
     TransactionEditModalComponent,
     TransactionMetadataModalComponent,
     RecurringPatternModalComponent,
+    MercadoPagoDetailModalComponent,
   ],
   templateUrl: './visa-nacional.component.html',
   styleUrl: './visa-nacional.component.scss',
@@ -91,6 +101,7 @@ function isMultiInstallment(
 export class VisaNacionalComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly transactionService = inject(TransactionService);
+  private readonly mercadoPagoService = inject(MercadoPagoService);
   private readonly toast = inject(ToastService);
   private vnTimelineSub: Subscription | null = null;
 
@@ -144,6 +155,8 @@ export class VisaNacionalComponent {
   protected readonly editServerError = signal<string | null>(null);
   protected readonly metadataTarget = signal<Transaction | null>(null);
   protected readonly recurringPatternTarget = signal<Transaction | null>(null);
+  protected readonly mpDetailPayment = signal<MpPayment | null>(null);
+  protected readonly mpDetailLoading = signal(false);
 
   protected readonly chartBars = computed((): ChartBarPoint[] => {
     return this.monthlyTotals().map((bucket) => ({
@@ -283,6 +296,8 @@ export class VisaNacionalComponent {
       isInstallment,
       categoryLabel: cat?.name ?? 'Uncategorized',
       categoryColor: cat?.color ?? '#94a3b8',
+      direction: tx.direction,
+      mercadopago_stored_payment: tx.mercadopago_stored_payment ?? null,
     };
   }
 
@@ -451,6 +466,41 @@ export class VisaNacionalComponent {
 
   protected onMetadataDismissed(): void {
     this.metadataTarget.set(null);
+  }
+
+  protected transactionHasMercadoPagoLink(row: TimelineRow): boolean {
+    return Boolean(row.mercadopago_stored_payment?.id);
+  }
+
+  protected onMercadoPagoDetail(row: TimelineRow, event: MouseEvent): void {
+    event.stopPropagation();
+    this.openMenuId.set(null);
+    const sp = row.mercadopago_stored_payment;
+    if (!sp?.id) {
+      return;
+    }
+    this.mpDetailLoading.set(true);
+    this.mpDetailPayment.set(null);
+    this.mercadoPagoService
+      .getStoredPayment(sp.id)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        catchError(() => this.mercadoPagoService.getPayment(sp.mp_payment_id)),
+      )
+      .subscribe({
+        next: (p) => {
+          this.mpDetailPayment.set(p);
+          this.mpDetailLoading.set(false);
+        },
+        error: (err: unknown) => {
+          this.mpDetailLoading.set(false);
+          this.toast.error(httpErrorMessage(err) ?? 'Could not load Mercado Pago payment.');
+        },
+      });
+  }
+
+  protected onMercadoPagoDetailDismissed(): void {
+    this.mpDetailPayment.set(null);
   }
 }
 

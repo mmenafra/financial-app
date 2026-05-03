@@ -18,6 +18,7 @@ from ..models import (
 from ..serializers import TransactionSerializer
 from .bank_statement_parser import parse_bsa_bank_statement
 from .bsa_import import import_bsa_row
+from .mercadopago_nacional_sync import sync_and_link_visa_nacional_statement
 from .visa_internacional_import import (
     import_visa_internacional_row,
     skipped_item_preview_from_internacional_row,
@@ -225,6 +226,20 @@ def visa_nacional_import_pipeline(request, file_import):
     )
     created_instances = _refresh_transactions_preserving_order(created_instances)
 
+    mp_state = sync_and_link_visa_nacional_statement(
+        request.user, visa_statement, period_end
+    )
+
+    if created_instances:
+        pks_ordered = [t.pk for t in created_instances]
+        fresh_map = {
+            t.pk: t
+            for t in Transaction.objects.filter(pk__in=pks_ordered).select_related(
+                "mercadopago_stored_payment"
+            )
+        }
+        created_instances = [fresh_map[pk] for pk in pks_ordered if pk in fresh_map]
+
     file_import.rows_imported = created_count
     file_import.rows_skipped = skipped_count
     file_import.status = ImportStatus.COMPLETED
@@ -249,6 +264,13 @@ def visa_nacional_import_pipeline(request, file_import):
         "ai_categorization_attempted": ai_categorization_attempted,
         "ai_categorization_failed": ai_categorization_failed,
         "ai_failure_detail": ai_failure_detail,
+        "mercadopago_payments_synced": mp_state["mercadopago_payments_synced"],
+        "mercadopago_links_created": mp_state["mercadopago_links_created"],
+        "mercadopago_sync_skipped_no_token": mp_state[
+            "mercadopago_sync_skipped_no_token"
+        ],
+        "mercadopago_sync_error": mp_state["mercadopago_sync_error"],
+        "mercadopago_link_summary": mp_state["mercadopago_link_summary"],
     }
     return Response(response_body, status=status.HTTP_201_CREATED)
 

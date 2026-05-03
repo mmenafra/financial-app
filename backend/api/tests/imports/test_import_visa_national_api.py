@@ -18,6 +18,18 @@ class ImportVisaNationalAPITests(APITestCase):
             password="StrongPass123!",
         )
         self.url = reverse("import-visa-national")
+        self._mp_patcher = patch(
+            "api.imports.pipeline.sync_and_link_visa_nacional_statement",
+            return_value={
+                "mercadopago_payments_synced": 0,
+                "mercadopago_links_created": 0,
+                "mercadopago_sync_skipped_no_token": True,
+                "mercadopago_sync_error": None,
+                "mercadopago_link_summary": [],
+            },
+        )
+        self._mp_patcher.start()
+        self.addCleanup(self._mp_patcher.stop)
 
     def test_endpoint_requires_authentication(self):
         pdf = SimpleUploadedFile(

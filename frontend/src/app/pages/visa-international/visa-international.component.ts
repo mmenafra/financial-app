@@ -12,6 +12,7 @@ import { TransactionEditModalComponent } from '../../components/transaction-edit
 import { TransactionMetadataModalComponent } from '../../components/transaction-metadata-modal/transaction-metadata-modal.component';
 import type {
   Category,
+  Direction,
   RecurringPattern,
   Transaction,
   UpdateTransactionPayload,
@@ -38,6 +39,7 @@ interface TimelineRow {
   isSubscription: boolean;
   categoryLabel: string;
   categoryColor: string;
+  direction: Direction;
 }
 
 interface ChartBarPoint {
@@ -260,6 +262,7 @@ export class VisaInternationalComponent {
       isSubscription,
       categoryLabel: cat?.name ?? 'Uncategorized',
       categoryColor: cat?.color ?? '#94a3b8',
+      direction: tx.direction,
     };
   }
 

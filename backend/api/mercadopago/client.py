@@ -24,8 +24,18 @@ def _access_token_or_raise() -> str:
     return token
 
 
-def search_payments(*, offset: int, limit: int) -> dict:
+def search_payments(
+    *,
+    offset: int,
+    limit: int,
+    begin_date: str | None = None,
+    end_date: str | None = None,
+    range_field: str = "date_created",
+) -> dict:
     """GET /v1/payments/search via SDK (newest payments first).
+
+    When ``begin_date`` and ``end_date`` are set (ISO-8601), ``range_field`` must
+    be a valid MP ``range`` value (e.g. ``dateCreated``/``date_created`` per SDK).
 
     Pagination: Mercado Pago allows limit up to 50 and offset up to 10000.
     """
@@ -33,14 +43,17 @@ def search_payments(*, offset: int, limit: int) -> dict:
     sdk = mercadopago.SDK(_access_token_or_raise())
     safe_limit = max(1, min(int(limit), 50))
     safe_offset = max(0, min(int(offset), 10_000))
-    return sdk.payment().search(
-        {
-            "sort": "date_created",
-            "criteria": "desc",
-            "offset": safe_offset,
-            "limit": safe_limit,
-        }
-    )
+    filters: dict = {
+        "sort": "date_created",
+        "criteria": "desc",
+        "offset": safe_offset,
+        "limit": safe_limit,
+    }
+    if begin_date and end_date:
+        filters["range"] = range_field
+        filters["begin_date"] = begin_date
+        filters["end_date"] = end_date
+    return sdk.payment().search(filters)
 
 
 def get_payment(payment_id: str) -> dict:

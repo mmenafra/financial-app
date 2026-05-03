@@ -84,6 +84,13 @@ export interface MpAdditionalInfo {
   [key: string]: unknown;
 }
 
+/** Response from POST /api/mercadopago/stored-payments/link/ */
+export interface MercadoPagoLinkResponse {
+  stored_payment_id: string;
+  mp_payment_id: number;
+  transaction_id: string;
+}
+
 export interface MpPayment {
   id?: number | string;
   date_created?: string;

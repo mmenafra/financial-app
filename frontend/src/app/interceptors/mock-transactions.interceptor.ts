@@ -118,6 +118,7 @@ function tx(
     file_import: partial.file_import ?? null,
     visa_international_statement: partial.visa_international_statement ?? null,
     visa_nacional_statement: partial.visa_nacional_statement ?? null,
+    mercadopago_stored_payment: partial.mercadopago_stored_payment ?? null,
     is_hidden: partial.is_hidden ?? false,
   };
 }

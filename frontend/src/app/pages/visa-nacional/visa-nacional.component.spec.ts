@@ -4,6 +4,8 @@ import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
 import type { VisaNacionalDashboardResponse } from '../../models/transaction.model';
+import type { MpPayment } from '../../models/mercadopago.model';
+import { MercadoPagoService } from '../../services/mercadopago.service';
 import { TransactionService } from '../../services/transaction.service';
 import { VisaNacionalComponent } from './visa-nacional.component';
 
@@ -39,6 +41,11 @@ describe('VisaNacionalComponent', () => {
     match_type: 'PARTIAL' as const,
   };
 
+  const mpStub: Partial<MercadoPagoService> = {
+    getStoredPayment: () => of({} as MpPayment),
+    getPayment: () => of({} as MpPayment),
+  };
+
   const txStub: Partial<TransactionService> = {
     getCategories: () => of([]),
     getRecurringPatterns: () => of([]),
@@ -60,6 +67,7 @@ describe('VisaNacionalComponent', () => {
       providers: [
         provideHttpClient(),
         { provide: TransactionService, useValue: txStub as TransactionService },
+        { provide: MercadoPagoService, useValue: mpStub as MercadoPagoService },
         provideRouter([]),
       ],
     }).compileComponents();

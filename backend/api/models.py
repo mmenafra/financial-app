@@ -408,6 +408,38 @@ class Transaction(AbstractBaseModel):
         return f"{self.description} ({self.amount} {self.currency})"
 
 
+class MercadoPagoStoredPayment(AbstractBaseModel):
+    """Mercado Pago payment snapshot (deduped per user); optionally linked to a Visa Nacional tx."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="mercadopago_stored_payments",
+    )
+    mp_payment_id = models.BigIntegerField(db_index=True)
+    synced_at = models.DateTimeField()
+    payload = models.JSONField()
+    visa_transaction = models.OneToOneField(
+        Transaction,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="mercadopago_stored_payment",
+    )
+
+    class Meta:
+        ordering = ["-synced_at", "-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "mp_payment_id"],
+                name="api_mercadopagostoredpayment_user_mp_id_uniq",
+            ),
+        ]
+
+    def __str__(self):
+        return f"MP {self.mp_payment_id} (user {self.user_id})"
+
+
 class RecurringPattern(AbstractBaseModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

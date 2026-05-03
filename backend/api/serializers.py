@@ -8,6 +8,7 @@ from django.contrib.auth.password_validation import validate_password
 from .models import (
     Category,
     FileImport,
+    MercadoPagoStoredPayment,
     RecurringPattern,
     Source,
     Transaction,
@@ -226,8 +227,16 @@ class CategorySerializer(serializers.ModelSerializer):
         return value
 
 
+class MercadoPagoStoredPaymentSlimSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MercadoPagoStoredPayment
+        fields = ("id", "mp_payment_id")
+        read_only_fields = fields
+
+
 class TransactionSerializer(serializers.ModelSerializer):
     splits = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    mercadopago_stored_payment = serializers.SerializerMethodField()
 
     class Meta:
         model = Transaction
@@ -265,6 +274,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             "matched_recurring_pattern",
             "is_hidden",
             "splits",
+            "mercadopago_stored_payment",
         )
         read_only_fields = (
             "id",
@@ -277,7 +287,15 @@ class TransactionSerializer(serializers.ModelSerializer):
             "visa_international_statement",
             "visa_nacional_statement",
             "matched_recurring_pattern",
+            "mercadopago_stored_payment",
         )
+
+    def get_mercadopago_stored_payment(self, obj: Transaction):
+        try:
+            sp = obj.mercadopago_stored_payment
+        except MercadoPagoStoredPayment.DoesNotExist:
+            return None
+        return MercadoPagoStoredPaymentSlimSerializer(sp).data
 
     def validate(self, attrs):
         instance = self.instance

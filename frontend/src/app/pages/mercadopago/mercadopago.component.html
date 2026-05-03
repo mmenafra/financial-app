@@ -51,11 +51,11 @@
           </div>
         } @else {
           <section
-            class="overflow-hidden rounded-3xl border border-outline-variant/40 bg-surface-container-low shadow-sm"
+            class="overflow-x-auto rounded-3xl border border-outline-variant/40 bg-surface-container-low shadow-sm"
           >
-            <div class="overflow-x-auto">
+            <div class="min-w-0">
               <table
-                class="tx-table w-full min-w-[680px] text-left border-collapse"
+                class="tx-table w-full min-w-[760px] text-left border-collapse"
                 aria-label="Mercado Pago payments"
               >
                 <thead>
@@ -90,10 +90,16 @@
                     >
                       Status
                     </th>
+                    <th
+                      scope="col"
+                      class="bg-surface-container px-6 py-3 text-xs uppercase tracking-wide font-bold w-[5rem]"
+                    >
+                      <span class="sr-only">Actions</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  @for (row of rows(); track $index) {
+                  @for (row of rows(); track row.id ?? $index) {
                     <tr
                       class="cursor-pointer hover:bg-secondary-container/70"
                       tabindex="0"
@@ -133,11 +139,44 @@
                           {{ row.status ?? '—' }}
                         </span>
                       </td>
+                      <td
+                        class="relative px-4 py-3 text-right align-middle"
+                        (click)="$event.stopPropagation()"
+                      >
+                        <button
+                          type="button"
+                          class="tx-menu-btn"
+                          aria-label="More options"
+                          [attr.aria-expanded]="openMenuKey() === rowMenuKey(row)"
+                          aria-haspopup="true"
+                          [disabled]="!rowMenuKey(row)"
+                          (click)="toggleRowMenu(row, $event)"
+                        >
+                          <span class="material-symbols-outlined text-[20px]">more_vert</span>
+                        </button>
+                        @if (openMenuKey() === rowMenuKey(row)) {
+                          <div class="tx-dropdown tx-dropdown--up left-auto right-0" role="menu">
+                            <button
+                              type="button"
+                              class="tx-dropdown-item"
+                              role="menuitem"
+                              (click)="onLinkTransaction(row, $event)"
+                            >
+                              <span
+                                class="material-symbols-outlined text-[16px]"
+                                style="font-variation-settings: 'FILL' 0"
+                                >link</span
+                              >
+                              Link
+                            </button>
+                          </div>
+                        }
+                      </td>
                     </tr>
                   } @empty {
                     <tr>
                       <td
-                        colspan="5"
+                        colspan="6"
                         class="px-6 py-16 text-center text-sm font-semibold text-on-surface-variant"
                       >
                         No Mercado Pago payments returned (or credentials not configured).
@@ -176,6 +215,13 @@
               </button>
             }
           </div>
+        }
+
+        @if (linkModalMpId(); as mpId) {
+          <app-mercadopago-link-transaction-modal
+            [mpPaymentId]="mpId"
+            (dismissed)="closeLinkModal()"
+          />
         }
 
         @if (detailOpen()) {

@@ -5,7 +5,12 @@ import { map } from 'rxjs/operators';
 import type { Observable } from 'rxjs';
 
 import { environment } from '../../environments/environment';
-import type { MlItem, MpPayment, MpPaymentSearchResponse } from '../models/mercadopago.model';
+import type {
+  MercadoPagoLinkResponse,
+  MlItem,
+  MpPayment,
+  MpPaymentSearchResponse,
+} from '../models/mercadopago.model';
 
 @Injectable({ providedIn: 'root' })
 export class MercadoPagoService {
@@ -23,6 +28,24 @@ export class MercadoPagoService {
   getPayment(paymentId: string | number): Observable<MpPayment> {
     const id = String(paymentId).trim();
     return this.http.get<MpPayment>(`${this.baseUrl()}${encodeURIComponent(id)}/`);
+  }
+
+  /** Snapshot from DB (GET /api/mercadopago/stored-payments/:id/) for Visa Nacional links. */
+  getStoredPayment(storedId: string): Observable<MpPayment> {
+    const base = `${environment.apiUrl}/api/mercadopago/stored-payments/`;
+    return this.http.get<MpPayment>(`${base}${encodeURIComponent(storedId.trim())}/`);
+  }
+
+  /** Persists MP payment snapshot and attaches it to a Visa Nacional transaction. */
+  linkToVisaTransaction(
+    mpPaymentId: string | number,
+    transactionId: string,
+  ): Observable<MercadoPagoLinkResponse> {
+    const url = `${environment.apiUrl}/api/mercadopago/stored-payments/link/`;
+    return this.http.post<MercadoPagoLinkResponse>(url, {
+      mp_payment_id: Number(mpPaymentId),
+      transaction_id: transactionId,
+    });
   }
 
   /**

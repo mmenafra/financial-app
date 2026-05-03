@@ -1,8 +1,17 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  HostListener,
+  computed,
+  DestroyRef,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { MercadoPagoDetailModalComponent } from '../../components/mercadopago-detail-modal/mercadopago-detail-modal.component';
+import { MercadoPagoLinkTransactionModalComponent } from '../../components/mercadopago-link-transaction-modal/mercadopago-link-transaction-modal.component';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { TopNavComponent } from '../../components/top-nav/top-nav.component';
 import type { MpPayment } from '../../models/mercadopago.model';
@@ -15,7 +24,13 @@ const PAGE_SIZE = 30;
 @Component({
   selector: 'app-mercadopago',
   standalone: true,
-  imports: [CommonModule, SidebarComponent, TopNavComponent, MercadoPagoDetailModalComponent],
+  imports: [
+    CommonModule,
+    SidebarComponent,
+    TopNavComponent,
+    MercadoPagoDetailModalComponent,
+    MercadoPagoLinkTransactionModalComponent,
+  ],
   templateUrl: './mercadopago.component.html',
   styleUrl: './mercadopago.component.scss',
 })
@@ -34,6 +49,9 @@ export class MercadoPagoComponent implements OnInit {
   protected readonly detailOpen = signal(false);
   protected readonly detailPayment = signal<MpPayment | null>(null);
   protected readonly detailLoading = signal(false);
+
+  protected readonly openMenuKey = signal<string | null>(null);
+  protected readonly linkModalMpId = signal<string | null>(null);
 
   protected readonly hasMore = computed(() => {
     const total = this.pagingTotal();
@@ -92,6 +110,40 @@ export class MercadoPagoComponent implements OnInit {
     this.detailOpen.set(false);
     this.detailPayment.set(null);
     this.detailLoading.set(false);
+  }
+
+  @HostListener('document:click')
+  protected closeRowMenus(): void {
+    this.openMenuKey.set(null);
+  }
+
+  protected rowMenuKey(row: MpPayment): string {
+    const raw = row.id;
+    return raw == null ? '' : String(raw);
+  }
+
+  protected toggleRowMenu(row: MpPayment, event: MouseEvent): void {
+    event.stopPropagation();
+    const key = this.rowMenuKey(row);
+    if (!key) {
+      return;
+    }
+    this.openMenuKey.update((cur) => (cur === key ? null : key));
+  }
+
+  protected onLinkTransaction(row: MpPayment, event: MouseEvent): void {
+    event.stopPropagation();
+    this.openMenuKey.set(null);
+    const rawId = row.id;
+    if (rawId == null || `${rawId}`.trim() === '') {
+      this.toast.error('This payment does not include an ID.');
+      return;
+    }
+    this.linkModalMpId.set(`${rawId}`.trim());
+  }
+
+  protected closeLinkModal(): void {
+    this.linkModalMpId.set(null);
   }
 
   protected statusBadgeClass(status: string | null | undefined): string {

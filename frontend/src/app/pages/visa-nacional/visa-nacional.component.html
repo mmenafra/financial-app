@@ -188,9 +188,24 @@
                     </div>
 
                     <div class="vi-col-main min-w-0">
-                      <p class="m-0 text-base font-extrabold leading-snug text-primary">
-                        {{ row.title }}
-                      </p>
+                      <div class="flex min-w-0 items-start gap-1">
+                        <p
+                          class="m-0 min-w-0 flex-1 text-base font-extrabold leading-snug text-primary"
+                        >
+                          {{ row.title }}
+                        </p>
+                        @if (transactionHasMercadoPagoLink(row)) {
+                          <button
+                            type="button"
+                            class="tx-menu-btn shrink-0"
+                            aria-label="Mercado Pago payment details"
+                            title="Mercado Pago"
+                            (click)="onMercadoPagoDetail(row, $event)"
+                          >
+                            <span class="material-symbols-outlined text-[20px]">payments</span>
+                          </button>
+                        }
+                      </div>
                       @if (row.subtitle) {
                         <p
                           class="m-0 mt-1 text-sm font-medium leading-snug text-on-surface-variant"
@@ -212,9 +227,16 @@
 
                     <div class="vi-col-amount">
                       <p
-                        class="m-0 mt-1 font-headline text-lg font-extrabold tabular-nums text-primary"
+                        class="m-0 mt-1 font-headline text-lg font-extrabold tabular-nums"
+                        [class.text-emerald-700]="row.direction === 'INCOME'"
+                        [class.dark:text-emerald-400]="row.direction === 'INCOME'"
+                        [class.text-primary]="row.direction === 'EXPENSE'"
                       >
-                        {{ formatClp(row.amount) }}
+                        @if (row.direction === 'EXPENSE') {
+                          -{{ formatClp(row.amount) }}
+                        } @else {
+                          {{ formatClp(row.amount) }}
+                        }
                       </p>
                       <p
                         class="vi-currency-code m-0 mt-0.5 text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
@@ -316,6 +338,14 @@
   idPrefix="vn"
   (dismissed)="onMetadataDismissed()"
 />
+@if (mpDetailLoading() || mpDetailPayment()) {
+  <app-mercadopago-detail-modal
+    [payment]="mpDetailPayment()"
+    [detailLoading]="mpDetailLoading()"
+    idPrefix="vn-mp"
+    (dismissed)="onMercadoPagoDetailDismissed()"
+  />
+}
 
 @if (importModalOpen()) {
   <app-import-modal

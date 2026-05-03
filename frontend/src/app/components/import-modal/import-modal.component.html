@@ -79,6 +79,82 @@
           </button>
         </div>
       </div>
+    } @else if (importMercadoPagoStep()) {
+      <div class="mt-5 flex flex-col gap-4">
+        <p class="text-sm font-extrabold text-on-surface m-0">Mercado Pago linking</p>
+        @if (res.mercadopago_sync_error) {
+          <div
+            class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950"
+            role="status"
+          >
+            <p class="text-sm font-extrabold m-0">Could not complete Mercado Pago sync</p>
+            <p class="text-sm m-0 mt-1 font-mono opacity-95">{{ res.mercadopago_sync_error }}</p>
+          </div>
+        } @else if (res.mercadopago_sync_skipped_no_token) {
+          <p class="text-sm text-on-surface-variant m-0">
+            Mercado Pago token is not configured; statement rows were imported without MP matching.
+          </p>
+        }
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div
+            class="rounded-2xl border border-outline-variant/60 bg-surface-container/30 px-4 py-3"
+          >
+            <p class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">
+              MP payments synced
+            </p>
+            <p class="text-2xl font-extrabold text-primary m-0 mt-1">
+              {{ res.mercadopago_payments_synced ?? 0 }}
+            </p>
+          </div>
+          <div
+            class="rounded-2xl border border-outline-variant/60 bg-surface-container/30 px-4 py-3"
+          >
+            <p class="text-xs font-bold uppercase tracking-wide text-on-surface-variant m-0">
+              Links created
+            </p>
+            <p class="text-2xl font-extrabold text-on-surface m-0 mt-1">
+              {{ res.mercadopago_links_created ?? 0 }}
+            </p>
+          </div>
+        </div>
+        @if ((res.mercadopago_link_summary?.length ?? 0) > 0) {
+          <div
+            class="w-full min-w-0 max-h-[min(20rem,45vh)] overflow-auto rounded-xl border border-outline-variant/50"
+          >
+            <table class="tx-table w-full text-left border-collapse text-sm">
+              <thead>
+                <tr>
+                  <th>Linked</th>
+                  <th>MP payment</th>
+                  <th class="text-right">MP total</th>
+                  <th class="text-right">Visa</th>
+                  <th>Title</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of res.mercadopago_link_summary!; track row.transaction_id) {
+                  <tr>
+                    <td>{{ row.linked ? 'Yes' : '—' }}</td>
+                    <td class="font-mono">{{ row.mp_payment_id ?? '—' }}</td>
+                    <td class="text-right font-mono">{{ row.mp_total_amount ?? '—' }}</td>
+                    <td class="text-right font-mono">{{ row.visa_amount }}</td>
+                    <td class="min-w-0">
+                      <span class="block truncate" [title]="row.display_title ?? ''">{{
+                        row.display_title ?? '—'
+                      }}</span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        <div class="flex flex-wrap gap-2 justify-end pt-1">
+          <button type="button" class="tx-pill-btn" (click)="continueFromMercadoPagoToCategories()">
+            Continue to categories
+          </button>
+        </div>
+      </div>
     } @else {
       <div class="mt-5 flex flex-col gap-4">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -192,7 +268,9 @@
         }
 
         <div class="flex flex-wrap gap-2 justify-end pt-1">
-          <button type="button" class="tx-pill-btn" (click)="goToReviewStep()">Next</button>
+          <button type="button" class="tx-pill-btn" (click)="onSummaryNextFromImport()">
+            Next
+          </button>
         </div>
       </div>
     }

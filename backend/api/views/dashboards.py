@@ -244,6 +244,7 @@ class VisaNacionalDashboardView(APIView):
                     visa_nacional_statement=statement,
                     splits__isnull=True,
                 )
+                .select_related("mercadopago_stored_payment")
                 .visible_only()
                 .order_by("transaction_date", "created_at")
             )
@@ -256,6 +257,7 @@ class VisaNacionalDashboardView(APIView):
                     transaction_date__year=year,
                     transaction_date__month=month,
                 )
+                .select_related("mercadopago_stored_payment")
                 .visible_only()
                 .order_by("transaction_date", "created_at")
             )

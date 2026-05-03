@@ -347,7 +347,9 @@ class TransactionViewSet(ModelViewSet):
     pagination_class = TransactionPagination
 
     def get_queryset(self):
-        qs = Transaction.objects.filter(user=self.request.user)
+        qs = Transaction.objects.filter(user=self.request.user).select_related(
+            "mercadopago_stored_payment",
+        )
         if self.action != "list":
             return qs
         qs = qs.filter(splits__isnull=True)
