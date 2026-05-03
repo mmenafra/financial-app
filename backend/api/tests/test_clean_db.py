@@ -1,9 +1,12 @@
 """Tests for clean_db management command."""
 
+import os
 from datetime import date, datetime
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.contrib.sessions.backends.db import SessionStore
+from django.contrib.sessions.models import Session
 from django.core.files.base import ContentFile
 from django.core.management import CommandError, call_command
 from django.test import TestCase
@@ -16,15 +19,67 @@ from api.models import (
     Frequency,
     ImportStatus,
     RecurringPattern,
+    SocialAccount,
     Source,
     Transaction,
     TransactionStatus,
     TransactionType,
+    UserProfile,
     VisaInternationalStatement,
     VisaNacionalStatement,
 )
 
 User = get_user_model()
+
+
+class CleanDbAllTests(TestCase):
+    """``--all`` removes finance rows, users, linked identities/profiles, sessions."""
+
+    def test_all_clears_users_sessions_import_files_and_app_tables(self):
+        user = User.objects.create_user(
+            username="wipe-user",
+            email="wipe@example.com",
+            password="StrongPass123!",
+        )
+        SocialAccount.objects.create(
+            user=user, provider="google", provider_uid="gid-123"
+        )
+        self.assertTrue(UserProfile.objects.filter(user=user).exists())
+
+        fi = FileImport.objects.create(
+            user=user,
+            source=Source.CREDIT_CARD_INTERNATIONAL,
+            file=ContentFile(b"x", name="wipe.pdf"),
+            original_filename="wipe.pdf",
+            status=ImportStatus.COMPLETED,
+        )
+        abs_path = fi.file.path
+        self.assertTrue(os.path.isfile(abs_path))
+
+        store = SessionStore()
+        store.create()
+        self.assertGreater(Session.objects.count(), 0)
+
+        Transaction.objects.create(
+            user=user,
+            description="T",
+            amount=Decimal("1.00"),
+            currency="USD",
+            transaction_type=TransactionType.DEBIT,
+            direction=Direction.EXPENSE,
+            source=Source.CREDIT_CARD_INTERNATIONAL,
+            status=TransactionStatus.CONFIRMED,
+        )
+
+        call_command("clean_db", "--all")
+
+        self.assertFalse(os.path.isfile(abs_path))
+        self.assertEqual(User.objects.count(), 0)
+        self.assertEqual(SocialAccount.objects.count(), 0)
+        self.assertEqual(UserProfile.objects.count(), 0)
+        self.assertEqual(Session.objects.count(), 0)
+        self.assertEqual(Transaction.objects.count(), 0)
+        self.assertEqual(FileImport.objects.count(), 0)
 
 
 class CleanDbUserFullTests(TestCase):

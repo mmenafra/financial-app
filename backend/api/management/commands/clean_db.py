@@ -1,6 +1,7 @@
 from datetime import date, datetime
 
 from django.contrib.auth import get_user_model
+from django.contrib.sessions.models import Session
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection
 from django.utils import timezone
@@ -30,7 +31,9 @@ class Command(BaseCommand):
             "--all",
             action="store_true",
             help="Delete ALL rows from Transaction, Category, RecurringPattern, FileImport, "
-            "VisaInternationalStatement, VisaNacionalStatement, and User tables.",
+            "VisaInternationalStatement, VisaNacionalStatement, and User tables; clear "
+            "django_session; for each FileImport, delete the FileField blob from storage "
+            "then delete the row. Social accounts and user profiles cascade with users.",
         )
         parser.add_argument(
             "--user",
@@ -97,14 +100,15 @@ class Command(BaseCommand):
         cat_count, _ = Category.objects.all().delete()
         visa_intl_count, _ = VisaInternationalStatement.objects.all().delete()
         visa_nac_count, _ = VisaNacionalStatement.objects.all().delete()
-        fi_count, _ = FileImport.objects.all().delete()
+        fi_count = self._delete_file_imports_qs(FileImport.objects.all())
+        session_count, _ = Session.objects.all().delete()
         user_count, _ = User.objects.all().delete()
         self.stdout.write(
             self.style.SUCCESS(
                 f"Deleted {tx_count} transactions, {rp_count} recurring patterns, "
                 f"{cat_count} categories, {visa_intl_count} visa international statements, "
                 f"{visa_nac_count} visa nacional statements, "
-                f"{fi_count} file imports, {user_count} users."
+                f"{fi_count} file imports, {session_count} sessions, {user_count} users."
             )
         )
 
@@ -113,6 +117,20 @@ class Command(BaseCommand):
             return User.objects.get(username=username)
         except User.DoesNotExist as exc:
             raise CommandError(f"User '{username}' not found.") from exc
+
+    def _delete_file_imports_qs(self, queryset) -> int:
+        """Remove each FileImport and delete the stored upload from disk.
+
+        Django does not remove FileField blobs when a model instance is deleted.
+        QuerySet.delete() uses bulk SQL and skips per-instance behavior entirely.
+        """
+        pks = list(queryset.values_list("pk", flat=True))
+        for pk in pks:
+            fi = FileImport.objects.get(pk=pk)
+            if fi.file:
+                fi.file.delete(save=False)
+            fi.delete()
+        return len(pks)
 
     def _purge_transactions_raw(
         self,
@@ -160,7 +178,7 @@ class Command(BaseCommand):
             user=user
         ).delete()
         visa_nac_count, _ = VisaNacionalStatement.objects.filter(user=user).delete()
-        fi_count, _ = FileImport.objects.filter(user=user).delete()
+        fi_count = self._delete_file_imports_qs(FileImport.objects.filter(user=user))
         cat_count, _ = Category.objects.filter(user=user).delete()
         rp_count, _ = RecurringPattern.objects.filter(user=user).delete()
         self.stdout.write(
@@ -198,10 +216,12 @@ class Command(BaseCommand):
             user=user,
             period_end__gte=cutoff_date,
         ).delete()
-        fi_count, _ = FileImport.objects.filter(
-            user=user,
-            created_at__gte=cutoff_dt,
-        ).delete()
+        fi_count = self._delete_file_imports_qs(
+            FileImport.objects.filter(
+                user=user,
+                created_at__gte=cutoff_dt,
+            )
+        )
         rp_count, _ = RecurringPattern.objects.filter(user=user).delete()
 
         self.stdout.write(

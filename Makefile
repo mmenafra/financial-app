@@ -6,7 +6,7 @@ FRONTEND = frontend
 .PHONY: help docker-build docker-up docker-down docker-prod migrate \
 	lint fmt test seed seed-categories format-all lint-all test-all \
 	fe-install fe-dev fe-build fe-fmt fe-lint fe-test fe-test-ci fe-betterer fe-betterer-update \
-	db-clean-all db-clean-user db-clean-transactions db-clean-user-since \
+	db-clean-all clean-db-all db-clean-user db-clean-transactions db-clean-user-since \
 	db-backup db-restore \
 	createsuperuser dump-gemini-keys
 
@@ -17,7 +17,7 @@ help:
 	@echo "               make seed-categories EMAIL=<email> (optional RESET=1 to clear user categories first)"
 	@echo "               make createsuperuser (interactive; admin UI at /admin/)"
 	@echo "               make dump-gemini-keys [DUMP_GEMINI_OPTS=--insecure] (plaintext keys; use --insecure when DEBUG=False)"
-	@echo "DB clean:      make db-clean-all | db-clean-user USER=<u> (tx, visa stmts, imports, categories, patterns) | db-clean-transactions USER=<u> | db-clean-user-since USER=<u> [FROM_DATE=...] (keeps categories only)"
+	@echo "DB clean:      make db-clean-all (alias: clean-db-all) | db-clean-user USER=<u> (tx, visa stmts, imports, categories, patterns) | db-clean-transactions USER=<u> | db-clean-user-since USER=<u> [FROM_DATE=...] (keeps categories only)"
 	@echo "DB backup:      make db-backup  (gzip SQL under backups/; compose db service must be running)"
 	@echo "DB restore:     make db-restore BACKUP=path/to/file.sql.gz  (also accepts plain .sql)"
 	@echo "Frontend:      make fe-install | fe-dev | fe-build"
@@ -89,6 +89,8 @@ dump-gemini-keys:
 
 db-clean-all:
 	$(DC) run --rm $(BACKEND) python manage.py clean_db --all
+
+clean-db-all: db-clean-all
 
 db-clean-user:
 	@test -n "$(USER)" || (echo "Usage: make db-clean-user USER=<username>" && exit 1)
