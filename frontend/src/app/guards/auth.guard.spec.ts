@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
 import { provideRouter, Router } from '@angular/router';
 
 import { authGuard } from './auth.guard';
@@ -16,6 +17,15 @@ describe('authGuard', () => {
         provideRouter([]),
         { provide: AuthService, useValue: { isAuthenticated: () => true } },
       ],
+    });
+    const result = TestBed.runInInjectionContext(() => authGuard({} as never, {} as never));
+    expect(result).toBe(true);
+  });
+
+  it('allows navigation when only refresh token is stored', () => {
+    localStorage.setItem('auth_refresh', 'refresh-only');
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), provideHttpClient(), AuthService],
     });
     const result = TestBed.runInInjectionContext(() => authGuard({} as never, {} as never));
     expect(result).toBe(true);

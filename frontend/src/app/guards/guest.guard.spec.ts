@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
 import { provideRouter, Router } from '@angular/router';
 
 import { guestGuard } from './guest.guard';
@@ -27,6 +28,16 @@ describe('guestGuard', () => {
         provideRouter([]),
         { provide: AuthService, useValue: { isAuthenticated: () => true } },
       ],
+    });
+    const router = TestBed.inject(Router);
+    const result = TestBed.runInInjectionContext(() => guestGuard({} as never, {} as never));
+    expect(result).toEqual(router.createUrlTree(['/dashboard']));
+  });
+
+  it('returns UrlTree to dashboard when only refresh token is in localStorage', () => {
+    localStorage.setItem('auth_refresh', 'refresh-only');
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), provideHttpClient(), AuthService],
     });
     const router = TestBed.inject(Router);
     const result = TestBed.runInInjectionContext(() => guestGuard({} as never, {} as never));

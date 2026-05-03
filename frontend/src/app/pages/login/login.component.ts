@@ -35,6 +35,10 @@ export class LoginComponent implements OnInit {
   private googleInitialized = false;
 
   ngOnInit(): void {
+    if (this.auth.isAuthenticated()) {
+      void this.router.navigate(['/dashboard'], { replaceUrl: true });
+      return;
+    }
     if (!environment.googleClientId) {
       return;
     }

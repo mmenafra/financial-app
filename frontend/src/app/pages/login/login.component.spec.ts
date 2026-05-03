@@ -59,6 +59,21 @@ describe('LoginComponent', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
+  it('should redirect to dashboard when tokens are already present', () => {
+    sessionStorage.setItem('auth_access', 'existing-access');
+    sessionStorage.setItem('auth_refresh', 'existing-refresh');
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard'], { replaceUrl: true });
+  });
+
+  it('should redirect to dashboard when only refresh token is present', () => {
+    localStorage.setItem('auth_refresh', 'existing-refresh');
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard'], { replaceUrl: true });
+  });
+
   it('should render the login heading', () => {
     const fixture = TestBed.createComponent(LoginComponent);
     fixture.detectChanges();
@@ -120,7 +135,7 @@ describe('LoginComponent', () => {
       expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
     });
 
-    it('should store tokens in sessionStorage when rememberMe is false', () => {
+    it('stores access in sessionStorage and refresh in localStorage when rememberMe is false', () => {
       const fixture = TestBed.createComponent(LoginComponent);
       const component = fixture.componentInstance;
       fixture.detectChanges();
@@ -130,6 +145,8 @@ describe('LoginComponent', () => {
       httpMock.expectOne(API_SIGNIN).flush(MOCK_SUCCESS);
 
       expect(sessionStorage.getItem('auth_access')).toBe('access-token');
+      expect(localStorage.getItem('auth_refresh')).toBe('refresh-token');
+      expect(localStorage.getItem('auth_access')).toBe(null);
     });
 
     it('should store tokens in localStorage when rememberMe is true', () => {

@@ -36,8 +36,9 @@ export interface SignInResponse {
   tokens: AuthTokens;
 }
 
-const ACCESS_KEY = 'auth_access';
-const REFRESH_KEY = 'auth_refresh';
+/** Storage keys — exported for cross-tab sync (see App). */
+export const AUTH_ACCESS_STORAGE_KEY = 'auth_access';
+export const AUTH_REFRESH_STORAGE_KEY = 'auth_refresh';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -64,16 +65,25 @@ export class AuthService {
   }
 
   storeTokens(tokens: AuthTokens, remember: boolean): void {
-    const storage = remember ? localStorage : sessionStorage;
-    storage.setItem(ACCESS_KEY, tokens.access);
-    storage.setItem(REFRESH_KEY, tokens.refresh);
+    this.clearTokens();
+    if (remember) {
+      localStorage.setItem(AUTH_ACCESS_STORAGE_KEY, tokens.access);
+      localStorage.setItem(AUTH_REFRESH_STORAGE_KEY, tokens.refresh);
+    } else {
+      /**
+       * Session login: refresh in localStorage so other tabs can obtain an access token;
+       * access stays in sessionStorage (tab-scoped).
+       */
+      localStorage.setItem(AUTH_REFRESH_STORAGE_KEY, tokens.refresh);
+      sessionStorage.setItem(AUTH_ACCESS_STORAGE_KEY, tokens.access);
+    }
   }
 
   clearTokens(): void {
-    localStorage.removeItem(ACCESS_KEY);
-    localStorage.removeItem(REFRESH_KEY);
-    sessionStorage.removeItem(ACCESS_KEY);
-    sessionStorage.removeItem(REFRESH_KEY);
+    localStorage.removeItem(AUTH_ACCESS_STORAGE_KEY);
+    localStorage.removeItem(AUTH_REFRESH_STORAGE_KEY);
+    sessionStorage.removeItem(AUTH_ACCESS_STORAGE_KEY);
+    sessionStorage.removeItem(AUTH_REFRESH_STORAGE_KEY);
   }
 
   signOut(): void {
@@ -81,11 +91,17 @@ export class AuthService {
   }
 
   getAccessToken(): string | null {
-    return sessionStorage.getItem(ACCESS_KEY) ?? localStorage.getItem(ACCESS_KEY);
+    return (
+      sessionStorage.getItem(AUTH_ACCESS_STORAGE_KEY) ??
+      localStorage.getItem(AUTH_ACCESS_STORAGE_KEY)
+    );
   }
 
   getRefreshToken(): string | null {
-    return sessionStorage.getItem(REFRESH_KEY) ?? localStorage.getItem(REFRESH_KEY);
+    return (
+      sessionStorage.getItem(AUTH_REFRESH_STORAGE_KEY) ??
+      localStorage.getItem(AUTH_REFRESH_STORAGE_KEY)
+    );
   }
 
   refreshAccessToken(): Observable<TokenRefreshResponse> {
@@ -94,17 +110,24 @@ export class AuthService {
       .post<TokenRefreshResponse>(`${environment.apiUrl}/api/auth/token/refresh/`, { refresh })
       .pipe(
         tap((res) => {
-          const inLocal = !!localStorage.getItem(ACCESS_KEY);
-          const storage = inLocal ? localStorage : sessionStorage;
-          storage.setItem(ACCESS_KEY, res.access);
-          if (res.refresh) {
-            storage.setItem(REFRESH_KEY, res.refresh);
+          const accessInLocal = !!localStorage.getItem(AUTH_ACCESS_STORAGE_KEY);
+          if (accessInLocal) {
+            localStorage.setItem(AUTH_ACCESS_STORAGE_KEY, res.access);
+            if (res.refresh) {
+              localStorage.setItem(AUTH_REFRESH_STORAGE_KEY, res.refresh);
+            }
+          } else {
+            sessionStorage.setItem(AUTH_ACCESS_STORAGE_KEY, res.access);
+            if (res.refresh) {
+              localStorage.setItem(AUTH_REFRESH_STORAGE_KEY, res.refresh);
+            }
           }
         }),
       );
   }
 
+  /** True if we have any persisted session (access and/or refresh). */
   isAuthenticated(): boolean {
-    return !!this.getAccessToken();
+    return !!this.getAccessToken() || !!this.getRefreshToken();
   }
 }
