@@ -36,6 +36,7 @@ import { selectSpendTotalsAndTrend } from '../../store/transactions-page/transac
 import {
   transactionsPageInitialState,
   TRANSACTIONS_PAGE_SIZE,
+  UNCATEGORIZED_CATEGORY_FILTER,
 } from '../../store/transactions-page/transactions-page.state';
 import {
   positiveNumberValidator,
@@ -87,6 +88,7 @@ export class TransactionsComponent {
 
   protected readonly pageSize = PAGE_SIZE;
   protected readonly connectedSources = CONNECTED_SOURCES;
+  protected readonly uncategorizedCategoryFilter = UNCATEGORIZED_CATEGORY_FILTER;
 
   protected readonly selectedYear = toSignal(
     this.store.select(transactionsPageFeature.selectYear),
@@ -363,6 +365,9 @@ export class TransactionsComponent {
     const id = this.filterCategoryId();
     if (!id) {
       return '';
+    }
+    if (id === UNCATEGORIZED_CATEGORY_FILTER) {
+      return 'Uncategorized';
     }
     return this.categoryById().get(id)?.name ?? id;
   }

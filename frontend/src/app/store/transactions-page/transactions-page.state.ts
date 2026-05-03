@@ -2,11 +2,15 @@ import type { Category, Source, Transaction } from '../../models/transaction.mod
 
 export const TRANSACTIONS_PAGE_SIZE = 100;
 
+/** Value for `filterCategoryId` and GET `category` when showing uncategorized rows only. */
+export const UNCATEGORIZED_CATEGORY_FILTER = 'none';
+
 /** Public for helpers that validate rows against active filters. */
 export interface TransactionsPageState {
   year: number;
   month: number;
   page: number;
+  /** Category UUID, or `UNCATEGORIZED_CATEGORY_FILTER` for rows with no category. */
   filterCategoryId: string | undefined;
   filterSource: Source | undefined;
   /** When true, GET /transactions/ includes rows hidden from other screens (default false). */

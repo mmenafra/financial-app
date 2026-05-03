@@ -178,6 +178,17 @@ class TransactionAPITests(APITestCase):  # pylint: disable=too-many-public-metho
         self.assertEqual({row["id"] for row in response.data["results"]}, {str(t1.id)})
         self.assertNotIn(str(t2.id), {row["id"] for row in response.data["results"]})
 
+    def test_list_filter_uncategorized(self):
+        with_cat = self._create_tx(self.user, description="Cat", category=self.category)
+        no_cat = self._create_tx(self.user, description="NoCat", category=None)
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.list_url, {"category": "none"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = {row["id"] for row in response.data["results"]}
+        self.assertIn(str(no_cat.id), ids)
+        self.assertNotIn(str(with_cat.id), ids)
+
     def test_list_filter_by_category_not_owned_returns_400(self):
         self._create_tx(self.user)
         self.client.force_authenticate(user=self.user)

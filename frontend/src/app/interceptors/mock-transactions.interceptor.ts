@@ -441,7 +441,11 @@ export const mockTransactionsInterceptor: HttpInterceptorFn = (req, next) => {
 
   const categoryFilter = readStringParam(req.url, 'category');
   if (categoryFilter) {
-    filtered = filtered.filter((t) => t.category === categoryFilter);
+    if (categoryFilter.trim().toLowerCase() === 'none') {
+      filtered = filtered.filter((t) => t.category == null);
+    } else {
+      filtered = filtered.filter((t) => t.category === categoryFilter);
+    }
   }
 
   const sourceFilter = readStringParam(req.url, 'source');

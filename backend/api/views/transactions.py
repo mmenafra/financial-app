@@ -85,6 +85,8 @@ def _apply_transaction_month_filter(qs, month_raw):
 def _apply_transaction_category_filter(qs, category_id, user):
     if not _query_param_non_empty(category_id):
         return qs
+    if str(category_id).strip().lower() == "none":
+        return qs.filter(category__isnull=True)
     if not Category.objects.filter(pk=category_id, user=user).exists():
         raise ValidationError(
             {"category": "Category must belong to the authenticated user."}
@@ -289,10 +291,13 @@ class IncomeView(ListAPIView):
             ),
             OpenApiParameter(
                 name="category",
-                type=OpenApiTypes.UUID,
+                type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
                 required=False,
-                description="Filter by category id (must be one of your categories).",
+                description=(
+                    "Filter by category id (UUID; must be one of your categories), "
+                    "or the literal `none` for transactions with no category."
+                ),
             ),
             OpenApiParameter(
                 name="source",

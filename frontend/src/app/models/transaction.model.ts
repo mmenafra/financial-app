@@ -117,6 +117,7 @@ export interface PaginatedResponse<T> {
 export interface TransactionFilters {
   year?: number;
   month?: number;
+  /** Category UUID, or the literal `none` for uncategorized rows (GET /transactions/). */
   category?: string;
   source?: Source;
   page?: number;
