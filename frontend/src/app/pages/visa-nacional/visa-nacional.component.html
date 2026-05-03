@@ -286,6 +286,21 @@
                           </button>
                           <button
                             type="button"
+                            class="tx-dropdown-item disabled:opacity-45"
+                            role="menuitem"
+                            [disabled]="!transactionCanOpenMpLink(row)"
+                            [attr.title]="mpLinkDisabledTitle(row) || undefined"
+                            (click)="onLinkMercadoPago(row, $event)"
+                          >
+                            <span
+                              class="material-symbols-outlined text-[16px]"
+                              style="font-variation-settings: 'FILL' 0"
+                              >link</span
+                            >
+                            Link
+                          </button>
+                          <button
+                            type="button"
                             class="tx-dropdown-item"
                             role="menuitem"
                             (click)="onMetaDataRow(row, $event)"
@@ -344,6 +359,15 @@
     [detailLoading]="mpDetailLoading()"
     idPrefix="vn-mp"
     (dismissed)="onMercadoPagoDetailDismissed()"
+  />
+}
+
+@if (linkMercadoPagoTransactionId(); as vnLinkTxId) {
+  <app-visa-nacional-link-mercadopago-modal
+    [transactionId]="vnLinkTxId"
+    [transactionLabel]="linkMercadoPagoTransactionLabel()"
+    (dismissed)="onLinkMercadoPagoDismissed()"
+    (linkedSuccess)="onMercadoPagoLinkSuccess()"
   />
 }
 

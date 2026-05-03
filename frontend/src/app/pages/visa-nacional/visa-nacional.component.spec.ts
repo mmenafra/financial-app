@@ -44,6 +44,13 @@ describe('VisaNacionalComponent', () => {
   const mpStub: Partial<MercadoPagoService> = {
     getStoredPayment: () => of({} as MpPayment),
     getPayment: () => of({} as MpPayment),
+    getPayments: () => of({ results: [], paging: { total: 0 } }),
+    linkToVisaTransaction: () =>
+      of({
+        stored_payment_id: 'a0000000-0000-0000-0000-000000000001',
+        mp_payment_id: 1,
+        transaction_id: 'b0000000-0000-0000-0000-000000000002',
+      }),
   };
 
   const txStub: Partial<TransactionService> = {

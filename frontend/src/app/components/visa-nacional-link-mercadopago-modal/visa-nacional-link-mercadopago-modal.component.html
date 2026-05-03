@@ -1,0 +1,184 @@
+<div
+  class="tx-modal-backdrop"
+  role="button"
+  tabindex="0"
+  aria-label="Close dialog"
+  (click)="closeModal()"
+  (keydown.enter)="closeModal()"
+  (keydown.space)="$event.preventDefault(); closeModal()"
+></div>
+<div
+  class="tx-modal tx-modal--wide"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-labelledby]="titleId"
+>
+  <div class="flex flex-col gap-1">
+    <h2 [id]="titleId" class="font-headline m-0 text-xl font-extrabold text-primary">
+      Link Mercado Pago payment
+    </h2>
+    <p class="m-0 mt-1 text-sm font-semibold text-on-surface-variant">
+      Choose a Mercado Pago payment to attach to this Visa Nacional transaction.
+    </p>
+    @if (transactionLabel(); as label) {
+      @if (label.trim()) {
+        <p class="m-0 mt-1 text-xs font-semibold text-on-surface-variant line-clamp-2">
+          {{ label }}
+        </p>
+      }
+    }
+  </div>
+
+  <div class="mt-4 flex flex-col gap-3">
+    <label class="sr-only" for="vn-link-mp-search">Search Mercado Pago payments</label>
+    <input
+      id="vn-link-mp-search"
+      type="search"
+      class="w-full rounded-xl border border-outline-variant/70 bg-surface-container-low px-4 py-3 text-sm font-semibold text-on-surface shadow-sm"
+      placeholder="Search by id, description, date, status, or amount…"
+      [value]="searchQuery()"
+      (input)="onSearchInput($event)"
+      autocomplete="off"
+    />
+
+    @if (loadError(); as err) {
+      <div
+        class="rounded-2xl border border-rose-500/35 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-950"
+        role="alert"
+      >
+        {{ err }}
+      </div>
+    } @else if (listLoading()) {
+      <div
+        class="rounded-2xl border border-outline-variant/40 bg-surface-container-low/80 px-4 py-10 text-center text-sm font-semibold text-on-surface-variant"
+      >
+        Loading Mercado Pago payments…
+      </div>
+    } @else {
+      <div
+        class="max-h-[min(28rem,55vh)] overflow-auto rounded-2xl border border-outline-variant/40"
+      >
+        <table class="w-full min-w-[520px] border-collapse text-left">
+          <thead class="sticky top-0 z-[1] bg-surface-container/95 backdrop-blur-sm">
+            <tr class="border-b border-outline-variant/40">
+              <th
+                scope="col"
+                class="px-4 py-3 text-xs font-bold uppercase tracking-wide text-on-surface-variant"
+              >
+                Created
+              </th>
+              <th
+                scope="col"
+                class="px-4 py-3 text-xs font-bold uppercase tracking-wide text-on-surface-variant"
+              >
+                Description
+              </th>
+              <th
+                scope="col"
+                class="px-4 py-3 text-xs font-bold uppercase tracking-wide text-on-surface-variant"
+              >
+                Amount
+              </th>
+              <th
+                scope="col"
+                class="px-4 py-3 text-xs font-bold uppercase tracking-wide text-on-surface-variant"
+              >
+                Status
+              </th>
+              <th
+                scope="col"
+                class="w-[4.5rem] px-4 py-3 text-xs font-bold uppercase tracking-wide text-on-surface-variant"
+              >
+                <span class="sr-only">Link</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (mp of filteredRows(); track mp.id ?? $index) {
+              @let created = mp.date_created | date: 'medium';
+              @let amountLbl = formatDisplayAmount(mp);
+              <tr class="border-b border-outline-variant/25 hover:bg-secondary-container/40">
+                <td class="px-4 py-3 text-xs font-semibold text-on-surface-variant">
+                  {{ created ?? mp.date_created ?? '—' }}
+                </td>
+                <td class="max-w-[14rem] px-4 py-3 text-xs font-semibold text-primary">
+                  <span class="line-clamp-2">{{ mp.description ?? '—' }}</span>
+                </td>
+                <td class="px-4 py-3 text-xs font-bold tabular-nums text-primary">
+                  {{ amountLbl ?? '—' }}
+                </td>
+                <td class="px-4 py-3">
+                  <span
+                    class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold"
+                    [ngClass]="statusBadgeClass(mp.status ?? undefined)"
+                  >
+                    {{ mp.status ?? '—' }}
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <button
+                    type="button"
+                    class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-600/25 bg-emerald-500/15 text-emerald-800 shadow-sm hover:bg-emerald-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/35 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low disabled:cursor-not-allowed disabled:opacity-45"
+                    [disabled]="linkingMpId() !== null"
+                    [attr.aria-busy]="linkingMpId() === rowMenuKey(mp)"
+                    [attr.aria-label]="'Link Mercado Pago payment ' + (mp.id ?? '')"
+                    (click)="linkRow(mp, $event)"
+                  >
+                    @if (linkingMpId() === rowMenuKey(mp)) {
+                      <span
+                        class="material-symbols-outlined animate-spin text-[20px]"
+                        aria-hidden="true"
+                        >progress_activity</span
+                      >
+                    } @else {
+                      <span
+                        class="material-symbols-outlined text-[20px]"
+                        style="font-variation-settings: 'FILL' 0"
+                        aria-hidden="true"
+                        >add</span
+                      >
+                    }
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td
+                  colspan="5"
+                  class="px-4 py-12 text-center text-sm font-semibold text-on-surface-variant"
+                >
+                  No matching payments.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (hasMore()) {
+        <div class="flex flex-wrap justify-center">
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-full border border-outline-variant/70 bg-surface-container-low px-4 py-2 text-xs font-bold text-primary hover:bg-secondary-container/50 disabled:cursor-not-allowed disabled:opacity-45"
+            [disabled]="loadMoreLoading()"
+            [attr.aria-busy]="loadMoreLoading()"
+            (click)="loadMore()"
+          >
+            <span
+              class="material-symbols-outlined shrink-0 text-[18px]"
+              [class.animate-spin]="loadMoreLoading()"
+              aria-hidden="true"
+              style="font-variation-settings: 'FILL' 0"
+              >{{ loadMoreLoading() ? 'progress_activity' : 'expand_circle_down' }}</span
+            >
+            {{ loadMoreLoading() ? 'Loading…' : 'Load more' }}
+          </button>
+        </div>
+      }
+    }
+  </div>
+
+  <div class="flex flex-wrap justify-end gap-2 pt-5">
+    <button type="button" class="tx-pill-btn ghost" (click)="closeModal()">Cancel</button>
+  </div>
+</div>

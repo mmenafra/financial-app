@@ -12,6 +12,7 @@ import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { TopNavComponent } from '../../components/top-nav/top-nav.component';
 import { TransactionEditModalComponent } from '../../components/transaction-edit-modal/transaction-edit-modal.component';
 import { TransactionMetadataModalComponent } from '../../components/transaction-metadata-modal/transaction-metadata-modal.component';
+import { VisaNacionalLinkMercadoPagoModalComponent } from '../../components/visa-nacional-link-mercadopago-modal/visa-nacional-link-mercadopago-modal.component';
 import type {
   Category,
   Direction,
@@ -94,6 +95,7 @@ function isMultiInstallment(
     TransactionMetadataModalComponent,
     RecurringPatternModalComponent,
     MercadoPagoDetailModalComponent,
+    VisaNacionalLinkMercadoPagoModalComponent,
   ],
   templateUrl: './visa-nacional.component.html',
   styleUrl: './visa-nacional.component.scss',
@@ -157,6 +159,10 @@ export class VisaNacionalComponent {
   protected readonly recurringPatternTarget = signal<Transaction | null>(null);
   protected readonly mpDetailPayment = signal<MpPayment | null>(null);
   protected readonly mpDetailLoading = signal(false);
+
+  /** When set, the Link Mercado Pago modal is visible for this Visa Nacional tx. */
+  protected readonly linkMercadoPagoTransactionId = signal<string | null>(null);
+  protected readonly linkMercadoPagoTransactionLabel = signal('');
 
   protected readonly chartBars = computed((): ChartBarPoint[] => {
     return this.monthlyTotals().map((bucket) => ({
@@ -501,6 +507,54 @@ export class VisaNacionalComponent {
 
   protected onMercadoPagoDetailDismissed(): void {
     this.mpDetailPayment.set(null);
+  }
+
+  /** Mirrors backend `_visa_transaction_link_validation_error`: CLP only, no split children. */
+  protected transactionCanOpenMpLink(row: TimelineRow): boolean {
+    const t = this.transactions().find((x) => x.id === row.id);
+    if (!t || t.source !== 'CREDIT_CARD_NATIONAL') {
+      return false;
+    }
+    if (t.splits.length > 0) {
+      return false;
+    }
+    return (t.currency || '').trim().toUpperCase() === 'CLP';
+  }
+
+  protected mpLinkDisabledTitle(row: TimelineRow): string {
+    return this.transactionCanOpenMpLink(row)
+      ? ''
+      : 'Only CLP Visa Nacional transactions without splits can be linked.';
+  }
+
+  protected onLinkMercadoPago(row: TimelineRow, event: MouseEvent): void {
+    event.stopPropagation();
+    this.openMenuId.set(null);
+    if (!this.transactionCanOpenMpLink(row)) {
+      return;
+    }
+    const t = this.transactions().find((x) => x.id === row.id);
+    if (!t) {
+      return;
+    }
+    const labelParts = [`${row.dateLabel}`, row.title];
+    const amt = this.formatClp(row.amount);
+    if (row.direction === 'EXPENSE') {
+      labelParts.push(`-${amt}`);
+    } else {
+      labelParts.push(amt);
+    }
+    this.linkMercadoPagoTransactionLabel.set(labelParts.filter(Boolean).join(' · '));
+    this.linkMercadoPagoTransactionId.set(t.id);
+  }
+
+  protected onLinkMercadoPagoDismissed(): void {
+    this.linkMercadoPagoTransactionId.set(null);
+    this.linkMercadoPagoTransactionLabel.set('');
+  }
+
+  protected onMercadoPagoLinkSuccess(): void {
+    this.loadTimeline();
   }
 }
 
