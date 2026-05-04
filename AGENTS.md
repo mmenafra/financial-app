@@ -61,3 +61,48 @@ Cursor matches **prefixes**: a single entry `make` allows every Makefile target 
 
 - **IDE agent:** `~/.cursor/permissions.json` → `terminalAllowlist` (when set, it **replaces** the in-app terminal allowlist—edit the file to add or remove prefixes). This repo’s machine local file should include `make` plus any other prefixes you want (e.g. `git`, `docker`, `npx`). See [permissions.json](https://cursor.com/docs/reference/permissions).
 - **Cursor CLI:** [`.cursor/cli.json`](.cursor/cli.json) in this repo allows `Shell(make)` for project sessions (merges with your global CLI config).
+
+## Cursor Cloud specific instructions
+
+### Services
+
+| Service | Port | Start method |
+|---------|------|--------------|
+| PostgreSQL 16 | 5432 | `docker compose up db` (or full stack below) |
+| Django backend | 8000 | `docker compose up backend` (runs migrations on start) |
+| Angular frontend | 4200 | `docker compose up frontend` (ng serve with polling) |
+
+Full stack: `docker compose up --build` (or `make docker-up`).
+
+### Docker daemon
+
+The Cloud VM runs Docker-in-Docker with `fuse-overlayfs` storage driver and `iptables-legacy`. The daemon must be started before any `make` targets that use Docker Compose:
+
+```bash
+dockerd > /tmp/dockerd.log 2>&1 &
+sleep 3
+```
+
+The `/etc/docker/daemon.json` already configures `fuse-overlayfs`; do **not** pass `--storage-driver` as a flag (it conflicts with the config file).
+
+### Node.js
+
+Node 22 is installed via nvm. Source it before running frontend commands:
+
+```bash
+export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+```
+
+### Quick verification
+
+```bash
+curl -s http://localhost:8000/api/health/   # → {"status":"ok",...}
+curl -s -o /dev/null -w "%{http_code}" http://localhost:4200/  # → 200
+```
+
+### Notes
+
+- Backend `.env` uses `DB_ENGINE=sqlite` by default (`.env.example`); Docker Compose overrides to postgres.
+- `MERCADOPAGO_ACCESS_TOKEN` and `GOOGLE_CLIENT_ID` are optional; the app works without them.
+- Frontend Stylelint warnings (12) are pre-existing and non-blocking.
+- `make lint` / `make fmt` / `make test` all run inside the Docker Compose `backend` service container—the Docker daemon must be running.
